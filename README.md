@@ -30,70 +30,57 @@ Cognitive Matrix models civilization through **11 interconnected systems** that 
 
 ```text
 human-matrix-sim/
-├── config/
-│   ├── default.yaml              <- All parameters (single source of truth)
-│   ├── eras/                     <- Historically-researched era presets
-│   │   ├── ERA_SCHEMA.md         <- Schema documentation
-│   │   ├── hunter_gatherer.yaml  <- ~50,000 BCE nomadic bands
-│   │   ├── ancient_egypt.yaml    <- ~1500 BCE New Kingdom
-│   │   ├── roman_republic.yaml   <- ~100 BCE Late Republic
-│   │   ├── tang_dynasty.yaml     <- ~700 CE Cosmopolitan China
-│   │   ├── medieval_europe.yaml  <- ~1200 CE Feudal Christendom
-│   │   ├── industrial_revolution.yaml <- ~1850 CE Victorian Britain
-│   │   ├── america_1980s.yaml    <- ~1980s (The Matrix's chosen era)
-│   │   └── near_future.yaml      <- ~2040 hyper-connected dystopia
-│   └── scenarios/
-│       ├── harsh_world.yaml      <- High competition, scarce resources
-│       └── peaceful.yaml         <- Cooperative, abundant resources
-├── src/
-│   ├── __init__.py
-│   ├── config_loader.py          <- YAML loading with deep-merge and attribute access
-│   ├── agents.py                 <- Agent, Traits, Bond, emotions, beliefs, awareness
-│   ├── world.py                  <- 8x8 resource grid, terrain, depletion, tech unlocks
-│   ├── social.py                 <- Bond formation/decay (Dunbar limit, spatial indexing)
-│   ├── knowledge.py              <- Parent teaching + cultural memory + social amplifier
-│   ├── mate_selection.py         <- Competitive blend mate selection
-│   ├── agency.py                 <- Utility-driven movement + LLM protagonist thoughts
-│   ├── emotions.py               <- Emotional states, contagion, trauma, decision distortion
-│   ├── beliefs.py                <- Belief axes, factions, prophets, schisms, leaders
-│   ├── economy.py                <- Wealth, trade, theft, taxation, inheritance
-│   ├── matrix_layer.py           <- Awareness, glitches, Sentinels, The One, Oracle, cycles
-│   ├── conflict.py               <- Combat, faction wars, territorial disputes, peace
-│   ├── communication.py          <- Info objects, propagation, mutation, propaganda
-│   ├── engine.py                 <- Core tick orchestrator (all 11 systems)
-│   ├── narrator.py               <- Multi-provider LLM (Ollama + HuggingFace + fallback)
-│   ├── persistence.py            <- SQLite snapshots, tick stats, events, narratives
-│   └── prompts/                  <- LLM prompt templates
-│       ├── narrator.txt
-│       └── event_generator.txt
-├── dashboard/                    <- Streamlit dashboard package
-│   ├── app.py                    <- Main orchestrator
-│   ├── styles.py                 <- Matrix-themed CSS
-│   ├── state.py                  <- Session state, helpers, achievements
-│   ├── controls.py               <- Sidebar controls and parameter overrides
-│   ├── runner.py                 <- Tick runner and narrator integration
-│   ├── handlers.py               <- God mode, agent/cell actions
-│   └── tabs/                     <- Dashboard tab renderers
-│       ├── feed.py               <- Live feed & drama
-│       ├── charts.py             <- Population & trend charts
-│       ├── world.py              <- Terrain map with agents
-│       ├── agents.py             <- Agent inspector & family tree
-│       ├── social.py             <- Bond network visualization
-│       ├── systems.py            <- Emotions, factions, economy, matrix, culture
-│       ├── content.py            <- Events, narratives, protagonists
-│       └── records.py            <- Records, achievements, compare
-├── tests/                        <- Test suite
-│   ├── conftest.py               <- Shared fixtures
-│   └── test_systems.py           <- All 11 systems + integration tests
-├── output/                       <- Generated files (simulation.db, exports)
-├── .github/workflows/test.yml    <- CI pipeline
-├── main.py                       <- CLI entry point
-├── dashboard.py                  <- Streamlit entry point (thin wrapper)
-├── sweep.py                      <- Parameter sweep tool (outputs CSV)
-├── pyproject.toml                <- Project config & dependencies
-├── Makefile                      <- Common commands (make test, make dashboard, etc.)
-├── .env.example                  <- Environment variable template
-└── README.md
+├── src/                              <- Core simulation engine
+│   ├── agents.py                     <- Agent, Traits, Bond, emotions, beliefs, awareness
+│   ├── world.py                      <- 8x8 resource grid, terrain, depletion, tech unlocks
+│   ├── social.py                     <- Bond formation/decay (Dunbar limit, spatial indexing)
+│   ├── knowledge.py                  <- Parent teaching + cultural memory + social amplifier
+│   ├── mate_selection.py             <- Competitive blend mate selection
+│   ├── agency.py                     <- Utility-driven movement + LLM protagonist thoughts
+│   ├── emotions.py                   <- Emotional states, contagion, trauma, decision distortion
+│   ├── beliefs.py                    <- Belief axes, factions, prophets, schisms, leaders
+│   ├── economy.py                    <- Wealth, trade, theft, taxation, inheritance
+│   ├── matrix_layer.py              <- Awareness, glitches, Sentinels, The One, Oracle, cycles
+│   ├── conflict.py                   <- Combat, faction wars, territorial disputes, peace
+│   ├── communication.py              <- Info objects, propagation, mutation, propaganda
+│   ├── engine.py                     <- Core tick orchestrator (all 11 systems)
+│   ├── config_loader.py              <- YAML loading with deep-merge and attribute access
+│   ├── narrator.py                   <- Multi-provider LLM (Ollama + HuggingFace + fallback)
+│   ├── persistence.py                <- SQLite snapshots, tick stats, events, narratives
+│   └── prompts/                      <- LLM prompt templates
+├── gui/                              <- All GUI/frontend code
+│   ├── backend/                      <- FastAPI backend (The Construct API)
+│   │   └── api/
+│   │       ├── main.py               <- FastAPI app, CORS, route mounting
+│   │       ├── state.py              <- In-memory engine manager singleton
+│   │       └── routes/               <- REST + WebSocket endpoints
+│   ├── frontend/                     <- SvelteKit web frontend
+│   │   ├── src/lib/canvas/           <- WebGL world map, code rain, agent views
+│   │   ├── src/lib/panels/           <- Edge panels, terminal
+│   │   ├── src/lib/stores/           <- Svelte stores (simulation, UI state)
+│   │   └── src/lib/api/              <- REST + WebSocket client
+│   └── dashboard/                    <- Streamlit dashboard (15 tabs)
+│       ├── app.py                    <- Main orchestrator
+│       ├── state.py                  <- Session state, helpers, achievements
+│       ├── controls.py               <- Sidebar controls and parameter overrides
+│       ├── runner.py                 <- Tick runner and narrator integration
+│       ├── handlers.py               <- God mode, agent/cell actions
+│       └── tabs/                     <- Dashboard tab renderers
+├── config/                           <- Simulation parameters
+│   ├── default.yaml                  <- All parameters (single source of truth)
+│   ├── eras/                         <- Historically-researched era presets (8 eras)
+│   └── scenarios/                    <- Gameplay-tuned partial overrides
+├── scripts/                          <- Utility scripts
+│   └── sweep.py                      <- Parameter sweep tool (outputs CSV)
+├── tests/                            <- Test suite (pytest)
+│   ├── conftest.py                   <- Shared fixtures
+│   └── test_systems.py              <- All 11 systems + integration tests
+├── output/                           <- Generated files (simulation.db, exports)
+├── main.py                           <- CLI entry point
+├── dashboard.py                      <- Streamlit entry point (thin wrapper)
+├── pyproject.toml                    <- Project config & dependencies
+├── Makefile                          <- Common commands
+└── .github/workflows/test.yml        <- CI pipeline
 ```
 
 ---
@@ -165,25 +152,21 @@ streamlit run dashboard.py
 ### Run Tests
 
 ```bash
-# With pytest (recommended)
 make test
 # or: python -m pytest tests/ -v
-
-# Legacy test runner (still works)
-python test_systems.py
 ```
 
 ### Parameter Sweeps
 
 ```bash
 # Sweep a single parameter
-python sweep.py --param environment.harshness --values 0.5,1.0,1.5,2.0 --ticks 200
+python scripts/sweep.py --param environment.harshness --values 0.5,1.0,1.5,2.0 --ticks 200
 
 # Sweep a numeric range
-python sweep.py --param genetics.mutation_rate --range 0.05,0.3,0.05 --ticks 300
+python scripts/sweep.py --param genetics.mutation_rate --range 0.05,0.3,0.05 --ticks 300
 
 # Multiple repeats for statistical significance
-python sweep.py --param economy.trade_rate --values 0.0,0.1,0.2,0.3 --ticks 200 --repeats 5
+python scripts/sweep.py --param economy.trade_rate --values 0.0,0.1,0.2,0.3 --ticks 200 --repeats 5
 
 # Results saved to output/sweep_results.csv
 ```
@@ -276,9 +259,11 @@ The dashboard tracks the current era based on progress: Genesis, Dawn of Tribes,
                     ┌──────────────┼──────────────┐
                     │              │              │
               ┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼─────┐
-              │  SQLite DB │ │ Dashboard │ │    CLI    │
-              │Persistence │ │ Streamlit │ │  main.py  │
-              └───────────┘ └───────────┘ └───────────┘
+              │  SQLite DB │ │  gui/     │ │    CLI    │
+              │Persistence │ │ dashboard │ │  main.py  │
+              └───────────┘ │ backend   │ └───────────┘
+                            │ frontend  │
+                            └───────────┘
 ```
 
 **Data flow:** Config loads parameters → Engine runs 11 systems per tick in sequence → Each system reads/mutates shared agent state → TickResult aggregates stats → Persistence saves to SQLite → Dashboard/CLI display results.
@@ -599,7 +584,7 @@ Sources used to calibrate historically-researched era presets:
 - [x] Emotion-modified agency (`get_emotion_utility_modifiers` integrated into `compute_move` — fear → safety seeking, grief → paralysis, hope → exploration)
 - [x] Faction-specific cultural memory (each faction maintains independent knowledge pools with 1.5x contribution/absorption rates and 0.5x decay)
 - [x] Matrix cycle reset (awareness wipe, sentinel removal, partial cultural memory preservation at 70%, resource regeneration, war dissolution)
-- [x] Parameter sweep tooling (`sweep.py` — sweep any parameter with `--param`/`--values`/`--range`, outputs CSV with full stats)
+- [x] Parameter sweep tooling (`scripts/sweep.py` — sweep any parameter with `--param`/`--values`/`--range`, outputs CSV with full stats)
 - [x] Export simulation history to CSV/JSON (dashboard buttons + `db.export_run_csv()`/`db.export_run_json()`)
 - [x] Performance optimization (spatial indexing with `SpatialIndex` for O(1) neighbor lookups, dict-based bond decay — 447 agents at ~106ms/tick)
 

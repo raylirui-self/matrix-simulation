@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["src*", "backend*"]
+include = ["src*", "gui*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -26,7 +26,7 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 3. Install frontend dependencies:
    ```bash
-   cd frontend && npm install
+   cd gui/frontend && npm install
    ```
 
 4. Copy the environment template:
@@ -65,7 +65,7 @@ Open an issue describing the feature, its motivation, and how it fits the projec
 4. Ensure all checks pass:
    ```bash
    make test
-   ruff check src/ backend/ tests/
+   ruff check src/ gui/ tests/
    ```
 5. Submit a pull request
 
@@ -85,11 +85,12 @@ Open an issue describing the feature, its motivation, and how it fits the projec
 ## Project Structure
 
 - `src/` — Core simulation engine
-- `backend/` — FastAPI REST API
-- `frontend/` — SvelteKit web UI
+- `gui/backend/` — FastAPI REST API
+- `gui/frontend/` — SvelteKit web UI
+- `gui/dashboard/` — Streamlit dashboard
 - `config/` — YAML configuration and era presets
 - `tests/` — pytest test suite
-- `dashboard/` — Streamlit dashboard (legacy)
+- `scripts/` — Utility scripts (parameter sweep)
 
 ## License
 

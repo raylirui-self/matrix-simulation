@@ -6,7 +6,7 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from backend.api.state import manager
+from gui.backend.api.state import manager
 
 router = APIRouter(tags=["websocket"])
 

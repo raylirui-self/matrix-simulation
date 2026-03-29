@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.state import manager
+from gui.backend.api.state import manager
 
 router = APIRouter(prefix="/api/sim/{run_id}/world", tags=["world"])
 

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.api.state import manager
+from gui.backend.api.state import manager
 from src.agents import create_agent, Agent, Bond
 from src.engine import WorldEvent
 

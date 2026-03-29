@@ -12,25 +12,25 @@ import streamlit as st
 
 from src.agents import PHASES, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
 
-from dashboard.styles import MATRIX_CSS
-from dashboard.state import init_state, get_db, get_era
-from dashboard.controls import render_sidebar
-from dashboard.runner import run_ticks
-from dashboard.handlers import (
+from gui.dashboard.styles import MATRIX_CSS
+from gui.dashboard.state import init_state, get_db, get_era
+from gui.dashboard.controls import render_sidebar
+from gui.dashboard.runner import run_ticks
+from gui.dashboard.handlers import (
     handle_new_sim, handle_god_mode, handle_agent_actions,
     handle_cell_actions, handle_event_injection,
 )
-from dashboard.tabs.feed import render_feed_tab
-from dashboard.tabs.charts import render_charts_tab
-from dashboard.tabs.world import render_world_tab
-from dashboard.tabs.agents import render_agents_tab
-from dashboard.tabs.social import render_social_tab
-from dashboard.tabs.systems import (
+from gui.dashboard.tabs.feed import render_feed_tab
+from gui.dashboard.tabs.charts import render_charts_tab
+from gui.dashboard.tabs.world import render_world_tab
+from gui.dashboard.tabs.agents import render_agents_tab
+from gui.dashboard.tabs.social import render_social_tab
+from gui.dashboard.tabs.systems import (
     render_emotions_tab, render_factions_tab, render_economy_tab,
     render_matrix_tab, render_culture_tab,
 )
-from dashboard.tabs.content import render_events_tab, render_narratives_tab, render_protagonists_tab
-from dashboard.tabs.records import render_records_tab, render_compare_tab
+from gui.dashboard.tabs.content import render_events_tab, render_narratives_tab, render_protagonists_tab
+from gui.dashboard.tabs.records import render_records_tab, render_compare_tab
 
 
 def main():

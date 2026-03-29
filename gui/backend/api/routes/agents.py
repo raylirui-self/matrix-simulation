@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.api.state import manager
+from gui.backend.api.state import manager
 
 router = APIRouter(prefix="/api/sim/{run_id}/agents", tags=["agents"])
 

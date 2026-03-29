@@ -8,7 +8,7 @@ import streamlit as st
 from src.narrator import Narrator
 from src.agency import generate_protagonist_thought
 
-from dashboard.state import check_achievements, generate_drama
+from gui.dashboard.state import check_achievements, generate_drama
 
 
 def build_narrator(cfg, sidebar_state: dict) -> Narrator:

@@ -13,7 +13,7 @@ from src.engine import SimulationEngine, RunState, WorldEvent
 from src.world import ResourceGrid
 from src.persistence import SimulationDB
 
-from dashboard.state import get_db, get_cfg
+from gui.dashboard.state import get_db, get_cfg
 
 
 def render_sidebar(db: SimulationDB):

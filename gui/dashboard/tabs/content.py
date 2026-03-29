@@ -5,7 +5,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 from src.agents import SKILL_NAMES, EMOTION_NAMES
-from dashboard.state import generate_portrait_prompt
+from gui.dashboard.state import generate_portrait_prompt
 
 
 def render_events_tab():
