@@ -8,7 +8,7 @@ version = "2.0.0"
 description = "Agent-based civilization simulator with emergent societies, factions, and Matrix meta-layer"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 
 dependencies = [
     "pyyaml>=6.0,<7.0",

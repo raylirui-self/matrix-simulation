@@ -498,20 +498,116 @@ Projects and research that inform this simulation's design:
 | [**Project Sid**](https://github.com/altera-al/project-sid) (Altera AI, 2024) | 1,000+ LLM agents in Minecraft spontaneously developed government, economy, and religion | Emergent factions, belief systems, economy, social bonds | Full LLM (expensive), no generational dynamics, no Matrix meta-layer |
 | [**Generative Agents**](https://github.com/joonspk-research/generative_agents) (Stanford/Google, 2023) | 25 LLM agents in "Smallville" forming relationships and spreading information | Memory systems, social bonds, emergent behavior | No economy, factions, reproduction, or conflict. Full LLM for all agents |
 | **Sugarscape** (Epstein & Axtell, 1996) | The foundational ABM: grid resources, trade, reproduction, cultural transmission | Grid-based resources, wealth inequality, cultural zones, combat | Much simpler agents, no emotions/beliefs/LLM/Matrix layer |
+| [**AgentSociety**](https://github.com/tsinghua-fib-lab/AgentSociety) (Tsinghua, 2025) | 10,000+ LLM agents simulating employment, consumption, and social interactions; reproduces polarization and UBI effects | Large-scale social simulation with emergent macro phenomena from agent interactions | Urban social science focus, no civilization-building or awareness mechanics |
+| [**Concordia**](https://github.com/google-deepmind/concordia) (Google DeepMind, 2023) | Library for generative agent-based modeling; agents interact in natural language to study cooperation and social dilemmas | LLM agents in social dilemma scenarios; cooperation/competition emergence | Research framework focused on cooperation, not full civilization |
+| [**OASIS**](https://github.com/camel-ai/oasis) (CAMEL-AI, 2024) | Social media simulator supporting up to 1 million LLM agents; simulates X/Reddit dynamics | Massive-scale LLM agent simulation with social dynamics | Social media platform simulation, not civilization |
+| [**AI Town**](https://github.com/a16z-infra/ai-town) (a16z, 2023) | Deployable virtual town where LLM characters live, chat, and socialize; inspired by Generative Agents | LLM agents with memory in a virtual social environment | Tech demo / starter kit; no economy, conflict, or generational dynamics |
+| [**Sotopia**](https://sotopia.world/) (CMU, 2023) | Open-ended environment with 90 social scenarios and 40 characters for evaluating LLM social intelligence | Social interaction evaluation; agents with personalities, secrets, relationships | Evaluation benchmark, not continuous simulation |
 
-### Games & Simulations
+### Classic Simulation & God Games
 
-| Project | Relevance |
-|---------|-----------|
-| [**Dwarf Fortress**](https://www.bay12games.com/dwarves/) | Per-dwarf personality, emotions, social bonds, faction warfare, resource economy. Their thought/emotion system parallels our System 6 |
-| [**WorldBox**](https://www.superworldbox.com/) | God-sim with emergent civilizations, wars, and tech progression. The "watch and intervene" model parallels our God Mode |
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**SimCity**](https://www.ea.com/games/simcity) (Maxis) | 1989 | Emergent urban dynamics (traffic, crime, economics) from zoning and infrastructure. Inspired the entire simulation game genre. Top-down urban planning, no individual agent cognition |
+| **Populous** (Bullfrog) | 1989 | The first god game — indirect control of autonomous worshippers via terrain manipulation and divine acts. Parallels our God Mode |
+| [**Civilization**](https://civilization.2k.com/) (Firaxis) | 1991+ | Full civilization arc with tech trees, diplomacy, warfare, and culture across historical eras. Player-directed strategy, not autonomous agents |
+| **SimEarth** (Maxis) | 1990 | Planetary simulation based on Gaia hypothesis — climate, tectonics, and evolution of life. Macro-scale, no individual agents |
+| [**Black & White**](https://en.wikipedia.org/wiki/Black_%26_White_(video_game)) (Lionhead) | 2001 | God game with a learning AI creature that develops morality from player reinforcement. Parallels our belief evolution |
+| [**Spore**](https://www.spore.com/) (Maxis) | 2008 | Multi-scale evolution from cell to space civilization. Player-directed, each stage is a different genre |
+| **From Dust** (Ubisoft) | 2011 | Advanced terrain/fluid simulation; guide nomadic tribe by reshaping the environment. Environmental physics focus |
+| [**The Universim**](https://crytivo.com/the-universim) (Crytivo) | 2014+ | God game guiding civilization from Stone Age to Space Age on procedural planets. Player-directed progression |
 
-### Frameworks
+### Life Simulation & Artificial Life
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**Creatures**](https://en.wikipedia.org/wiki/Creatures_(video_game_series)) (Cyberlife) | 1996 | Neural-network-brained creatures that learn, evolve genetically, and exhibit emergent behavior. Pioneered bottom-up emergent intelligence |
+| [**The Sims**](https://www.ea.com/games/the-sims) (Maxis) | 2000+ | Maslow-based needs hierarchy, social bonds, emergent stories from autonomous behavior. Household-scale, not society-scale |
+| **Conway's Game of Life** | 1970 | Zero-player cellular automaton — the foundational example of emergence from simple rules. No agents or social dynamics |
+| [**Tierra**](https://en.wikipedia.org/wiki/Tierra_(computer_simulation)) (Thomas Ray) | 1991 | Self-replicating programs competing in a digital ecology; parasites and symbiotes emerge. No social/cognitive layer |
+| [**Avida**](https://avida.devosoft.org/) (Michigan State) | 2003 | Digital evolution platform where programs evolve and compete on a lattice. Pure evolution research |
+| [**Lenia**](https://chakazul.github.io/lenia.html) (Bert Chan) | 2015 | Continuous Game of Life generalization with 400+ emergent species. Mathematical/artistic, no cognition |
+| [**The Bibites**](https://leocaussan.itch.io/the-bibites) | 2021 | Neural-network virtual creatures evolving via mutation and natural selection. Individual organism focus |
+
+### Colony & Society Simulations
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**Dwarf Fortress**](https://www.bay12games.com/dwarves/) | 2006+ | Per-dwarf personality, emotions, social bonds, faction warfare, resource economy. Their thought/emotion system parallels our System 6 |
+| [**WorldBox**](https://www.superworldbox.com/) | 2018+ | God-sim with emergent civilizations, wars, and tech progression. The "watch and intervene" model parallels our God Mode |
+| [**RimWorld**](https://rimworldgame.com/) | 2018 | AI Storyteller system (Cassandra/Phoebe/Randy) generating emergent narratives from colonist personalities, emotions, and social bonds. Strong design parallel for narrative pacing |
+| [**Kenshi**](https://lofigames.com/) | 2018 | Open-world sandbox where factions war, migrate, and react dynamically without player centrality. No reproduction or generational dynamics |
+| [**Frostpunk**](https://frostpunkgame.com/) | 2018 | City-survival with moral dilemmas; hope/discontent mechanics parallel our emotion systems. Player-directed policy |
+| [**Oxygen Not Included**](https://www.klei.com/games/oxygen-not-included) | 2019 | Colony survival with detailed resource cycles and duplicant needs. Physics/engineering focus, no social bonds or beliefs |
+| [**Songs of Syx**](https://songsofsyx.com/) | 2020+ | Massive-scale colony sim with thousands of citizens, complex economy, social classes. Player-directed management |
+| **Banished** (Shining Rock) | 2014 | Settlement survival with population dynamics. No individual agent personality |
+| [**Manor Lords**](https://www.manorlords.com/) | 2024 | Medieval city-builder with agent-based citizen simulation. Building/RTS hybrid |
+| [**Prison Architect**](https://www.paradoxinteractive.com/games/prison-architect) | 2015 | Agent needs system driving emergent collective behavior (riots, escapes). Institutional management |
+| [**Cities: Skylines II**](https://www.paradoxinteractive.com/games/cities-skylines-ii) | 2023 | 100,000+ individual citizens with unique pathfinding, careers, and social relationships. Urban planning focus |
+
+### Grand Strategy & Emergent History
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**Crusader Kings 3**](https://www.crusaderkings.com/) | 2020 | Dynasty simulation with per-character traits, relationships, schemes, and emergent political narratives across generations. Player controls one dynasty |
+| [**Victoria 3**](https://www.paradoxinteractive.com/games/victoria-3) | 2022 | Population groups (Pops) with political leanings, economic roles, and social movements. Macro-scale nation management |
+| **Humankind** (Amplitude) | 2021 | 4X strategy combining 60 historical cultures across eras. Turn-based, not agent-based |
+| **Mount & Blade II: Bannerlord** | 2022 | Dynamic factions, economy, NPC agency in a living political world. Action-RPG hybrid |
+
+### Procedural History & Worldbuilding
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**Caves of Qud**](https://www.cavesofqud.com/) | 2015+ | Procedural civilization generation with religions, art styles, languages, and mythic biographies. Player explores, doesn't simulate |
+| [**Ultima Ratio Regum**](https://www.ultimaratioregum.co.uk/) | 2012+ | Procedural civilizations with religions, ideologies, art, and political systems. Academic art project |
+| [**Galimulator**](https://snoddasmannen.itch.io/galimulator) | 2017 | Galactic empire rise/fall simulation with wars, dynasties, and revolutions. Abstracted agents at galactic scale |
+| [**Screeps**](https://screeps.com/) | 2016 | MMO where players write JavaScript to control autonomous colony agents 24/7 in a persistent world. Player writes the AI |
+
+### Multi-Agent LLM Frameworks
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**AgentVerse**](https://github.com/OpenBMB/AgentVerse) (Tsinghua) | 2023 | Multi-agent framework for orchestrating LLM agents; supports task-solving and simulation |
+| [**AutoGen**](https://github.com/microsoft/autogen) (Microsoft) | 2023 | Multi-agent conversation framework for complex problem-solving |
+| [**MetaGPT**](https://github.com/geekan/MetaGPT) (DeepWisdom) | 2023 | Multi-agent framework assigning SOPs and roles to LLM agents |
+| [**CrewAI**](https://github.com/crewAIInc/crewAI) | 2023 | Teams of LLM agents with roles handling workflows |
+| [**Voyager**](https://voyager.minedojo.org/) (NVIDIA) | 2023 | First LLM-powered lifelong learning agent in Minecraft; continuous skill acquisition. Single agent |
+| [**MineLand**](https://github.com/cocacola-lab/MineLand) | 2024 | Multi-agent Minecraft simulator supporting 48 agents with physical needs and limited senses |
+
+### Emergent Behavior Research
+
+| Project | Year | Relevance |
+|---------|------|-----------|
+| [**OpenAI Hide-and-Seek**](https://openai.com/index/emergent-tool-use/) | 2019 | Multi-agent RL agents discover 6 emergent strategies including tool use from simple competitive rules |
+| [**Melting Pot**](https://github.com/google-deepmind/meltingpot) (DeepMind) | 2021 | Multi-agent RL environment for studying social dilemmas with up to 16 players |
+| [**Facade**](https://www.interactivestory.net/) (Mateas & Stern) | 2005 | First interactive drama with believable AI characters using natural language. Two-character drama |
+
+### ABM Frameworks
 
 | Framework | Relevance |
 |-----------|-----------|
 | [**Mesa**](https://github.com/projectmesa/mesa) (Python) | Standard Python ABM framework. Our engine builds equivalent functionality with domain-specific extensions |
 | [**MASON**](https://github.com/eclab/mason) (Java) | High-performance ABM toolkit. Relevant for spatial indexing if scaling beyond 8x8 |
+| [**NetLogo**](https://ccl.northwestern.edu/netlogo/) | Visual ABM environment widely used in education and research |
+| [**Repast**](https://repast.github.io/) (Argonne National Lab) | Mature Java/Python ABM platform for large-scale social/organizational simulation |
+| [**GAMA**](https://gama-platform.org/) | GIS-integrated ABM platform for spatially explicit agent simulations |
+| [**FLAME GPU**](https://flamegpu.com/) (U. Sheffield) | GPU-accelerated ABM framework supporting billions of agents |
+| [**Agents.jl**](https://juliadynamics.github.io/Agents.jl/stable/) | Julia-based ABM framework with strong performance |
+| [**krABMaga**](https://krabmaga.github.io/) | Rust-based ABM framework outperforming Mesa, NetLogo, and MASON in benchmarks |
+| [**PettingZoo**](https://pettingzoo.farama.org/) (Farama) | Standard API for multi-agent reinforcement learning environments |
+| [**AnyLogic**](https://www.anylogic.com/) | Commercial multi-paradigm simulation (ABM + system dynamics + discrete events) |
+
+### Foundational Academic Models
+
+| Reference | Year | Relevance |
+|-----------|------|-----------|
+| **Schelling's Segregation Model** | 1971 | Mild individual preferences create extreme macro-level segregation — foundational emergence demonstration |
+| **Axelrod's Cooperation Tournament** | 1984 | Iterated Prisoner's Dilemma showing how cooperation emerges among self-interested agents |
+| **El Farol Bar Problem** (W. Brian Arthur) | 1994 | Bounded rationality and emergent coordination without central control |
+| **Santa Fe Artificial Stock Market** | 1994 | Agent-based stock market with evolutionary trading strategies — emergent economic dynamics |
+| **Artificial Anasazi Model** (Axtell et al.) | 2002 | ABM reconstruction of Anasazi civilization collapse using archaeological data |
+| **Cliodynamics** (Peter Turchin) | 2003+ | Mathematical models finding patterns in historical data to predict political instability — inspired by Asimov's psychohistory |
+| [**JASSS**](https://www.jasss.org/) | 1998+ | *Journal of Artificial Societies and Social Simulation* — the primary academic journal for social simulation research |
 
 ### Philosophical Foundation
 
@@ -519,6 +615,13 @@ Projects and research that inform this simulation's design:
 |-----------|-----------|
 | [**Bostrom's Simulation Argument**](https://www.simulation-argument.com/) (2003) | The theoretical basis for our Matrix meta-layer: what would it mean for simulated entities to discover their reality? |
 | **"Growing Artificial Societies"** (Epstein & Axtell, 1996) | The book that established agent-based social simulation. Our project can be positioned as "Sugarscape extended with belief dynamics, LLM narration, and simulation-awareness mechanics" |
+
+### Interactive Explorations
+
+| Project | Relevance |
+|---------|-----------|
+| [**Parable of the Polygons**](https://ncase.me/polygons/) (Vi Hart & Nicky Case, 2014) | Interactive visualization of Schelling's segregation model — emergence from individual bias |
+| [**The Evolution of Trust**](https://ncase.me/trust/) (Nicky Case, 2017) | Interactive game theory exploration of cooperation/defection dynamics |
 
 ### Academic References for Era Parameters
 
@@ -553,19 +656,21 @@ Sources used to calibrate historically-researched era presets:
 
 ### Feature Comparison
 
-| Feature | Cognitive Matrix | Generative Agents | Sugarscape | Dwarf Fortress | Project Sid |
-|---------|-----------------|-------------------|------------|----------------|-------------|
-| Agent count | ~50-500 | 25 | 100s | 100s | 1000+ |
-| LLM integration | Hybrid (protagonists) | Full (all agents) | None | None | Full (all agents) |
-| Social bonds | 8-slot Dunbar | Relationships | No | Detailed | Emergent |
-| Belief/ideology | 4-axis + factions | No | Binary tags | Values system | Emergent |
-| Economy | Trade + Gini | No | Sugar/spice | Detailed | Emergent |
-| Generational | Reproduction + cultural memory | No | Yes | Yes | No |
-| Emotions | 5 emotions + trauma + contagion | No | No | Yes (detailed) | No |
-| Conflict/warfare | Faction wars | No | Basic | Detailed | Minimal |
-| **Matrix meta-layer** | **Yes (unique)** | No | No | No | No |
+| Feature | Cognitive Matrix | Generative Agents | Sugarscape | Dwarf Fortress | Project Sid | RimWorld | CK3 | The Sims | AgentSociety |
+|---------|-----------------|-------------------|------------|----------------|-------------|----------|-----|----------|--------------|
+| Agent count | ~50-500 | 25 | 100s | 100s | 1000+ | 3-20 | 1000s | 1-8 households | 10,000+ |
+| LLM integration | Hybrid (protagonists) | Full (all agents) | None | None | Full (all agents) | None | None | None | Full (all agents) |
+| Social bonds | 8-slot Dunbar | Relationships | No | Detailed | Emergent | Detailed | Dynasty | Relationships | Emergent |
+| Belief/ideology | 4-axis + factions | No | Binary tags | Values system | Emergent | Ideoligion (DLC) | Religion + culture | No | Emergent |
+| Economy | Trade + Gini | No | Sugar/spice | Detailed | Emergent | Colony-level | National | Household | Employment + consumption |
+| Generational | Reproduction + cultural memory | No | Yes | Yes | No | No | Yes (core mechanic) | Expansion DLC | No |
+| Emotions | 5 emotions + trauma + contagion | No | No | Yes (detailed) | No | Mood system | Stress | Moodlets | No |
+| Conflict/warfare | Faction wars | No | Basic | Detailed | Minimal | Raids + melee | Wars + schemes | No | No |
+| AI narrative | LLM narrator | LLM dialogue | No | Legends mode | LLM dialogue | AI Storyteller | Event system | No | LLM interactions |
+| Emergent autonomy | Full (observe) | Full (observe) | Full | Partial (manage) | Full (observe) | Partial (manage) | Partial (play as ruler) | Partial (direct) | Full (observe) |
+| **Matrix meta-layer** | **Yes (unique)** | No | No | No | No | No | No | No | No |
 
-**Our differentiator**: The Matrix meta-layer — where agents can discover they're simulated and the system actively fights to maintain control — is genuinely novel across this landscape.
+**Our differentiator**: The Matrix meta-layer — where agents can discover they're simulated and the system actively fights to maintain control — is genuinely novel across the entire landscape. No other project in this survey — academic, commercial, or indie — implements simulation-awareness as a core mechanic.
 
 ---
 
