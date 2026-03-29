@@ -6,33 +6,29 @@ Systems 6-11: New (Emotions, Beliefs, Economy, Matrix, Conflict, Communication)
 """
 from __future__ import annotations
 
-import json
-import random
 from dataclasses import dataclass, field
 from typing import Optional
 
 from src.config_loader import SimConfig
 from src.agents import (
-    Agent, SKILL_NAMES, PHASES, create_agent, create_offspring,
-    set_id_counter, get_id_counter,
+    Agent, SKILL_NAMES, PHASES, create_agent,
 )
 from src.world import ResourceGrid, TechBreakthrough
 from src.knowledge import CulturalMemory, parent_teaching, social_transfer_multiplier
 from src.social import process_bonds
 from src.mate_selection import process_reproduction
-from src.agency import compute_move, auto_select_protagonists, generate_protagonist_thought, build_spatial_index
+from src.agency import compute_move, auto_select_protagonists, build_spatial_index
 from src.emotions import (
     process_emotions, on_agent_death_emotions, on_birth_emotions,
-    on_breakthrough_emotions, get_emotion_utility_modifiers,
+    on_breakthrough_emotions,
 )
 from src.beliefs import (
     Faction, process_beliefs, get_faction_bonuses,
-    set_faction_id_counter, get_faction_id_counter,
 )
 from src.economy import process_economy, process_inheritance
 from src.matrix_layer import MatrixState, process_matrix, check_cycle_reset
 from src.conflict import FactionWar, process_conflict
-from src.communication import InfoObject, process_communication, set_info_id_counter, get_info_id_counter
+from src.communication import InfoObject, process_communication
 
 
 @dataclass

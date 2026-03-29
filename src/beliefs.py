@@ -12,7 +12,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 
-from src.agents import Agent, Bond, BELIEF_AXES
+from src.agents import Agent, BELIEF_AXES
 
 
 def spatial_distance(a: Agent, b: Agent) -> float:

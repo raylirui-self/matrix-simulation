@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Optional
-
 from src.agents import Agent, Bond
 
 
@@ -170,7 +168,6 @@ def process_economy(agents: list[Agent], tick: int, cfg, world) -> dict:
     # ── Phase 5: Faction taxation & redistribution ──
     tax_rate = econ_cfg.faction_tax_rate
     if tax_rate > 0:
-        from src.beliefs import Faction  # avoid circular at module level
         faction_pools = {}  # faction_id → collected tax
 
         for a in alive:

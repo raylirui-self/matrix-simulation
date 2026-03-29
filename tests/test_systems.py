@@ -8,7 +8,6 @@ import random
 from src.agents import create_agent, create_offspring, Agent, Bond, Traits, EMOTION_NAMES, BELIEF_AXES
 from src.beliefs import process_beliefs, belief_similarity, Faction
 from src.communication import process_communication, InfoObject
-from src.config_loader import SimConfig
 from src.conflict import process_conflict, FactionWar
 from src.economy import process_economy, process_inheritance
 from src.emotions import process_emotions, on_agent_death_emotions, get_emotion_utility_modifiers
@@ -23,7 +22,7 @@ from src.world import ResourceGrid
 # ===================================================
 
 def test_config_load_default(cfg):
-    assert cfg.population.initial_size == 40
+    assert cfg.population.initial_size == 50
     assert cfg.environment.harshness == 1.0
 
 
@@ -34,7 +33,7 @@ def test_config_new_system_configs_exist(cfg):
     assert hasattr(cfg, 'matrix'), "Missing matrix config"
     assert hasattr(cfg, 'conflict'), "Missing conflict config"
     assert hasattr(cfg, 'communication'), "Missing communication config"
-    assert cfg.emotions.decay_rate == 0.05
+    assert cfg.emotions.decay_rate == 0.10
     assert cfg.matrix.max_sentinels == 5
 
 

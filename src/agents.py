@@ -276,7 +276,6 @@ class Agent:
         }
         for m in old_memories:
             evt = m.get("event", "").lower()
-            tick = m.get("tick", 0)
             text = m.get("event", "")
             if any(k in evt for k in ["bond", "mate", "friend", "rival"]):
                 categories["bonds"].append(text)

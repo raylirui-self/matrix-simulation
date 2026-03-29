@@ -15,7 +15,7 @@
 	function scrollToBottom() {
 		if (scrollEl) {
 			requestAnimationFrame(() => {
-				scrollEl.scrollTop = scrollEl.scrollHeight;
+				scrollEl!.scrollTop = scrollEl!.scrollHeight;
 			});
 		}
 	}

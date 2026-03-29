@@ -6,14 +6,14 @@ from __future__ import annotations
 import logging
 import math
 import random
+from collections import defaultdict
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
 from src.agents import Agent
-from src.world import ResourceGrid
 from src.emotions import get_emotion_utility_modifiers
-from collections import defaultdict
+from src.world import ResourceGrid
+
+logger = logging.getLogger(__name__)
 
 
 class SpatialIndex:
@@ -259,7 +259,6 @@ def _fallback_thought(agent: Agent, grid: ResourceGrid,
     paragraphs = []
 
     # === Opening: emotional state + situation awareness ===
-    name = agent.protagonist_name or f"Agent #{agent.id}"
     terrain_desc = {"plains": "open grasslands", "forest": "dense forest", "mountains": "rocky highlands", "coast": "the shoreline"}.get(cell.terrain, "this place")
 
     if agent.health < 0.2:
@@ -333,12 +332,11 @@ def _fallback_thought(agent: Agent, grid: ResourceGrid,
         ]))
 
     if nearby:
-        friends_near = [n for n in nearby if agent.has_bond_with(n.id)]
         strangers_near = [n for n in nearby if not agent.has_bond_with(n.id)]
         if strangers_near and len(strangers_near) > 3:
             paragraphs.append(f"This area is getting crowded. {len(strangers_near)} strangers within reach. Resources don't stretch forever — someone will have to move. I hope it's not me.")
         elif strangers_near and agent.traits.sociability > 0.5:
-            paragraphs.append(f"New faces nearby. Part of me wants to reach out. A bond with the right agent could change everything. But trust is expensive, and betrayal costs more.")
+            paragraphs.append("New faces nearby. Part of me wants to reach out. A bond with the right agent could change everything. But trust is expensive, and betrayal costs more.")
 
     # === Children / legacy ===
     if child_count > 3:
@@ -364,7 +362,7 @@ def _fallback_thought(agent: Agent, grid: ResourceGrid,
     if agent.phase == "elder":
         paragraphs.append(_rng.choice([
             f"I feel the weight of {agent.age} cycles in every joint, every slow step. The young ones move so fast, so certain of themselves. I was like that once. Now I carry something they don't have yet: the memory of everything that went wrong, and the wisdom of having survived it.",
-            f"My time is running out — I can feel it the way you feel a storm approaching. Not with fear, exactly, but with a strange clarity. Everything matters more when you know it's ending. Every sunset. Every conversation. Every breath.",
+            "My time is running out — I can feel it the way you feel a storm approaching. Not with fear, exactly, but with a strange clarity. Everything matters more when you know it's ending. Every sunset. Every conversation. Every breath.",
         ]))
     elif agent.phase == "adolescent":
         paragraphs.append(_rng.choice([
@@ -425,7 +423,6 @@ def generate_protagonist_thought(agent: Agent, grid: ResourceGrid,
     dom_emo = agent.dominant_emotion or "neutral"
     mate_bonds = [b for b in agent.bonds if b.bond_type == "mate"]
     rival_bonds = [b for b in agent.bonds if b.bond_type == "rival"]
-    top_skill = max(agent.skills, key=agent.skills.get) if agent.skills else "survival"
     memory_context = agent.get_memory_context(recent_count=8)
 
     # Try LLM first (skipped during batch runs for performance)
@@ -513,8 +510,8 @@ Respond in JSON: {{"thought": "your inner monologue here", "priority": "survive|
                 # No valid JSON — use cleaned text directly
                 # Strip any remaining analysis/reasoning prefixes
                 lines = text.split("\n")
-                clean_lines = [l for l in lines if not any(
-                    l.strip().startswith(p) for p in
+                clean_lines = [line for line in lines if not any(
+                    line.strip().startswith(p) for p in
                     ["*", "Analyze", "Role:", "Context:", "Personality:", "Emotional",
                      "Skills:", "Stats:", "Relationship", "Location:", "PERSONALITY",
                      "SKILLS", "LOCATION", "RELATIONSHIPS", "RECENT"]

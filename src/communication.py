@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
-from src.agents import Agent, SKILL_NAMES
+from src.agents import Agent
 
 
 @dataclass

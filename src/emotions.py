@@ -7,8 +7,6 @@ In human terms: emotions drive irrational behavior that shapes civilizations.
 from __future__ import annotations
 
 import math
-import random
-from typing import Optional
 
 from src.agents import Agent, EMOTION_NAMES
 
