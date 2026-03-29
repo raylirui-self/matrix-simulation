@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output (keep folder, ignore generated files)
+output/*.db
+output/*.db-shm
+output/*.db-wal
+output/*.json
+output/*.csv
+output/export_*/
+output/portraits/
+output/era_landscapes/
+!output/.gitkeep
+
+# Node
+node_modules/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Claude AI workspace
+.claude/

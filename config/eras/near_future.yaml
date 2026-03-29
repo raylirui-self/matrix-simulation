@@ -1,0 +1,232 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Near-Future
+# ═══════════════════════════════════════════════════════════════
+
+name: "Near-Future"
+description: "Hyper-connected dystopia — AI acceleration, digital tribalism, and existential questioning"
+time_period: "~2040"
+region: "Global megacity archetype (East Asian / Western hybrid)"
+historical_context: |
+  A speculative but grounded extrapolation of current trends. AI has
+  automated most routine work, concentrating wealth among capital owners
+  (Acemoglu & Restrepo 2020 projected). Remote work and digital
+  interaction have further atomized physical communities. Social media
+  has Balkanized belief systems into echo chambers — everyone has access
+  to information but consensus reality has fractured. UBI or equivalent
+  programs provide subsistence but not meaning. Mental health crises are
+  widespread — loneliness, purposelessness, and simulation-theory discourse
+  have gone mainstream. Technology provides comfort but also a pervasive
+  sense that reality itself might be constructed. Gene editing, brain-
+  computer interfaces, and AI companions blur the line between natural
+  and artificial. This is the era where the Matrix's façade would be
+  hardest to maintain — too many people are already asking the question.
+
+# ── Population ──
+population:
+  initial_size: 100            # dense urban living — high starting density
+  max_size: 500                # default — megacity scale abstracted
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 90             # medical advances extend lifespan (Oeppen & Vaupel 2002 trend)
+  max_age_variance: 10         # low variance — precision medicine smooths outcomes
+  base_health_decay: 0.001     # slowest decay — advanced medicine, biotech
+  elder_decay_multiplier: 1.5  # anti-aging treatments reduce elder vulnerability
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.10          # large populations + genetic screening reduce drift
+  trait_blend_noise: 0.03      # gene editing may reduce phenotypic randomness
+
+# ── Skills ──
+skills:
+  learning_multiplier: 1.8     # AI tutors, VR training, neural interfaces — learning is fast
+  phase_growth_multipliers:
+    infant: 0.4                # stimulation-rich environments from birth
+    child: 2.0                 # AI-personalized education — far beyond 1980s schooling
+    adolescent: 1.5            # deep specialization earlier, AI-augmented
+    adult: 1.0                 # lifelong learning normalized — career shifts common
+    elder: 0.5                 # cognitive augmentation keeps elders learning
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 5             # fewer deep bonds — digital connections replace depth (Dunbar 2020)
+  friend_formation_distance: 0.20  # digital bridges mean distance matters less
+  friend_min_sociability: 0.55     # hard to form bonds — social anxiety epidemic
+  friend_ticks_to_form: 10         # slow — trust is harder in low-trust society
+  decay_rates:
+    friend: 0.015              # friendships are transient — people ghost, move on
+    rival: 0.010               # rivalries are digital and ephemeral
+    mate: 0.012                # relationships are fluid — serial monogamy / poly norms
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 28                  # delayed partnership — extended adolescence, career focus
+  max_age: 55                  # extended fertility via IVF and biotech
+  min_health: 0.25             # medical support compensates — low physical bar
+  search_radius: 0.40          # widest search — dating apps, global connectivity
+  top_n_stochastic: 4          # more options than ever (paradox of choice)
+  base_reproduction_chance: 0.03  # very low fertility — below replacement (TFR ~1.2 projected)
+  weights:
+    competition: 0.15          # physical fitness least important ever
+    compatibility: 0.45        # algorithm-matched compatibility dominates
+    proximity: 0.05            # almost irrelevant — digital-first relationships
+    bond: 0.35                 # emotional connection valued highly in loneliness epidemic
+  fitness_weights:
+    resilience: 0.10           # barely matters — environment is safe
+    intelligence: 0.40         # intelligence is the primary status signal
+    health: 0.10               # medicine compensates
+    avg_skill: 0.40            # skill/creativity is the currency of relevance
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.08     # parents physically present less — remote work but also digital distraction
+    top_skills_taught: 1       # parents teach values/social; AI teaches skills
+    transfer_rate: 0.05        # low parental transfer — AI tutors do the teaching
+  cultural_memory:
+    floor_cap: 0.75            # digital archives preserve nearly everything
+    decay_rate: 0.0001         # near-zero decay — everything is recorded and indexed
+    contribution_on_death: 0.08  # digital legacy — every person's work is preserved
+    pool_absorption_rate: 0.005  # rapid absorption — AI-curated learning paths
+  social_amplifier:
+    social_skill_bonus: 0.3    # social learning diminished — AI replaces human mentors
+    network_bonus_per_friend: 0.03  # weak ties are many but shallow
+    network_bonus_cap: 0.15    # network effects capped — information overload
+
+# ── Environment & Resources ──
+environment:
+  harshness: 0.3               # technology buffers almost all environmental challenges
+  regeneration_rate: 0.015     # climate damage + resource depletion slows regeneration
+  base_carrying_capacity: 50   # high capacity — vertical farming, synthetic food, fusion energy
+  terrain_weights:
+    plains: 0.55               # urbanized flatlands dominate
+    forest: 0.10               # reduced — deforestation + urban sprawl
+    mountains: 0.05            # marginal
+    coast: 0.30                # coastal megacities despite rising seas
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.15        # resources abundant — not a primary driver
+    social_pull: 0.30          # loneliness epidemic drives social seeking (Murthy 2023)
+    curiosity_pull: 0.30       # exploration and novelty-seeking are primary motivators
+    safety_penalty: 0.05       # very safe environment — minimal physical threats
+    inertia: 0.20              # digital routines create high inertia — comfortable paralysis
+  movement_speed: 0.02         # physically sedentary — digital nomads move virtually
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.07             # fast emotional cycling — dopamine loops, media-accelerated
+  contagion_radius: 0.20       # digital amplification — emotions spread wide
+  contagion_rate: 0.04         # viral emotional contagion — outrage cycles (Brady et al. 2021)
+  grief_on_bond_death: 0.25    # grief is real but muted — fewer deep bonds, death is rare
+  trauma_heal_rate: 0.005      # good therapy access — but also constant re-traumatization via media
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.012   # beliefs shift fast — constant info exposure
+  transmission_rate: 0.03        # moderate — echo chambers amplify within group
+  transmission_noise: 0.05       # high noise — misinformation, deepfakes, AI-generated content
+  faction_formation_similarity: 0.50  # factions form easily — digital tribalism (Bail 2021)
+  faction_formation_radius: 0.30      # wide — digital connections bridge distance
+  min_faction_size: 3                 # micro-factions viable — niche online communities
+  faction_check_interval: 10          # rapid faction dynamics — trends shift fast
+  faction_leave_threshold: 1.2        # easy to leave — just unsubscribe
+  prophet_extremism_threshold: 0.55   # influencers become prophets easily — low bar
+  prophet_charisma_threshold: 0.50    # viral charisma matters — TikTok prophets
+  schism_check_interval: 50           # frequent schisms — cancel culture, ideological splits
+  schism_variance_threshold: 0.35     # groups splinter readily — purity spirals
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.10            # highly productive economy — AI-augmented
+  wealth_decay: 0.008          # durable digital assets, low consumption needs (UBI covers basics)
+  trade_radius: 0.25           # global digital trade
+  trade_rate: 0.20             # active platform economy
+  theft_aggression_threshold: 0.6  # physical theft rare — cybercrime exists but different
+  faction_tax_rate: 0.04       # higher redistribution — UBI, platform fees
+  inheritance_rate: 0.80       # high inheritance — wealth dynasties entrenched
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0012     # high — simulation theory is mainstream discourse
+  trauma_awareness_boost: 0.005     # existential crises drive awareness rapidly
+  awareness_contagion_radius: 0.20  # digital spread — awareness goes viral
+  awareness_transfer_rate: 0.02     # fast transfer — forums, podcasts, AI-generated proofs
+  glitch_probability: 0.04          # frequent glitches — deepfakes, VR artifacts, AI hallucinations blur reality
+  glitch_awareness_boost: 0.08      # glitches are taken seriously — "we might be in a simulation"
+  redpill_threshold: 0.35           # low bar — many already half-believe it
+  sentinel_deploy_threshold: 0.5    # system deploys early — awareness threatens control
+  sentinel_suppress_power: 0.03     # weaker suppression — too many channels to control
+  max_sentinels: 8                  # more sentinels needed — fighting on many fronts
+  comfort_injection_interval: 15    # constant comfort — dopamine drip of entertainment
+  max_ticks_per_cycle: 4000         # shorter cycles — system destabilizes faster
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.7   # physical violence rare — high social taboo
+  combat_radius: 0.04               # very close range — physical confrontation unusual
+  combat_damage: 0.04               # low lethality — modern trauma care, physical combat rare
+  war_check_interval: 50            # organized physical war is rare
+  war_threshold: 0.8                # very high bar for kinetic conflict
+  war_ideology_weight: 0.6          # info wars dominate — ideological conflict is primary
+  war_rivalry_weight: 0.2           # faction rivalry is digital
+  war_territory_weight: 0.2         # physical territory matters less
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 3          # constant content creation — everyone is a broadcaster
+  transmission_radius: 0.30          # global reach — digital amplification
+  transmission_rate: 0.5             # viral spread — algorithm-boosted
+  mutation_rate: 0.20                # high mutation — AI remixing, memes, deepfakes
+  knowledge_skill_boost: 0.002       # higher boost — info is more actionable with AI tools
+  system_narrative_interval: 10      # constant system narrative — algorithmic feeds, ads, nudges
+  info_lifetime: 800                 # digital persistence — but attention span means effective life is shorter
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture
+  - mining
+  - trade_networks
+  - industrialization
+  # Note: future eras could add AI, biotech, fusion — requires engine extension
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: 0.6, std: 0.30 }    # hyper-individualist but with collectivist counter-movements
+  tradition:     { mean: -0.3, std: 0.40 }    # progressive default but with strong traditionalist backlash
+  system_trust:  { mean: -0.2, std: 0.40 }    # widespread distrust — institutional credibility collapsed
+  spirituality:  { mean: 0.1, std: 0.45 }     # polarized — secular majority but spiritual seekers rising
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A gleaming megacity of glass towers and holographic advertisements.
+    Autonomous vehicles glide silently. Everyone wears AR glasses or neural
+    interfaces. The physical world is beautiful but strangely empty of
+    human connection — people walk alone, conversing with invisible AIs.
+    Underground, in analog spaces without cameras, the whisper network
+    grows: something about this world doesn't add up.
+  vocabulary:
+    - neural link
+    - algorithm
+    - feed
+    - UBI
+    - content creator
+    - echo chamber
+    - deepfake
+    - AR overlay
+    - digital nomad
+    - platform
+    - viral
+    - disconnected
+  themes:
+    - the paradox of connection without intimacy
+    - abundance that fails to satisfy
+    - the blurring line between real and simulated
+    - AI as both liberator and jailer
+    - the loneliness epidemic beneath digital abundance
+    - simulation theory as the era's defining philosophical question

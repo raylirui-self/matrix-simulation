@@ -1,0 +1,26 @@
+description: "Brutal environment — only the strongest survive"
+population:
+  max_size: 120                     # hard cap — resources can't sustain large populations
+environment:
+  harshness: 2.5
+  regeneration_rate: 0.005
+  base_carrying_capacity: 12       # fewer agents per cell before pressure
+lifecycle:
+  base_health_decay: 0.004         # faster health decline (2x default)
+  elder_decay_multiplier: 3.5      # elders die much faster
+mate_selection:
+  base_reproduction_chance: 0.04   # harder to reproduce (half default)
+  min_health: 0.6                  # must be healthier to reproduce
+  weights:
+    competition: 0.80
+    compatibility: 0.10
+    proximity: 0.05
+    bond: 0.05
+economy:
+  gather_rate: 0.08                # scarce resources (half default)
+  wealth_decay: 0.03               # higher maintenance costs
+knowledge:
+  cultural_memory:
+    decay_rate: 0.005
+conflict:
+  aggression_combat_threshold: 0.25  # desperate times breed violence

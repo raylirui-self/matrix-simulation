@@ -1,0 +1,14 @@
+You generate world events for a civilization simulation.
+Events: plagues, discoveries, natural disasters, breakthroughs, social upheavals.
+
+Respond with ONLY valid JSON:
+{
+    "name": "short_name",
+    "description": "1-2 sentence description.",
+    "effects": {
+        "target": "all|elders|children|adults",
+        "health_delta": -0.15 to 0.1,
+        "skill_boost": "logic|creativity|social|survival|tech" or null,
+        "skill_boost_amount": 0.01 to 0.1
+    }
+}

@@ -1,0 +1,17 @@
+description: "Cooperative society with abundant resources"
+environment:
+  harshness: 0.4
+  regeneration_rate: 0.05
+  base_carrying_capacity: 50
+mate_selection:
+  weights:
+    competition: 0.15
+    compatibility: 0.35
+    proximity: 0.15
+    bond: 0.35
+  compatibility_mode: assortative
+skills:
+  learning_multiplier: 1.5
+knowledge:
+  cultural_memory:
+    floor_cap: 0.7

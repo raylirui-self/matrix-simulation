@@ -1,0 +1,223 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Medieval Europe
+# ═══════════════════════════════════════════════════════════════
+
+name: "Medieval Europe"
+description: "Feudal Christendom — lords, serfs, monasteries, and crusades"
+time_period: "~1200 CE"
+region: "Western Europe (France / England / HRE archetype)"
+historical_context: |
+  High medieval Europe was defined by the feudal system: a rigid hierarchy
+  from king to lord to knight to serf, bound by oaths of fealty and land
+  tenure. The Catholic Church was the dominant intellectual and moral
+  authority, controlling literacy, education, and the afterlife narrative.
+  ~90% of the population were peasants tied to the land. Wealth inequality
+  was extreme (Milanovic 2011 estimates Gini ~0.70+). Knowledge was
+  concentrated in monasteries and guilds — the average person was illiterate.
+  Warfare was endemic: feudal disputes, crusades, and Viking/Mongol
+  incursions. Life expectancy was ~30-35 (again skewed by infant mortality;
+  surviving adults lived to ~50-60). The Black Death hadn't hit yet at 1200,
+  but famine and disease were constant companions.
+
+# ── Population ──
+population:
+  initial_size: 60             # village-scale (medieval English village: 50-300, Dyer 2002)
+  max_size: 400                # bounded by agricultural carrying capacity
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 60             # adults surviving childhood reached ~55-65 (Russell 1948)
+  max_age_variance: 20         # disease, famine, and violence create high variance
+  base_health_decay: 0.003     # harder than modern but easier than foraging (settled agriculture)
+  elder_decay_multiplier: 3.0  # elders vulnerable — no medicine beyond herbalism
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.12          # slightly lower — larger populations, more gene flow via trade/war
+  trait_blend_noise: 0.04      # moderate variation
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.6     # most people have no access to education — guild/monastery only
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality, minimal structured learning
+    child: 1.0                 # children work fields from age 7 — practical learning
+    adolescent: 1.3            # guild apprenticeships begin ~12-14 (Epstein 1991)
+    adult: 0.5                 # specialization — learn your trade, nothing else
+    elder: 0.15                # elders are teachers and authorities, not learners
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 6             # rigid social stratification limits cross-class bonds
+  friend_formation_distance: 0.08  # bonds form within your village/class
+  friend_min_sociability: 0.5      # harder to form bonds across feudal divides
+  friend_ticks_to_form: 8          # slow trust-building in hierarchical society
+  decay_rates:
+    friend: 0.008              # friendships stable within class but fragile across
+    rival: 0.003               # feuds persist for generations (blood feuds, vendettas)
+    mate: 0.002                # marriages are economic contracts — very stable (Herlihy 1985)
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 16                  # canon law minimum was 12F/14M but typical marriage ~16-20
+  max_age: 45                  # shorter reproductive window given health
+  min_health: 0.4
+  search_radius: 0.15          # limited to your village/manor — low mobility (Dyer 2002)
+  top_n_stochastic: 2          # fewer choices — marriages often arranged
+  base_reproduction_chance: 0.10  # higher fertility — Church encouraged procreation
+  weights:
+    competition: 0.55          # fitness competition high — strong/healthy preferred (harsh conditions)
+    compatibility: 0.10        # compatibility barely matters — marriages are alliances
+    proximity: 0.20            # you marry within your village (serfdom restricts movement)
+    bond: 0.15                 # existing family alliances influence pairings
+  compatibility_mode: assortative
+  fitness_weights:
+    resilience: 0.35           # physical hardiness essential for agricultural labor
+    intelligence: 0.15         # valued by Church/guilds but invisible to most
+    health: 0.35               # visible health signals survival and labor capacity
+    avg_skill: 0.15            # craft skill matters for guild members
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.10     # children work alongside parents
+    top_skills_taught: 2       # father teaches trade, mother teaches domestic skills
+    transfer_rate: 0.12        # strong apprenticeship tradition — learning by doing
+  cultural_memory:
+    floor_cap: 0.35            # monasteries preserve some knowledge, but most is lost to illiteracy
+    decay_rate: 0.003          # written records (monasteries) slow decay vs oral-only
+    contribution_on_death: 0.04  # guild masters contribute; peasants barely do
+    pool_absorption_rate: 0.0008  # slow — knowledge locked behind literacy barrier
+  social_amplifier:
+    social_skill_bonus: 0.3    # social learning exists but stratified by class
+    network_bonus_per_friend: 0.04
+    network_bonus_cap: 0.2     # limited cross-class knowledge sharing
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.4               # agricultural but pre-industrial — famine every few years
+  regeneration_rate: 0.025     # managed farmland + forests regenerate moderately
+  base_carrying_capacity: 25   # medieval agriculture supports more than foraging but with limits
+  terrain_weights:
+    plains: 0.45               # arable farmland dominates — open field system
+    forest: 0.20               # forests for timber, hunting (often lord's reserve)
+    mountains: 0.10            # marginal land — mining and herding
+    coast: 0.25                # fishing villages, ports, trade
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.35        # subsistence farming dominates daily life
+    social_pull: 0.15          # social bonds matter but are constrained by class
+    curiosity_pull: 0.05       # curiosity is discouraged — "curiositas" was a sin (Augustine)
+    safety_penalty: 0.25       # bandits, wars, disease make safety paramount
+    inertia: 0.20              # serfdom means you stay where you are — high inertia
+  movement_speed: 0.015        # serfs tied to land — very low mobility (except crusaders/merchants)
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.04             # emotions persist — communal village life, religious fervor
+  contagion_radius: 0.12       # village proximity + church gatherings spread emotions
+  contagion_rate: 0.05         # high contagion — religious hysteria, plague panic (Cohn 2006)
+  grief_on_bond_death: 0.5     # death is common but still devastating (high child mortality)
+  trauma_heal_rate: 0.001      # slow healing — religious consolation only, no therapy
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.002   # beliefs barely drift — Church enforces orthodoxy
+  transmission_rate: 0.05        # aggressive memetic transmission — sermons, confession, festivals
+  transmission_noise: 0.008      # low noise — centralized doctrine keeps beliefs uniform
+  faction_formation_similarity: 0.55  # factions form readily (guilds, religious orders, noble houses)
+  faction_formation_radius: 0.15
+  min_faction_size: 5
+  faction_check_interval: 15     # frequent faction dynamics — feudal politics are constant
+  prophet_extremism_threshold: 0.60   # prophets/heretics emerge more easily (millenarian movements)
+  prophet_charisma_threshold: 0.60    # Francis of Assisi, Peter the Hermit — charisma enough
+  schism_check_interval: 80
+  schism_variance_threshold: 0.4     # schisms happen readily (Cathars, Waldensians, Franciscan splits)
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.06            # agricultural surplus — better than foraging
+  wealth_decay: 0.015          # stored grain, durable goods — slower decay than foraging
+  trade_radius: 0.10           # local markets, limited long-distance trade
+  trade_rate: 0.08             # low trade rate — most production is subsistence (Postan 1966)
+  theft_aggression_threshold: 0.4  # banditry and raiding common (outlaws, routiers)
+  faction_tax_rate: 0.06       # heavy taxation — tithes to Church + dues to lord (~30-50% of output)
+  inheritance_rate: 0.85       # primogeniture — land and wealth pass to eldest son (Goody 1983)
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0002     # Church actively suppresses questioning — heresy is death
+  trauma_awareness_boost: 0.001     # trauma drives people TO faith, not away from system
+  awareness_contagion_radius: 0.08  # awareness spreads slowly — dangerous to share doubts
+  awareness_transfer_rate: 0.005    # whispering doubt is risky — Inquisition
+  glitch_probability: 0.01          # fewer glitches perceived — everything explained by God's will
+  glitch_awareness_boost: 0.03      # miracles/portents noticed but attributed to divine, not glitch
+  redpill_threshold: 0.6            # very high bar — leaving the faith is existential crisis
+  sentinel_deploy_threshold: 0.7    # system tolerates more before deploying (Church as soft sentinel)
+  max_ticks_per_cycle: 6000         # longer cycles — feudal order is stable
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.4   # violence normalized — feudal disputes settled by force
+  combat_radius: 0.08               # melee range — swords, spears, bows
+  combat_damage: 0.10               # lethal but armor mitigates somewhat
+  war_check_interval: 20            # wars are frequent — feudal politics, crusades
+  war_threshold: 0.5                # low bar for war — land disputes escalate fast
+  war_ideology_weight: 0.5          # religious wars dominate (crusades, heretic suppression)
+  war_rivalry_weight: 0.3           # feudal blood feuds
+  war_territory_weight: 0.2         # territorial disputes secondary to ideology/honor
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 12        # moderate — Church creates info (sermons, proclamations)
+  transmission_radius: 0.10         # voice + written proclamations
+  transmission_rate: 0.2            # moderate — literacy barrier limits spread
+  mutation_rate: 0.20               # high mutation — oral retelling + translation errors
+  knowledge_skill_boost: 0.0005     # limited — most info is religious, not practical
+  system_narrative_interval: 30     # Church propaganda is frequent — reinforcing the worldview
+  info_lifetime: 400                # written records last longer than oral
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                     # farming established since Neolithic
+  - mining                          # iron mining widespread by 1200 CE
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: -0.5, std: 0.15 }   # collectivist — feudal obligations, communal farming
+  tradition:     { mean: 0.8, std: 0.10 }     # extremely traditional — custom is law
+  system_trust:  { mean: 0.6, std: 0.20 }     # high trust in Church/feudal order (divinely ordained)
+  spirituality:  { mean: 0.9, std: 0.05 }     # near-universal deep religiosity
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A medieval village under the shadow of a stone church and a lord's manor.
+    Thatched-roof cottages surround muddy lanes. The rhythm of life follows
+    the liturgical calendar — planting, harvest, feast days, and fasts.
+    Beyond the village walls: dark forests, rival lords, and the rumor of crusade.
+  vocabulary:
+    - serf
+    - lord
+    - tithe
+    - guild
+    - monastery
+    - heresy
+    - pilgrimage
+    - feast day
+    - blood feud
+    - Christendom
+    - manor
+    - fief
+    - penance
+  themes:
+    - rigid hierarchy and the weight of obligation
+    - faith as the lens through which all reality is interpreted
+    - the tension between Church doctrine and lived experience
+    - scarcity, famine, and the cruelty of winter
+    - honor, blood feuds, and the violence of the powerful
+    - rare moments of beauty — cathedrals, illuminated manuscripts, sacred music

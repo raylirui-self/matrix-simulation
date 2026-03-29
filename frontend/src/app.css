@@ -1,0 +1,147 @@
+/* ═══════════════════════════════════════════════
+   THE CONSTRUCT — Matrix Theme CSS
+   ═══════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+:root {
+	/* Matrix palette */
+	--bg-primary: #030d03;
+	--bg-secondary: #061206;
+	--bg-panel: rgba(6, 18, 6, 0.85);
+	--bg-panel-solid: #0a1a0a;
+
+	--green-dim: #0a3a0a;
+	--green-muted: #1a6a1a;
+	--green-primary: #00ff88;
+	--green-bright: #00ffaa;
+	--green-glow: rgba(0, 255, 136, 0.3);
+
+	--cyan: #00ddff;
+	--cyan-dim: #006688;
+
+	--red-warning: #ff4466;
+	--red-dim: #661122;
+
+	--gold: #ffd700;
+	--gold-dim: #665500;
+
+	--white: #e0ffe0;
+	--white-pure: #ffffff;
+	--text-dim: #4a6a4a;
+	--text-muted: #2a4a2a;
+
+	/* System vs Resistance duality */
+	--system-color: #00aacc;
+	--resistance-color: #ffd700;
+
+	/* Terrain colors */
+	--terrain-plains: #2a4a1a;
+	--terrain-forest: #1a3a0a;
+	--terrain-mountains: #3a3a2a;
+	--terrain-coast: #1a2a3a;
+
+	/* Phase colors */
+	--phase-infant: #66ff66;
+	--phase-child: #00ddff;
+	--phase-adolescent: #ffaa00;
+	--phase-adult: #ff4466;
+	--phase-elder: #aa66ff;
+
+	/* Emotion colors */
+	--emo-happiness: #00ff88;
+	--emo-fear: #ffff00;
+	--emo-anger: #ff2200;
+	--emo-grief: #6644cc;
+	--emo-hope: #00aaff;
+
+	/* Bond colors */
+	--bond-family: #00ff88;
+	--bond-friend: #00ddff;
+	--bond-rival: #ff4466;
+	--bond-mate: #ffa500;
+	--bond-ally: #66ff66;
+	--bond-enemy: #ff0000;
+	--bond-resistance: #ffd700;
+
+	/* Typography */
+	--font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+	/* Spacing */
+	--panel-width: 300px;
+
+	/* Animation */
+	--transition-fast: 150ms ease;
+	--transition-medium: 300ms ease;
+	--transition-slow: 600ms ease;
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: var(--bg-primary);
+	color: var(--green-primary);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.4;
+	cursor: default;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+::-webkit-scrollbar-track {
+	background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+	background: var(--green-dim);
+	border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--green-muted);
+}
+
+/* Selection */
+::selection {
+	background: var(--green-glow);
+	color: var(--white);
+}
+
+/* Utility classes */
+.text-dim { color: var(--text-dim); }
+.text-muted { color: var(--text-muted); }
+.text-green { color: var(--green-primary); }
+.text-cyan { color: var(--cyan); }
+.text-red { color: var(--red-warning); }
+.text-gold { color: var(--gold); }
+.text-white { color: var(--white); }
+
+/* Matrix code texture (subtle background) */
+.matrix-texture {
+	position: relative;
+}
+.matrix-texture::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(
+		0deg,
+		transparent,
+		transparent 2px,
+		rgba(0, 255, 136, 0.015) 2px,
+		rgba(0, 255, 136, 0.015) 4px
+	);
+	pointer-events: none;
+	z-index: 0;
+}

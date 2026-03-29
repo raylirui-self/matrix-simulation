@@ -1,0 +1,507 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Parameter Landscape — Research-Backed Reference for Cognitive Matrix v2
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# This file documents every tunable parameter, its real-world basis,
+# supporting research, known deviations from reality, and suggested ranges.
+#
+# NOT loaded by the simulation — this is a reference document.
+# Actual values are in config/default.yaml and scenario overrides.
+#
+# Format per parameter:
+#   value:       current default
+#   range:       [min, max] reasonable range
+#   models:      what real-world phenomenon this represents
+#   research:    relevant theories, papers, studies
+#   accuracy:    how well the algorithm matches the research (1-5 stars)
+#   notes:       caveats, known gaps, suggested improvements
+# ═══════════════════════════════════════════════════════════════════════════
+
+timescale:
+  note: >
+    CRITICAL AMBIGUITY: The simulation has no explicit tick-to-time mapping.
+    Lifecycle uses years (max_age: 80) but all rates are per-tick.
+    Interpretation: 1 tick ≈ 1 year gives plausible lifecycle dynamics
+    but makes emotional/social rates too slow (5% emotion decay per YEAR?).
+    Consider: 1 tick ≈ 1 month (agents live ~80 months ≈ 6.7 years compressed)
+    would make social/emotional rates more realistic.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# POPULATION & LIFECYCLE
+# ═══════════════════════════════════════════════════════════════════════════
+
+population.initial_size:
+  value: 40
+  range: [10, 500]
+  models: Founding population of a settlement
+  research: >
+    Minimum viable population studies suggest ~50-500 for genetic diversity
+    (Frankham et al. 2014). 40 is on the low end but viable with mutation.
+  accuracy: "★★★★☆"
+
+lifecycle.phase_ages:
+  value: { infant: 0, child: 3, adolescent: 12, adult: 18, elder: 60 }
+  models: Human developmental stages
+  research: >
+    Piaget developmental stages, WHO life stage definitions.
+    Infant→3 matches toddlerhood. Adolescence at 12 matches puberty onset.
+    Adult at 18 is standard. Elder at 60 is slightly early (WHO uses 65)
+    but historically reasonable for pre-modern societies.
+  accuracy: "★★★★☆"
+  notes: No sex differences in maturation timing (girls ~2 years earlier).
+
+lifecycle.base_health_decay:
+  value: 0.002
+  range: [0.001, 0.005]
+  models: Biological aging / senescence
+  research: >
+    Gompertz mortality law: mortality doubles every ~8 years after 30.
+    The simulation uses a flat decay + 2.5x elder multiplier, which is
+    a crude step function, not the exponential curve research describes.
+  accuracy: "★★☆☆☆"
+  notes: >
+    Should implement Gompertz: decay = base * exp(age / gompertz_constant).
+    Also missing: infant mortality (historically 30-50% before age 5),
+    sex-based mortality differences (women outlive men by 4-7 years).
+
+lifecycle.elder_decay_multiplier:
+  value: 2.5
+  range: [1.5, 5.0]
+  models: Accelerated aging in old age
+  research: >
+    Real senescence begins gradually around age 30, not as a step function
+    at 60. Antagonistic pleiotropy theory (Williams 1957).
+  accuracy: "★★☆☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# GENETICS & INHERITANCE
+# ═══════════════════════════════════════════════════════════════════════════
+
+genetics.mutation_rate:
+  value: 0.15
+  range: [0.05, 0.30]
+  models: Genetic variation between generations
+  research: >
+    Real per-base-pair mutation rate: ~1.5×10⁻⁸ (Kong et al. 2012).
+    But this parameter models PHENOTYPIC variation across composite traits,
+    not individual mutations. 15% per trait per generation is defensible as
+    compressed genetic drift + de novo variants + epigenetic + developmental
+    noise. Heritability of personality: ~0.40-0.60 (Bouchard & McGue 2003).
+  accuracy: "★★★☆☆"
+  notes: >
+    High side — produces more diversity than real populations, which could
+    prevent selection from fixing advantageous traits. The real problem is
+    blending inheritance (parent average + noise) instead of Mendelian
+    particulate inheritance, which halves variance each generation. Mutation
+    compensates but the model is pre-Mendelian.
+
+genetics.trait_blend_noise:
+  value: 0.05
+  range: [0.02, 0.10]
+  models: Non-genetic developmental variation
+  research: >
+    Monozygotic twin studies show ~40-60% of personality variance is non-genetic
+    (environmental + developmental noise). SD of 0.05 on a [0,1] scale is modest.
+  accuracy: "★★★☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SKILLS & LEARNING
+# ═══════════════════════════════════════════════════════════════════════════
+
+skills.learning_multiplier:
+  value: 1.0
+  range: [0.1, 3.0]
+  models: Global rate of cognitive skill acquisition
+  research: >
+    Power law of practice (Newell & Rosenbloom 1981): skill improves as
+    a power function of practice time. The diminishing returns factor (0.8)
+    implements this. Learning multiplier scales the base rate.
+  accuracy: "★★★☆☆"
+
+skills.phase_growth_multipliers:
+  value: { infant: 0.3, child: 1.5, adolescent: 1.2, adult: 0.6, elder: 0.2 }
+  models: Critical periods in cognitive development
+  research: >
+    Critical period hypothesis (Lenneberg 1967), neuroplasticity decline.
+    Children learning 5x faster than elders is consistent with research.
+    Child peak at 1.5 aligns with language acquisition critical periods.
+  accuracy: "★★★★☆"
+  notes: >
+    Missing: distinction between fluid intelligence (peaks ~25, declines)
+    and crystallized intelligence (increases into 60s). Cattell 1963.
+    All 5 skills use the same growth curve, which is unrealistic.
+
+skills.diminishing_returns_factor:
+  value: 0.8
+  range: [0.5, 0.95]
+  models: Diminishing returns on skill practice
+  research: >
+    Power law of practice. Each unit of skill becomes 20% harder to acquire.
+    Ericsson's deliberate practice theory suggests 10,000 hours for mastery.
+  accuracy: "★★★★☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SOCIAL BONDS
+# ═══════════════════════════════════════════════════════════════════════════
+
+social.bond_capacity:
+  value: 8
+  range: [5, 15]
+  models: Cognitive limit on close relationships
+  research: >
+    Dunbar's number: ~5 intimate, ~15 close friends, ~50 friends, ~150
+    acquaintances. 8 sits between intimate and close layers.
+    Social brain hypothesis (Dunbar 1992).
+  accuracy: "★★★★☆"
+  notes: >
+    No weak ties layer (Granovetter 1973). Weak ties are critical for
+    information flow and opportunity but missing entirely. The 8-slot limit
+    creates a bottleneck that constrains ALL social dynamics (trade, belief,
+    emotion, knowledge, conflict all operate through bonds).
+
+social.decay_rates:
+  value: { friend: 0.01, rival: 0.005, mate: 0.02 }
+  range: { friend: [0.005, 0.02], rival: [0.002, 0.01], mate: [0.003, 0.01] }
+  models: Relationship maintenance and dissolution
+  research: >
+    Median friendship half-life ~7 years (Bhatt et al.).
+    Median marriage duration ~20+ years (even for divorces, median ~8 years).
+    Grudges persist longest (rival decay slowest = correct).
+  accuracy: "★★☆☆☆"
+  notes: >
+    ⚠️ BUG: Mate bonds decay FASTEST (0.02) — should be SLOWEST after family.
+    Real pair bonds are more stable than friendships. Suggested fix:
+    mate: 0.005 (half of friend rate).
+
+social.friend_formation_distance:
+  value: 0.1
+  range: [0.05, 0.20]
+  models: Propinquity effect — proximity drives friendship
+  research: >
+    Festinger, Schachter & Back (1950): physical proximity is the strongest
+    predictor of friendship formation. 0.1 on a unit square = same or
+    adjacent grid cell. Appropriate for pre-industrial societies.
+  accuracy: "★★★★☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# MATE SELECTION & REPRODUCTION
+# ═══════════════════════════════════════════════════════════════════════════
+
+mate_selection.weights:
+  value: { competition: 0.50, compatibility: 0.25, proximity: 0.10, bond: 0.15 }
+  models: Multi-criteria mate choice
+  research: >
+    Trivers parental investment (1972): higher-investing sex (female) is choosier.
+    Buss (1989): women prioritize resources/status, men prioritize youth/health.
+    Both sexes rank kindness and intelligence highly.
+  accuracy: "★★★☆☆"
+  notes: >
+    Competition at 50% overweights intrasexual competition. Bond weight (15%)
+    is too low — existing pair bonds are the strongest predictor of mate
+    choice in most human societies. Suggested: competition 0.35, bond 0.30.
+
+mate_selection.compatibility_mode:
+  value: disassortative
+  range: [assortative, disassortative]
+  models: Whether similar or different traits attract
+  research: >
+    ⚠️ DEFAULT IS WRONG. Human mating is predominantly ASSORTATIVE for
+    intelligence, education, personality, attractiveness (Luo & Klohnen 2005).
+    Disassortative preference is only documented for immune genes (MHC,
+    Wedekind et al. 1995). Should default to assortative.
+  accuracy: "★☆☆☆☆"
+
+mate_selection.base_reproduction_chance:
+  value: 0.08
+  range: [0.03, 0.15]
+  models: Per-tick probability of successful reproduction
+  research: >
+    If 1 tick ≈ 1 year, expected offspring per female ≈ 0.08 × 30 years ×
+    health_factor ≈ 1.2-2.4. Close to modern replacement (TFR ~2.1) but
+    low for pre-industrial societies (TFR 5-7). Historical populations
+    needed high fertility to offset infant/child mortality.
+  accuracy: "★★★☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# EMOTIONS & PSYCHOLOGY
+# ═══════════════════════════════════════════════════════════════════════════
+
+emotions.contagion_rate:
+  value: 0.03
+  range: [0.01, 0.10]
+  models: Emotional contagion through proximity
+  research: >
+    Hatfield, Cacioppo & Rapson (1994): emotions spread through mimicry,
+    feedback, and contagion. Kramer et al. (2014, Facebook study): small
+    effect sizes (d ~ 0.001-0.02) per exposure. 0.03 for face-to-face
+    interaction is slightly high but plausible.
+  accuracy: "★★★☆☆"
+  notes: >
+    ⚠️ Emotions only spread UPWARD (fear infects calm, not reverse).
+    Missing: emotional downregulation through social support — one of the
+    primary functions of social bonds. Calm agents should reduce fear in
+    fearful agents, not just be immune to it.
+
+emotions.decay_rate:
+  value: 0.05
+  range: [0.03, 0.10]
+  models: Emotional homeostasis / hedonic treadmill
+  research: >
+    Hedonic adaptation (Brickman & Campbell 1971): emotions return to
+    baseline over time. Speed depends on emotion type — anger dissipates
+    faster than grief. A uniform 5% decay is a simplification.
+  accuracy: "★★★☆☆"
+  notes: Should vary by emotion type. Grief decays much slower than anger.
+
+emotions.trauma_heal_rate:
+  value: 0.002
+  range: [0.001, 0.005]
+  models: PTSD natural recovery
+  research: >
+    ~50% of PTSD cases resolve within 3 months; chronic PTSD persists for
+    years (Kessler et al. 1995). The very slow rate models chronic trauma.
+    Social support accelerating recovery is well-established
+    (Brewin, Andrews & Valentine 2000).
+  accuracy: "★★★★☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# BELIEFS, IDEOLOGY & FACTIONS
+# ═══════════════════════════════════════════════════════════════════════════
+
+beliefs.transmission_rate:
+  value: 0.02
+  range: [0.005, 0.05]
+  models: Memetic transmission through social bonds
+  research: >
+    Bounded confidence models (Deffuant et al. 2000): influence only
+    occurs if beliefs are within a similarity threshold. DeGroot model
+    allows unbounded influence. This implementation is DeGroot-like.
+  accuracy: "★★☆☆☆"
+  notes: >
+    ⚠️ No bounded confidence threshold. Any bonded agent can shift beliefs
+    regardless of ideological distance. Should add a rejection threshold
+    (e.g., agents with belief distance > 0.8 ignore each other's influence).
+    This causes excessive convergence.
+
+beliefs.faction_formation_similarity:
+  value: 0.65
+  range: [0.3, 0.85]
+  models: Ideological clustering threshold for group formation
+  research: >
+    Axelrod's culture model (1997): similarity-biased interaction produces
+    cultural regions. Schelling segregation: even mild same-group preference
+    produces strong clustering. 0.65 is a moderate threshold.
+  accuracy: "★★★★☆"
+
+beliefs.experience_drift_rate:
+  value: 0.005
+  range: [0.001, 0.01]
+  models: Belief change from lived experience
+  research: >
+    Core values are highly stable in adulthood (Alwin & Krosnick 1991).
+    0.5% per tick is very slow, which is realistic — dramatic belief
+    shifts require major life events, not gradual drift.
+  accuracy: "★★★★☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ECONOMY
+# ═══════════════════════════════════════════════════════════════════════════
+
+economy.gather_rate:
+  value: 0.05
+  range: [0.02, 0.10]
+  models: Subsistence resource gathering
+  research: >
+    Sugarscape (Epstein & Axtell 1996) uses similar resource-gathering
+    mechanics. No production function — agents forage, not produce.
+    Missing: division of labor, comparative advantage (Adam Smith).
+  accuracy: "★★★☆☆"
+
+economy.trade_rate:
+  value: 0.15
+  range: [0.05, 0.30]
+  models: Wealth redistribution through commerce
+  research: >
+    Trade only between bonded agents models trust-based exchange.
+    Market economies trade between strangers (North 1990, institutional
+    economics). The bond requirement creates tiny closed economies.
+  accuracy: "★★☆☆☆"
+  notes: >
+    0.0 = no trade, extreme inequality. 0.15 = moderate markets.
+    0.3+ = rapid wealth equalization. Even at 0.3, the bond requirement
+    limits total trade volume severely.
+
+economy.inheritance_rate:
+  value: 0.7
+  range: [0.5, 0.95]
+  models: Intergenerational wealth transfer
+  research: >
+    Historical estate transfer was close to 100% before modern taxation.
+    0.7 (30% "burial cost") is a reasonable friction. Piketty's "Capital"
+    shows inheritance is the primary driver of wealth concentration.
+  accuracy: "★★★★☆"
+
+economy.faction_tax_rate:
+  value: 0.02
+  range: [0.0, 0.10]
+  models: Collective taxation and redistribution
+  research: >
+    Primitive communal sharing. 2% flat tax is very low — modern welfare
+    states tax 30-50%. But for early civilizations, 2% is plausible
+    (tithe-like contributions to communal stores).
+  accuracy: "★★★☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# THE MATRIX META-LAYER
+# ═══════════════════════════════════════════════════════════════════════════
+
+matrix.awareness_growth_rate:
+  value: 0.0005
+  range: [0.0001, 0.003]
+  models: Gradual awakening to systemic truth (class consciousness)
+  research: >
+    Maps to: false consciousness (Marx/Lukacs), Gramsci's cultural hegemony,
+    diffusion of innovation (Rogers 1962). Very slow base growth (0.05% per
+    tick) means reaching redpill threshold (0.5) takes ~1000 ticks minimum.
+    Consistent with awakening being rare and slow.
+  accuracy: "★★★★☆"
+
+matrix.glitch_probability:
+  value: 0.02
+  range: [0.0, 0.10]
+  models: System instability / cracks in the narrative
+  research: >
+    Information cascades (Bikhchandani et al. 1992): rare events can
+    trigger cascading awareness. 2% per tick = ~1 glitch every 50 ticks.
+  accuracy: "★★★☆☆"
+
+matrix.reset_threshold:
+  value: 50.0
+  range: [20.0, 200.0]
+  models: Critical mass for system collapse
+  research: >
+    Granovetter threshold models for collective action. The fixed threshold
+    of 50.0 total awareness has a SCALING PROBLEM: with 40 agents this
+    requires avg awareness of 1.25 (impossible, cap is 1.0). With 500
+    agents, it requires avg awareness of only 0.1 (very easy). Should
+    scale with population.
+  accuracy: "★★☆☆☆"
+  notes: >
+    ⚠️ Should be a ratio (e.g., avg_awareness > 0.5) not a fixed sum.
+    Current implementation makes resets much easier with large populations.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONFLICT & WARFARE
+# ═══════════════════════════════════════════════════════════════════════════
+
+conflict.combat_damage:
+  value: 0.08
+  range: [0.02, 0.25]
+  models: Lethality of interpersonal violence
+  research: >
+    With 0.5-1.5x random multiplier: 4-12% health per encounter.
+    Full-health agent survives 8-25 fights. Pre-modern combat mortality
+    was much higher per engagement. Lanchester's laws suggest damage
+    should scale with force concentration.
+  accuracy: "★★☆☆☆"
+  notes: >
+    No terrain bonuses, no force concentration advantage, no surrender.
+    Two armies of 3 vs 15 fight at equal per-capita rates. Should implement
+    at least linear Lanchester (larger forces deal proportionally more damage).
+
+conflict.war_threshold:
+  value: 0.6
+  range: [0.2, 1.2]
+  models: Conditions for organized faction warfare
+  research: >
+    Fearon's rationalist explanations for war (1995). Wars require:
+    ideological distance (0.4 weight), mutual rivalry (0.35), territorial
+    overlap (0.25). The three-factor model is well-structured.
+  accuracy: "★★★☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# COMMUNICATION & INFORMATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+communication.mutation_rate:
+  value: 0.15
+  range: [0.05, 0.30]
+  models: Information degradation (telephone game)
+  research: >
+    Bartlett (1932) serial reproduction: substantial distortion per
+    retelling. 15% chance per hop is plausible. After max_hops (10),
+    information could be heavily degraded.
+  accuracy: "★★★☆☆"
+  notes: >
+    ⚠️ BUG: Mutation modifies the shared InfoObject, not a copy.
+    All holders' memory retroactively changes when one person retells.
+
+communication.knowledge_skill_boost:
+  value: 0.001
+  range: [0.001, 0.01]
+  models: Learning from received information
+  research: >
+    At 0.001, an agent needs 1000 knowledge items to gain 1 skill point.
+    Information-based learning is essentially non-functional at this rate.
+    Should be at least 0.005 to be meaningful.
+  accuracy: "★★☆☆☆"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# KNOWLEDGE TRANSFER & CULTURAL MEMORY
+# ═══════════════════════════════════════════════════════════════════════════
+
+knowledge.cultural_memory.floor_cap:
+  value: 0.5
+  range: [0.2, 0.8]
+  models: Maximum civilizational knowledge baseline (cultural ratchet)
+  research: >
+    Tomasello's cultural ratchet (1999): cumulative culture means each
+    generation starts higher. 0.5 cap = newborns can inherit up to 50%
+    proficiency. Boyd & Richerson dual inheritance theory.
+  accuracy: "★★★★☆"
+
+knowledge.cultural_memory.decay_rate:
+  value: 0.001
+  range: [0.0005, 0.003]
+  models: Knowledge loss over time (dark ages)
+  research: >
+    Real cultural knowledge, once institutionalized (writing, libraries),
+    persists for centuries. Oral traditions are more fragile.
+    0.001 per tick means floors degrade by ~0.1 over 100 ticks.
+    Combined with pool_drain_rate (0.99), cultural accumulation is
+    very slow — may prevent the ratchet from functioning in typical runs.
+  accuracy: "★★★☆☆"
+
+knowledge.parent_teaching.transfer_rate:
+  value: 0.1
+  range: [0.05, 0.20]
+  models: Vertical cultural transmission (parent → child)
+  research: >
+    Cavalli-Sforza & Feldman cultural transmission models.
+    Hewlett & Cavalli-Sforza (1986): parent teaching is domain-specific.
+    10% of parent skill transferred per tick when in proximity.
+  accuracy: "★★★☆☆"
+  notes: >
+    Only top 2 skills taught — creates convergence where everyone teaches
+    the same skills. Missing: oblique transmission (learning from non-parent
+    adults / apprenticeship).
+
+# ═══════════════════════════════════════════════════════════════════════════
+# KNOWN CROSS-SYSTEM ISSUES
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# 1. TIMESCALE: No explicit tick-to-time mapping. Lifecycle = years,
+#    social/emotional rates feel like weeks/months. Needs resolution.
+#
+# 2. BOND BOTTLENECK: 8-slot capacity constrains ALL social dynamics.
+#    Trade, belief, emotion, knowledge, conflict all go through bonds.
+#    Very sensitive to this single parameter.
+#
+# 3. NO STOCHASTIC MORTALITY: No disease, accidents, or natural disasters
+#    as random death events. Removes a major selective pressure.
+#
+# 4. NO INFANT MORTALITY: Historically 30-50% died before age 5.
+#    Absence inflates population growth and removes child-death grief.
+#
+# 5. NO WEAK TIES: Granovetter (1973) showed weak ties are critical
+#    for information flow. The binary bond model misses this entirely.

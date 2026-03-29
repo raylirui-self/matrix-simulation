@@ -1,0 +1,1 @@
+"""Cognitive Matrix v2 — Agent-Based Behavioral Simulation."""

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cognitive-matrix"
+version = "2.0.0"
+description = "Agent-based civilization simulator with emergent societies, factions, and Matrix meta-layer"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+dependencies = [
+    "pyyaml>=6.0,<7.0",
+    "ollama>=0.4.0,<1.0",
+    "huggingface_hub>=0.25.0,<1.0",
+    "streamlit>=1.40.0,<2.0",
+    "plotly>=5.24.0,<6.0",
+    "pandas>=2.2.0,<3.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "websockets>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.8.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["src*", "backend*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

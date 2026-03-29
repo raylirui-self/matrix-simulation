@@ -1,0 +1,220 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Ancient Egypt — New Kingdom
+# ═══════════════════════════════════════════════════════════════
+
+name: "Ancient Egypt"
+description: "New Kingdom Egypt — pharaohs, pyramids, scribes, and the eternal Nile"
+time_period: "~1500 BCE"
+region: "Nile Valley, Upper and Lower Egypt (Thebes / Memphis archetype)"
+historical_context: |
+  The New Kingdom (c. 1550–1070 BCE) was Egypt's imperial golden age. Under
+  pharaohs like Hatshepsut, Thutmose III, and later Akhenaten and Ramesses II,
+  Egypt controlled territory from Nubia to the Levant. Society was rigidly
+  hierarchical: pharaoh (living god) → vizier → priests/scribes → soldiers →
+  artisans → peasant farmers. ~90% of the population were illiterate agricultural
+  workers tied to the Nile's annual flood cycle. Ma'at — cosmic order, truth,
+  and justice — was the central organizing principle of society and religion.
+  The afterlife cult dominated spiritual life: massive resources were devoted
+  to tomb-building and funerary practices. Life expectancy at birth was ~30-35
+  years (Nunn 1996), heavily skewed by infant mortality; adults surviving
+  childhood could reach 50-60. Villages along the Nile typically held 50-200
+  people. Literacy was the exclusive domain of scribes (~1% of population,
+  Baines & Eyre 1983). Trade networks reached Punt (Somalia/Eritrea), Byblos,
+  and the Aegean.
+
+# ── Population ──
+population:
+  initial_size: 40             # Nile village scale (Kemp 2006: typical villages 50-200, smaller hamlets ~30-50)
+  max_size: 350                # bounded by Nile floodplain agriculture (high yield but geographically constrained)
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 60             # adults surviving childhood reached ~50-65 (Nunn 1996, skeletal evidence)
+  max_age_variance: 20         # high variance from disease (schistosomiasis endemic), occupational hazards
+  base_health_decay: 0.003     # settled agriculture with Nile surplus, but endemic parasitic disease
+  elder_decay_multiplier: 2.8  # elders respected but vulnerable — limited medicine beyond herbalism and prayer
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.14          # moderate — Nile Valley population fairly large, some gene flow from Nubia/Levant
+  trait_blend_noise: 0.05      # moderate phenotypic variation
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.65    # scribal schools for elite only; peasants learn through practice (Baines & Eyre 1983)
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality (~30-40%), limited structured learning
+    child: 1.2                 # children work fields/workshops from young age; scribal training begins ~age 5
+    adolescent: 1.4            # apprenticeship in crafts, scribal schools intensify (Satire of the Trades, c. 1900 BCE)
+    adult: 0.5                 # specialization plateau — master your trade
+    elder: 0.15                # elders teach and advise; priests accumulate ritual knowledge
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 8             # moderate — village life fosters bonds, but class barriers limit cross-strata ties
+  friend_formation_distance: 0.10  # village-scale proximity; geographic isolation along Nile corridor
+  friend_min_sociability: 0.40     # communal labor (corvée for pharaoh's projects) fosters bonds
+  friend_ticks_to_form: 6          # moderate — village familiarity but hierarchical distance
+  decay_rates:
+    friend: 0.006              # stable village friendships — low mobility for peasants
+    rival: 0.003               # rivalries persist in small communities (land disputes, inheritance)
+    mate: 0.003                # marriages stable — economic partnerships (Meskell 2002)
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 14                  # Egyptian marriage age was young, typically 12-14 for women (Meskell 2002)
+  max_age: 42                  # shorter reproductive window given health constraints
+  min_health: 0.45             # moderate bar — agricultural labor demands basic fitness
+  search_radius: 0.18          # limited to village and nearby settlements along Nile
+  top_n_stochastic: 2          # limited choices in village context; some arrangement by families
+  base_reproduction_chance: 0.09  # high fertility encouraged — children are economic assets and afterlife insurance
+  weights:
+    competition: 0.40          # fitness matters — physical labor society, hierarchical display
+    compatibility: 0.15        # less emphasis on compatibility — family arrangement common
+    proximity: 0.25            # village endogamy strong (Meskell 2002: Deir el-Medina evidence)
+    bond: 0.20                 # love poetry exists (Chester Beatty papyrus) — bonds valued
+  fitness_weights:
+    resilience: 0.35           # physical hardiness for agricultural labor and Nile floods
+    intelligence: 0.20         # scribal intelligence highly rewarded for the elite (Satire of the Trades)
+    health: 0.30               # visible health critical — endemic disease made healthy mates prized
+    avg_skill: 0.15            # craft skill valued, especially for artisan class (Deir el-Medina)
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.12     # children work alongside parents in fields and workshops
+    top_skills_taught: 2       # trade skills passed father-to-son; domestic skills mother-to-daughter
+    transfer_rate: 0.13        # strong apprenticeship tradition — craft families at Deir el-Medina
+  cultural_memory:
+    floor_cap: 0.40            # hieroglyphic/hieratic writing preserves knowledge, but literacy is ~1% (Baines & Eyre 1983)
+    decay_rate: 0.002          # written records on stone/papyrus endure well; but access is restricted
+    contribution_on_death: 0.04  # scribes and priests contribute; peasants leave minimal cultural record
+    pool_absorption_rate: 0.001  # slow — knowledge locked behind scribal literacy barrier
+  social_amplifier:
+    social_skill_bonus: 0.4    # social learning important — oral teaching dominates for non-literate majority
+    network_bonus_per_friend: 0.05  # moderate network effects within class
+    network_bonus_cap: 0.25    # limited cross-class knowledge sharing (rigid hierarchy)
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.0               # Nile provides reliable surplus but droughts/low floods cause famine (Bell 1971)
+  regeneration_rate: 0.04      # Nile flood annual renewal — high natural regeneration of farmland
+  base_carrying_capacity: 30   # Nile agriculture very productive per unit area (Butzer 1976: ~2x Mesopotamia)
+  terrain_weights:
+    plains: 0.50               # Nile floodplain — primary agricultural zone
+    forest: 0.05               # minimal — Egypt was largely deforested by New Kingdom
+    mountains: 0.15            # Eastern desert and quarries — mining, gold
+    coast: 0.30                # Delta region, Mediterranean trade, Nile riverine activity
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.35        # agricultural subsistence dominates; corvée labor demands
+    social_pull: 0.20          # communal obligations strong — festivals, temple service
+    curiosity_pull: 0.10       # limited — Ma'at values order over exploration; scribes are the curious ones
+    safety_penalty: 0.20       # desert raiders, Nile floods, disease create real threats
+    inertia: 0.15              # peasants tied to land but not as rigidly as medieval serfs
+  movement_speed: 0.02         # low mobility — peasants stay near fields; Nile travel for elites/traders
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.04             # emotions persist — intense communal/religious life
+  contagion_radius: 0.12       # village proximity, temple festivals spread emotions
+  contagion_rate: 0.05         # high contagion — religious festivals, communal mourning (70-day embalming period)
+  grief_on_bond_death: 0.55    # death deeply mourned — elaborate funerary rituals reflect grief's centrality
+  trauma_heal_rate: 0.002      # religious consolation (afterlife promise) helps but no formal therapy
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.002   # beliefs very stable — Ma'at enforces cosmic order; drift is impiety
+  transmission_rate: 0.05        # aggressive transmission — temple rituals, festivals, priestly authority
+  transmission_noise: 0.01       # very low noise — centralized priestly doctrine, hieroglyphic orthodoxy
+  faction_formation_similarity: 0.65  # factions uncommon — strong pharaonic unity; but priestly vs military elite tensions
+  faction_formation_radius: 0.15
+  min_faction_size: 4
+  prophet_extremism_threshold: 0.70   # prophetic figures rare — Akhenaten was exceptional (monotheistic revolution)
+  prophet_charisma_threshold: 0.65    # high bar — pharaoh monopolizes divine authority
+  schism_variance_threshold: 0.5      # schisms rare — Ma'at demands unity; Amarna period was an anomaly
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.07            # Nile agriculture highly productive — surplus supports massive state projects (Kemp 2006)
+  wealth_decay: 0.015          # grain storage in state granaries; durable goods (pottery, tools, linen)
+  trade_radius: 0.12           # local trade + state-organized long-distance trade (Punt, Byblos, Aegean)
+  trade_rate: 0.10             # moderate — redistribution economy, not free market (Warburton 2003)
+  theft_aggression_threshold: 0.5  # theft punished harshly (tomb robbery trials, Papyrus Abbott)
+  faction_tax_rate: 0.07       # heavy state extraction — corvée labor + grain tax (~20-30% of harvest)
+  inheritance_rate: 0.70       # strong inheritance — property passed to children (Meskell 2002: Deir el-Medina wills)
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0003     # low — Ma'at explains everything; questioning order is impiety
+  trauma_awareness_boost: 0.002     # trauma drives people to temples, not away from the system
+  glitch_probability: 0.02          # some glitches — divine visions, oracle pronouncements (Karnak oracle)
+  glitch_awareness_boost: 0.04      # glitches interpreted as divine messages, not system failures
+  redpill_threshold: 0.55           # moderate-high bar — religious framework absorbs most doubts
+  max_ticks_per_cycle: 5500         # long cycles — pharaonic order was remarkably stable
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.45   # military culture strong — chariot warrior elite (Spalinger 2005)
+  combat_radius: 0.08                # melee + chariot range — bronze weapons, composite bows
+  combat_damage: 0.10                # lethal — bronze weapons, no armor for most infantry
+  war_check_interval: 25             # frequent military campaigns — Thutmose III fought 17 campaigns
+  war_threshold: 0.55                # moderate bar — pharaoh initiates wars for territory and tribute
+  war_ideology_weight: 0.3           # religious justification for war (pharaoh as Horus defeating chaos)
+  war_rivalry_weight: 0.2            # dynastic rivalries, Hyksos resentment
+  war_territory_weight: 0.5          # territorial expansion into Nubia, Levant is primary driver
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 10         # moderate — scribes create records, but slowly and for elite use
+  transmission_radius: 0.12          # voice + written proclamations (royal stelae, temple inscriptions)
+  transmission_rate: 0.25            # moderate — oral transmission dominant for illiterate majority
+  mutation_rate: 0.15                # oral tradition mutates; written records more stable but inaccessible
+  knowledge_skill_boost: 0.001       # limited — most information is religious/administrative, not practical
+  info_lifetime: 500                 # hieroglyphic records on stone are near-permanent; papyrus degrades
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                      # Nile agriculture established since ~5000 BCE
+  - mining                           # copper/gold mining in Eastern Desert since Old Kingdom
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: -0.5, std: 0.15 }   # collectivist — communal labor, pharaoh's will dominates (Kemp 2006)
+  tradition:     { mean: 0.8, std: 0.10 }     # extremely traditional — Ma'at = eternal unchanging cosmic order
+  system_trust:  { mean: 0.7, std: 0.15 }     # very high trust — pharaoh is a living god; system is divinely ordained
+  spirituality:  { mean: 0.9, std: 0.05 }     # near-universal deep spirituality — afterlife cult pervades all life
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A village on the banks of the Nile, shadowed by temple pylons and the distant
+    cliffs of the Valley of the Kings. Mud-brick houses cluster along irrigation
+    canals. The rhythm of life follows the Nile's flood — inundation, planting,
+    harvest. Scribes tally grain; priests chant in temple courtyards; corvée
+    laborers haul stone for the pharaoh's eternal monuments. Above it all, the
+    sun god Ra traverses the sky, and Ma'at holds chaos at bay.
+  vocabulary:
+    - pharaoh
+    - scribe
+    - Ma'at
+    - corvée
+    - vizier
+    - temple
+    - afterlife
+    - ka (spirit)
+    - Nile flood
+    - hieroglyph
+    - embalming
+    - offering
+  themes:
+    - the weight of cosmic order and the fear of chaos (isfet)
+    - death as a transition, not an end — the afterlife as the true life
+    - the Nile as giver and taker — floods bring life but also destruction
+    - rigid hierarchy as divine will — pharaoh as living god
+    - the scribe's power — literacy as the ultimate social lever
+    - monumental labor and the smallness of individual lives

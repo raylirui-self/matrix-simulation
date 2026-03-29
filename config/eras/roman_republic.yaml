@@ -1,0 +1,227 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Late Roman Republic
+# ═══════════════════════════════════════════════════════════════
+
+name: "Roman Republic"
+description: "Late Republic Rome — senators, legions, slaves, and civil war"
+time_period: "~100 BCE"
+region: "Roman Republic (Rome / Italian peninsula archetype)"
+historical_context: |
+  The Late Roman Republic (c. 133–27 BCE) was an era of extraordinary dynamism
+  and violent transformation. Rome controlled the Mediterranean but was tearing
+  itself apart internally. The patron-client system (patronus-cliens) structured
+  all social relations — every Roman owed obligations upward and dispensed
+  favors downward. Extreme wealth inequality: the senatorial elite controlled
+  vast latifundia (slave plantations) while urban plebs depended on grain doles.
+  Marius's military reforms (~107 BCE) created professional armies loyal to
+  generals, not the state — enabling Sulla's march on Rome (88 BCE) and
+  Caesar's later crossing of the Rubicon. Life expectancy at birth was ~25-30
+  (Scheidel 2001, "Death on the Nile"), though adult survivors reached 50-60.
+  Slavery was massive — perhaps 30-40% of Italy's population (Hopkins 1978).
+  Greek philosophy was transforming elite thought (Stoicism, Epicureanism),
+  while traditional Roman religion was declining among the educated. Literacy
+  was higher than most ancient societies (~15-20% in Rome, Harris 1989).
+  Population of Rome itself was ~400,000-1,000,000.
+
+# ── Population ──
+population:
+  initial_size: 80             # urban neighborhood / insula block scale (Laurence 1994: Roman neighborhoods ~50-200)
+  max_size: 500                # bounded by simulation scale — represents one urban quarter
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 60             # adult survivors reached ~55-65 (Scheidel 2001; Frier 1982 life tables)
+  max_age_variance: 22         # very high variance — disease, violence, class-based health disparities
+  base_health_decay: 0.0035    # urban disease burden high (malaria endemic in Rome, Scheidel 2003)
+  elder_decay_multiplier: 2.8  # elders vulnerable — limited medicine beyond Greek physicians for elite
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.10          # large cosmopolitan population — high gene flow from conquest and slavery
+  trait_blend_noise: 0.05      # moderate variation — diverse population mixing
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.75    # higher than medieval — Greek tutors, rhetorical schools, but only for elite
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality (~30%), patria potestas — father decides if child lives
+    child: 1.2                 # elite boys educated from ~7; slaves and plebs learn trades early
+    adolescent: 1.5            # rhetorical education peaks (Quintilian model); military service begins ~17
+    adult: 0.6                 # cursus honorum demands continued political learning for elites
+    elder: 0.2                 # elder senators valued for auctoritas; but learning plateaus
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 7             # patron-client bonds are numerous but hierarchical (Saller 1982)
+  friend_formation_distance: 0.10  # urban proximity in insulae; but class segregation limits cross-strata
+  friend_min_sociability: 0.40     # Roman social life was active — baths, forums, collegia (associations)
+  friend_ticks_to_form: 5          # bonds form through daily patronage interactions, collegia membership
+  decay_rates:
+    friend: 0.008              # friendships (amicitia) were political tools — maintained carefully (Brunt 1965)
+    rival: 0.002               # rivalries were fierce and long-lasting — senatorial feuds span generations
+    mate: 0.004                # Roman marriage could be dissolved easily (divorce was common among elite)
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 16                  # Roman marriage: girls ~12-14, boys ~17-20 legally (Treggiari 1991)
+  max_age: 45                  # moderate reproductive window
+  min_health: 0.4              # moderate bar — physical fitness valued for military service
+  search_radius: 0.20          # moderate — urban mobility higher than rural; arranged marriages for elite
+  top_n_stochastic: 3          # more options in urban setting; but elite marriages are arranged
+  base_reproduction_chance: 0.08  # moderate-high — Augustus later had to legislate pronatalism (Lex Iulia)
+  weights:
+    competition: 0.50          # high competition — social status, military glory, wealth dominate (Hopkins 1983)
+    compatibility: 0.10        # minimal — elite marriages are political alliances (Treggiari 1991)
+    proximity: 0.15            # urban mixing but class boundaries strong
+    bond: 0.25                 # patron-client bonds and family alliances drive pairings
+  compatibility_mode: assortative  # strong class endogamy — senators marry senators (Saller 1994)
+  fitness_weights:
+    resilience: 0.30           # military fitness valued — legionary service is the path to citizenship
+    intelligence: 0.25         # rhetorical skill and political cunning highly valued (Cicero as ideal)
+    health: 0.25               # visible health important in disease-heavy urban environment
+    avg_skill: 0.20            # craft skill matters for artisans; political skill for elite
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.12     # paterfamilias directly supervises children's education (Bonner 1977)
+    top_skills_taught: 3       # Roman education: letters, rhetoric, and practical trade
+    transfer_rate: 0.12        # strong — Greek tutor tradition for elite; apprenticeship for plebs
+  cultural_memory:
+    floor_cap: 0.45            # Latin literacy ~15-20% (Harris 1989); libraries emerging (but limited access)
+    decay_rate: 0.002          # written records on papyrus/stone; but fires destroy archives regularly
+    contribution_on_death: 0.05  # elite leave writings, laws, monuments; plebs leave little
+    pool_absorption_rate: 0.001  # moderate — literacy barrier, but public inscriptions and oratory help
+  social_amplifier:
+    social_skill_bonus: 0.5    # social learning very important — forum debates, baths, collegia
+    network_bonus_per_friend: 0.05  # patron-client networks are powerful knowledge channels
+    network_bonus_cap: 0.30    # strong network effects — "who you know" defines Roman life
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.2               # urban disease (malaria, gastrointestinal), periodic grain shortages
+  regeneration_rate: 0.025     # Mediterranean agriculture + imports from Sicily, Egypt
+  base_carrying_capacity: 30   # high for ancient world — Mediterranean agriculture + trade imports
+  terrain_weights:
+    plains: 0.40               # Italian plains — primary agricultural zone (Campania, Po Valley)
+    forest: 0.10               # reduced by centuries of clearing for agriculture and shipbuilding
+    mountains: 0.15            # Apennines — herding, mining, defensive positions
+    coast: 0.35                # Mediterranean coastal — mare nostrum is Rome's highway
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.30        # grain dole helps plebs, but wealth accumulation drives elite
+    social_pull: 0.25          # patron-client obligations dominate — social bonds are survival (Saller 1982)
+    curiosity_pull: 0.10       # Greek philosophy encourages inquiry among elite; plebs have little leisure
+    safety_penalty: 0.20       # civil war, urban violence (Clodius's gangs), proscriptions create real danger
+    inertia: 0.15              # moderate — urban mobility but also strong neighborhood/collegia ties
+  movement_speed: 0.025        # moderate mobility — Roman roads enable movement; but most stay local
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.04             # emotions persist — honor culture, public shaming, intense political life
+  contagion_radius: 0.12       # forum gatherings, baths, spectacles (gladiatorial games) spread emotions
+  contagion_rate: 0.05         # high contagion — mob violence, triumph celebrations, funeral processions
+  grief_on_bond_death: 0.45    # Roman grief was public and performative — laudationes funebres
+  trauma_heal_rate: 0.002      # Stoic philosophy offers coping; but no formal support systems
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.005   # moderate drift — Greek philosophy challenges traditional religion
+  transmission_rate: 0.04        # active transmission — oratory, public spectacle, patron influence
+  transmission_noise: 0.02       # moderate — multiple philosophical schools compete, no single orthodoxy
+  faction_formation_similarity: 0.45  # factions form readily — optimates vs populares, collegia, clientelae
+  faction_formation_radius: 0.18
+  min_faction_size: 5
+  faction_check_interval: 12     # rapid faction dynamics — Roman politics was perpetual factional struggle
+  prophet_extremism_threshold: 0.55   # demagogues emerge readily — Gracchi, Clodius, Catiline
+  prophet_charisma_threshold: 0.55    # oratorical charisma is THE political weapon (Cicero, Caesar)
+  schism_check_interval: 60
+  schism_variance_threshold: 0.35     # frequent splits — civil wars, proscription lists, political violence
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.07            # productive Mediterranean agriculture + conquest tribute
+  wealth_decay: 0.012          # durable goods, stored grain, coinage (denarius system)
+  trade_radius: 0.15           # Mediterranean-wide trade networks — grain, wine, olive oil, slaves
+  trade_rate: 0.12             # active commercial economy — publicani, negotiatores (Temin 2013)
+  theft_aggression_threshold: 0.35  # property crime rampant in Rome — no police force (Nippel 1995)
+  faction_tax_rate: 0.05       # publicani tax farming + tribute from provinces
+  inheritance_rate: 0.85       # strong inheritance — Roman wills were central institution (Champlin 1991)
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0005     # moderate — philosophy questions reality, but practical Romans dismiss it
+  trauma_awareness_boost: 0.003     # civil war trauma could trigger deeper questioning
+  glitch_probability: 0.02          # Roman prodigies (portents) — interpreted as divine signs
+  glitch_awareness_boost: 0.05      # prodigies taken seriously but attributed to gods, not system failure
+  redpill_threshold: 0.50           # moderate bar — Epicurean/Skeptic traditions question appearances
+  max_ticks_per_cycle: 5000         # moderate cycles — Republic was stable for centuries then collapsed fast
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.35   # violence very normalized — gladiatorial games, political murder (Lintott 1999)
+  combat_radius: 0.10                # legionary combat range — pilum + gladius; organized formations
+  combat_damage: 0.11                # high lethality — professional soldiers with iron weapons
+  war_check_interval: 15             # very frequent — Rome was at war almost continuously (Harris 1979)
+  war_threshold: 0.40                # very low bar — war was the default state; "bellum omnium" (Sallust)
+  war_ideology_weight: 0.3           # mos maiorum (ancestral customs) justifies war; political ideology emerging
+  war_rivalry_weight: 0.35           # personal rivalries drive civil wars (Marius vs Sulla, Caesar vs Pompey)
+  war_territory_weight: 0.35         # territorial expansion is central to Roman identity and economy
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 8          # moderate-fast — Senate records (acta), public orations, graffiti
+  transmission_radius: 0.14          # forum oratory reaches crowds; written dispatches for distance
+  transmission_rate: 0.30            # high — oratory, public readings, graffiti (Pompeii evidence)
+  mutation_rate: 0.15                # oral retelling mutates; written records more stable
+  knowledge_skill_boost: 0.0015      # moderate — practical knowledge from trade, rhetoric from education
+  info_lifetime: 450                 # papyrus records moderately durable; stone inscriptions permanent
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                      # established since Neolithic
+  - mining                           # iron mining widespread; silver mines at Laurion
+  - trade_networks                   # Mediterranean trade well-established by 100 BCE
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: 0.0, std: 0.30 }    # mixed — Roman civic duty vs emerging elite individualism (Beard 2015)
+  tradition:     { mean: 0.4, std: 0.30 }     # mos maiorum valued but eroding — Sallust laments moral decline
+  system_trust:  { mean: 0.2, std: 0.35 }     # declining — civil wars, proscriptions destroying institutional trust
+  spirituality:  { mean: 0.3, std: 0.30 }     # moderate — traditional religion declining among elite; mystery cults rising
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A crowded neighborhood in late Republican Rome. Towering insulae
+    (apartment blocks) lean over narrow streets filled with merchants,
+    slaves, and clients hurrying to their patron's morning salutatio.
+    The Forum buzzes with oratory and intrigue. Graffiti covers the walls.
+    In the distance, the sound of construction — another senator building
+    a monument to his glory. The Republic's institutions still stand, but
+    everyone can feel the cracks. Armed gangs roam the streets after dark.
+  vocabulary:
+    - patron
+    - client
+    - senator
+    - legion
+    - forum
+    - gladiator
+    - triumph
+    - proscription
+    - insula
+    - latifundium
+    - mos maiorum
+    - denarius
+    - collegium
+  themes:
+    - the patron-client web as both safety net and cage
+    - the Republic dying in slow motion — institutions hollowed by ambition
+    - extreme inequality — senatorial luxury alongside plebeian squalor
+    - military glory as the path to power and the road to tyranny
+    - Greek philosophy colliding with Roman pragmatism
+    - the violence beneath the marble — assassination, proscription, civil war

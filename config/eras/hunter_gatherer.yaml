@@ -1,0 +1,210 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Hunter-Gatherer
+# ═══════════════════════════════════════════════════════════════
+
+name: "Hunter-Gatherer"
+description: "Nomadic bands surviving on foraging and hunting — humanity's longest era"
+time_period: "~50,000 BCE"
+region: "Global (African savanna / Eurasian steppe archetype)"
+historical_context: |
+  For 95% of human history, people lived in small nomadic bands of 20-50.
+  Social structure was fiercely egalitarian — anthropologists call it
+  "reverse dominance hierarchy" where the group actively suppressed
+  anyone who tried to accumulate power (Boehm 1999). Knowledge was
+  entirely oral, passed through storytelling, apprenticeship, and ritual.
+  Resources were shared communally. Conflict existed between bands but
+  was typically low-intensity raiding, not organized warfare. Spirituality
+  was animistic and deeply integrated into daily life. Life expectancy
+  was ~35 years, though this was heavily skewed by infant mortality —
+  adults who survived childhood often lived into their 60s.
+
+# ── Population ──
+population:
+  initial_size: 25            # typical band size (Kelly 2013: mean 25, range 15-50)
+  max_size: 150               # Dunbar's number — max stable social group for humans
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 65            # adults who survived childhood lived ~60-70 (Gurven & Kaplan 2007)
+  max_age_variance: 20        # high variance from disease, injury, predation
+  base_health_decay: 0.004    # harsher conditions, no medicine — double default decay
+  elder_decay_multiplier: 3.0  # elders extremely vulnerable without modern care
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.20          # small gene pools, higher effective drift (Harpending 1998)
+  trait_blend_noise: 0.08      # more phenotypic variation in small populations
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.7     # no formal education — learning through observation only
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality, limited learning window
+    child: 1.8                 # children integrated into band activities early (Lancy 2015)
+    adolescent: 1.5            # apprenticeship-style learning peaks in adolescence
+    adult: 0.4                 # plateau — mastery is about repetition, not new skills
+    elder: 0.1                 # elders teach, rarely learn new skills
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 12            # tighter, deeper bonds in small groups (Hill & Dunbar 2003)
+  friend_formation_distance: 0.15  # everyone in the band knows everyone
+  friend_min_sociability: 0.25     # even introverts bond in bands this small
+  friend_ticks_to_form: 3          # bonds form fast in close quarters
+  decay_rates:
+    friend: 0.005              # friendships are lifelong in stable bands
+    rival: 0.003               # rivalries persist — nowhere to escape in small band
+    mate: 0.003                # pair bonds extremely stable (Chapais 2008)
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 16                  # earlier sexual maturity / pairing in forager societies
+  max_age: 40                  # shorter reproductive window given health constraints
+  min_health: 0.5              # higher health bar — weak individuals struggle to reproduce
+  search_radius: 0.35          # must search wider — very few candidates in small band
+  top_n_stochastic: 2          # fewer choices available
+  base_reproduction_chance: 0.06  # moderate — limited by nutrition and health
+  weights:
+    competition: 0.35          # fitness matters but less than feudal/modern (egalitarian norms)
+    compatibility: 0.20        # compatibility valued but options are limited
+    proximity: 0.25            # proximity dominates — you mate within your band
+    bond: 0.20                 # pair bonds form before mating (Chapais 2008)
+  fitness_weights:
+    resilience: 0.4            # survival ability is the primary fitness signal
+    intelligence: 0.15         # valued but less legible than physical traits
+    health: 0.35               # visible health = survival = reproductive fitness
+    avg_skill: 0.1             # skill differentiation is low in forager bands
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.20     # children always near parents in nomadic band
+    top_skills_taught: 3       # generalist teaching — survival, social, and craft
+    transfer_rate: 0.15        # high — direct apprenticeship is effective (Hewlett & Cavalli-Sforza 1986)
+  cultural_memory:
+    floor_cap: 0.25            # oral tradition preserves less than written (Henrich 2004)
+    decay_rate: 0.005          # knowledge lost quickly without writing — elders die, songs forgotten
+    contribution_on_death: 0.03  # smaller contribution — no way to record beyond memory
+    pool_absorption_rate: 0.0005  # slow absorption — must be taught person-to-person
+  social_amplifier:
+    social_skill_bonus: 0.7    # social learning is THE mechanism — no books, no schools
+    network_bonus_per_friend: 0.08  # tight networks amplify learning strongly
+    network_bonus_cap: 0.5     # everyone knows everyone, strong network effects
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.8               # pre-agricultural world is harsh (but not maximally — humans adapted)
+  regeneration_rate: 0.03      # pristine ecosystems regenerate well — no over-exploitation
+  base_carrying_capacity: 15   # land supports few foragers per unit area (Kelly 2013: ~1/10 sq mi)
+  terrain_weights:
+    plains: 0.30               # savanna grasslands — primary habitat
+    forest: 0.35               # dense forests for foraging, shelter
+    mountains: 0.10            # avoided — harsh, low resources
+    coast: 0.25                # coastal foraging is highly productive (Marean 2010)
+  tech_breakthroughs:
+    enabled: true              # tech CAN emerge but starts from zero
+    # No pre-unlocked technologies — everything must be discovered
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.40        # survival dominates decision-making
+    social_pull: 0.25          # staying with the band is critical for survival
+    curiosity_pull: 0.15       # exploration exists but is risky
+    safety_penalty: 0.15       # predators and rival bands are real threats
+    inertia: 0.05              # nomadic — low inertia, frequent movement
+  movement_speed: 0.05         # nomadic bands move constantly following resources
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.04             # emotions persist slightly longer — intense communal life
+  contagion_radius: 0.15       # tight quarters = strong emotional contagion
+  contagion_rate: 0.06         # double default — emotions spread fast in bands (Hatfield 1994)
+  grief_on_bond_death: 0.6     # death of band member is devastating in small group
+  trauma_heal_rate: 0.003      # communal healing rituals help (slightly better than default)
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.003   # beliefs are stable — reinforced by group consensus
+  transmission_rate: 0.04        # beliefs spread fast in tight group (conformity pressure)
+  transmission_noise: 0.01       # low noise — oral repetition enforces consistency
+  faction_formation_similarity: 0.80  # factions rare — strong pressure for band unity
+  faction_formation_radius: 0.25      # wide radius — whole band is in range
+  min_faction_size: 3                 # smaller threshold given small population
+  prophet_extremism_threshold: 0.80   # shamans emerge only with extreme spiritual conviction
+  prophet_charisma_threshold: 0.70    # high bar — shamanic authority must be earned
+  schism_variance_threshold: 0.6      # bands do split but only under severe disagreement
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.04            # foraging is labor-intensive but sufficient (Sahlins 1972)
+  wealth_decay: 0.04           # no storage — food spoils, possessions are minimal
+  trade_radius: 0.15           # trade within band and with neighboring bands at boundaries
+  trade_rate: 0.25             # high sharing rate — "demand sharing" is the norm (Peterson 1993)
+  theft_aggression_threshold: 0.7  # theft is rare — strong social sanctions in small groups
+  faction_tax_rate: 0.0        # no taxation — egalitarian redistribution instead
+  inheritance_rate: 0.3        # minimal inheritance — few possessions, communal resources
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0008    # animistic worldview questions reality more naturally
+  trauma_awareness_boost: 0.004    # altered states (fasting, ritual) boost awareness
+  glitch_probability: 0.03         # more "glitches" — shamanic visions, dreams treated as real
+  glitch_awareness_boost: 0.07     # glitches are deeply meaningful in animistic framework
+  redpill_threshold: 0.4           # lower threshold — shamanic traditions accept altered reality
+  max_ticks_per_cycle: 3000        # shorter cycles — smaller civilizations peak faster
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.6   # combat requires higher aggression (social sanctions)
+  combat_radius: 0.08               # close-range only — melee weapons
+  combat_damage: 0.12               # higher lethality — no medicine, stone weapons are crude but deadly
+  war_check_interval: 50            # organized warfare is rare (Kelly 2000)
+  war_threshold: 0.8                # very high bar for inter-band war
+  war_ideology_weight: 0.2          # ideology rarely drives conflict
+  war_rivalry_weight: 0.3           # personal feuds matter
+  war_territory_weight: 0.5         # resource competition is the primary war driver
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 15        # info created less often — no writing, slower pace
+  transmission_radius: 0.15         # voice range in camp
+  transmission_rate: 0.4            # high within band — everyone talks to everyone
+  mutation_rate: 0.25               # oral tradition mutates fast (Bartlett 1932)
+  knowledge_skill_boost: 0.002      # stories teach survival skills effectively
+  info_lifetime: 200                # oral info degrades fast — 200 ticks then forgotten
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech: []               # nothing — all tech must be discovered from scratch
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: -0.6, std: 0.15 }   # strongly collectivist (Boehm 1999)
+  tradition:     { mean: 0.7, std: 0.10 }     # deeply traditional — oral customs are sacred
+  system_trust:  { mean: 0.3, std: 0.25 }     # moderate trust — no "system" to distrust yet
+  spirituality:  { mean: 0.8, std: 0.10 }     # animism pervades all aspects of life
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A small band of nomadic hunter-gatherers on an open savanna. No villages,
+    no farms, no walls. Just the sky, the fire, and the endless migration
+    following herds and seasons. Every person knows every other by name.
+  vocabulary:
+    - band
+    - hearth
+    - shaman
+    - elder council
+    - gathering grounds
+    - spirit walk
+    - ancestor song
+    - watering hole
+    - hunting party
+    - kin-group
+  themes:
+    - survival against nature
+    - oral tradition and storytelling
+    - communal sharing and equality
+    - shamanic visions and spirit world
+    - the tension between band loyalty and individual desire
+    - migration and the search for fertile ground

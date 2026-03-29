@@ -1,0 +1,229 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: 1980s America
+# ═══════════════════════════════════════════════════════════════
+
+name: "1980s America"
+description: "Reagan-era suburbia — peak consumerism, Cold War anxiety, and the dawn of computing"
+time_period: "~1980-1989"
+region: "United States (suburban middle-class archetype)"
+historical_context: |
+  The 1980s America that the Matrix chose as its simulation setting — and
+  for good reason. It represents a sweet spot of stability, consumerism,
+  and just enough existential unease. The Cold War provided background
+  dread without active conflict on home soil. Reagan-era economics
+  accelerated wealth inequality (top 1% share rose from 10% to 15%,
+  Piketty 2014). Suburbanization atomized communities — Putnam's
+  "Bowling Alone" thesis traces social capital decline to this era.
+  Television was the dominant information channel, creating shared
+  cultural narratives but also passivity. Education was widespread
+  but uneven. Technology was accelerating (personal computers arrived)
+  but hadn't yet transformed daily life. Religion was present but
+  declining in social authority. It's a world comfortable enough
+  that people don't question it — the ideal simulation setting.
+
+# ── Population ──
+population:
+  initial_size: 80             # suburban neighborhood scale
+  max_size: 500                # full community — default works
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 75             # US life expectancy ~74 in 1985 (CDC)
+  max_age_variance: 15         # lower variance — modern medicine smooths outcomes
+  base_health_decay: 0.0015    # modern medicine + nutrition = slow decay
+  elder_decay_multiplier: 2.0  # better elder care than historical, but aging still takes toll
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.12          # large diverse population — moderate drift
+  trait_blend_noise: 0.05      # default variance
+
+# ── Skills ──
+skills:
+  learning_multiplier: 1.2     # public education + libraries + early computing
+  phase_growth_multipliers:
+    infant: 0.3                # default — modern infant stimulation
+    child: 1.6                 # structured schooling from age 5-6
+    adolescent: 1.3            # high school + early specialization
+    adult: 0.7                 # continuing education more accessible than historical
+    elder: 0.3                 # retirees can still learn — community college, hobbies
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 7             # slightly below default — suburban atomization (Putnam 2000)
+  friend_formation_distance: 0.08  # neighborhood proximity — but cars extend range
+  friend_min_sociability: 0.45     # harder to form bonds in anonymous suburbs
+  friend_ticks_to_form: 6          # moderate — workplace/school proximity helps
+  decay_rates:
+    friend: 0.012              # friendships decay faster — people move, change jobs
+    rival: 0.008               # rivalries are less persistent — you can just avoid people
+    mate: 0.008                # divorce rate rising — ~50% of marriages by late 1980s
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 22                  # later marriage — college, career establishment first
+  max_age: 50                  # default
+  min_health: 0.3              # lower bar — medicine compensates for health issues
+  search_radius: 0.30          # wider search — cars, social venues, workplace dating
+  top_n_stochastic: 3          # default
+  base_reproduction_chance: 0.06  # declining fertility — birth control, career focus (TFR ~1.8)
+  weights:
+    competition: 0.30          # fitness matters less — wealth/status substitute
+    compatibility: 0.35        # compatibility highly valued — "love marriage" ideal
+    proximity: 0.10            # less important — mobility is high
+    bond: 0.25                 # dating period before marriage — bonds matter
+  compatibility_mode: assortative  # educational assortative mating rises in 1980s (Mare 1991)
+  fitness_weights:
+    resilience: 0.15           # less important in safe environment
+    intelligence: 0.35         # highly valued — education correlates with income
+    health: 0.15               # less visible as fitness signal (medicine masks)
+    avg_skill: 0.35            # skill/career success is primary status marker
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.12     # parents spend less time with kids (dual-income households)
+    top_skills_taught: 2       # default
+    transfer_rate: 0.08        # lower than foragers — parents are at work, kids at school
+  cultural_memory:
+    floor_cap: 0.60            # strong institutional knowledge preservation (libraries, schools)
+    decay_rate: 0.0005         # written/recorded knowledge decays very slowly
+    contribution_on_death: 0.06  # moderate — published work, institutional contributions
+    pool_absorption_rate: 0.002  # faster absorption — schools, TV, books
+  social_amplifier:
+    social_skill_bonus: 0.4    # social learning matters but less than institutional
+    network_bonus_per_friend: 0.04
+    network_bonus_cap: 0.25    # moderate network effects — weaker ties than historical
+
+# ── Environment & Resources ──
+environment:
+  harshness: 0.5               # American suburbia is comfortable — grocery stores, heating, AC
+  regeneration_rate: 0.03      # managed resources + imports — effective regeneration
+  base_carrying_capacity: 40   # industrial agriculture supports many
+  terrain_weights:
+    plains: 0.50               # suburban sprawl on flat land
+    forest: 0.15               # reduced — developed land
+    mountains: 0.05            # marginal — recreational
+    coast: 0.30                # coastal cities are population centers
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.25        # resources available — less desperate seeking
+    social_pull: 0.20          # social motivation moderate
+    curiosity_pull: 0.25       # curiosity encouraged — education, media, exploration
+    safety_penalty: 0.10       # safe environment — low safety anxiety (suburban)
+    inertia: 0.20              # high inertia — mortgage, job, routine (suburban trap)
+  movement_speed: 0.025        # moderate — people move for jobs but are somewhat rooted
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.06             # emotions fade faster — compartmentalization, media distraction
+  contagion_radius: 0.08       # weaker proximity — suburban separation, TV as buffer
+  contagion_rate: 0.025        # lower contagion — individualized emotional processing
+  grief_on_bond_death: 0.35    # grief is real but culturally suppressed ("move on")
+  trauma_heal_rate: 0.003      # therapy emerging but not yet mainstream — better than medieval
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.008   # beliefs shift faster — exposure to diverse media
+  transmission_rate: 0.015       # lower direct transmission — people are more private
+  transmission_noise: 0.03       # higher noise — media distortion, diverse sources
+  faction_formation_similarity: 0.60  # factions form at moderate similarity (political parties, subcultures)
+  faction_formation_radius: 0.20
+  min_faction_size: 5
+  faction_check_interval: 20
+  prophet_extremism_threshold: 0.65   # televangelists, cult leaders emerge with lower bar
+  prophet_charisma_threshold: 0.60    # TV charisma matters — Reagan, televangelists
+  schism_check_interval: 100
+  schism_variance_threshold: 0.45     # political polarization beginning (Fiorina 2005)
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.08            # industrial economy — high productivity
+  wealth_decay: 0.01           # consumer spending but durable goods, savings
+  trade_radius: 0.15           # broad trade networks — malls, commerce
+  trade_rate: 0.15             # active market economy — default
+  theft_aggression_threshold: 0.5  # property crime exists but socially punished
+  faction_tax_rate: 0.03       # moderate taxation — Reagan cut taxes but they still exist
+  inheritance_rate: 0.75       # strong inheritance — estate tax loopholes (Reagan era)
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0003     # low — comfortable life suppresses questioning
+  trauma_awareness_boost: 0.001     # trauma triggers therapy, not existential doubt
+  awareness_contagion_radius: 0.10  # awareness spreads through subcultures (punk, philosophy)
+  awareness_transfer_rate: 0.008    # moderate — countercultural networks exist
+  glitch_probability: 0.015         # fewer glitches — the simulation is well-calibrated for this era
+  glitch_awareness_boost: 0.04      # glitches noticed but rationalized away
+  redpill_threshold: 0.55           # moderate bar — the comfortable are reluctant to question
+  sentinel_deploy_threshold: 0.55   # system is vigilant — FBI, social conformity pressure
+  comfort_injection_interval: 25    # frequent comfort — TV, consumerism, "everything is fine"
+  max_ticks_per_cycle: 5000         # default — this is the "design era" for the Matrix
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.6   # violence socially discouraged — rule of law
+  combat_radius: 0.05               # smaller — physical confrontations are rare
+  combat_damage: 0.06               # lower lethality in domestic context (fistfights, not swords)
+  war_check_interval: 40            # interstate war is distant (Cold War proxy, not direct)
+  war_threshold: 0.7                # high bar for organized conflict
+  war_ideology_weight: 0.5          # Cold War is ideological (capitalism vs communism)
+  war_rivalry_weight: 0.25          # personal rivalry matters less at community scale
+  war_territory_weight: 0.25        # territorial disputes minimal domestically
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 5          # rapid info creation — TV, newspapers, radio, early internet
+  transmission_radius: 0.20          # TV broadcasts reach far — mass media
+  transmission_rate: 0.35            # high transmission — mass media saturation
+  mutation_rate: 0.10                # lower mutation — recorded media preserves accuracy
+  knowledge_skill_boost: 0.001       # default — info helps but is often entertainment
+  system_narrative_interval: 20      # frequent system narrative — news, advertising, "American Dream"
+  info_lifetime: 600                 # recorded info lasts long — VHS, newspapers, libraries
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                      # 10,000 years ago
+  - mining                           # ancient
+  - trade_networks                   # global trade by 1980s
+  - industrialization                # since 1800s — fully mature by 1980s
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: 0.5, std: 0.25 }    # American individualism — strong but varies by community
+  tradition:     { mean: 0.1, std: 0.30 }     # mixed — Bible Belt traditional, coasts progressive
+  system_trust:  { mean: 0.3, std: 0.25 }     # moderate — post-Watergate cynicism but Cold War patriotism
+  spirituality:  { mean: 0.2, std: 0.35 }     # declining but still present — "In God We Trust" era
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    Suburban America, 1985. Split-level houses with two-car garages line
+    cul-de-sacs. A television glows in every living room. The mall is the
+    social center. Neon signs advertise the promise of consumer happiness.
+    Underneath the surface comfort: Cold War dread, rising inequality, and
+    a creeping sense that something about this picture-perfect life isn't
+    quite real.
+  vocabulary:
+    - suburb
+    - mall
+    - yuppie
+    - Cold War
+    - television
+    - middle class
+    - American Dream
+    - corporate ladder
+    - shopping center
+    - nuclear family
+    - commute
+    - consumer
+  themes:
+    - the comfortable numbness of consumer society
+    - Cold War paranoia simmering beneath normalcy
+    - the American Dream as both aspiration and illusion
+    - suburban isolation despite physical proximity
+    - television as shared reality and pacifier
+    - the first hints of digital revolution on the horizon

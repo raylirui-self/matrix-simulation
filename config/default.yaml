@@ -1,0 +1,285 @@
+# ═══════════════════════════════════════════════════════════════
+# Cognitive Matrix v2 — Master Configuration
+# ═══════════════════════════════════════════════════════════════
+# Priority: default.yaml < scenario.yaml < CLI flags < dashboard sliders
+
+# ── Population ──
+population:
+  initial_size: 50
+  max_size: 500
+  sex_ratio: 0.5
+
+# ── Lifecycle ──
+lifecycle:
+  phase_ages:
+    infant: 0
+    child: 3
+    adolescent: 12
+    adult: 18
+    elder: 60
+  base_max_age: 80
+  max_age_variance: 25
+  base_health_decay: 0.002
+  elder_decay_multiplier: 2.5
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.15
+  trait_blend_noise: 0.05
+
+# ── Skills ──
+skills:
+  names:
+    - logic
+    - creativity
+    - social
+    - survival
+    - tech
+  learning_multiplier: 1.0
+  phase_growth_multipliers:
+    infant: 0.3
+    child: 1.5
+    adolescent: 1.2
+    adult: 0.6
+    elder: 0.2
+  diminishing_returns_factor: 0.8
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 8
+  friend_formation_distance: 0.1
+  friend_min_sociability: 0.4
+  friend_ticks_to_form: 5
+  rival_min_resilience: 0.5
+  mate_persist_sociability: 0.6
+  decay_rates:
+    friend: 0.02       # friends drift apart without reinforcement
+    rival: 0.008       # rivalries fade but slowly
+    mate: 0.008        # pair bonds are most stable after family
+    ally: 0.015
+    enemy: 0.006       # enemies are remembered longest
+    resistance: 0.005  # resistance bonds are strong
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 20
+  max_age: 50
+  min_health: 0.4
+  search_radius: 0.25
+  top_n_stochastic: 3
+  base_reproduction_chance: 0.08
+  weights:
+    competition: 0.50
+    compatibility: 0.25
+    proximity: 0.10
+    bond: 0.15
+  compatibility_mode: assortative     # humans mate assortatively for most traits (Luo & Klohnen 2005)
+  fitness_weights:
+    resilience: 0.3
+    intelligence: 0.3
+    health: 0.2
+    avg_skill: 0.2
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    enabled: true
+    proximity_radius: 0.15
+    top_skills_taught: 2
+    transfer_rate: 0.1
+  cultural_memory:
+    enabled: true
+    floor_cap: 0.5
+    decay_rate: 0.001
+    contribution_on_death: 0.05
+    pool_absorption_rate: 0.001
+    pool_drain_rate: 0.99
+  social_amplifier:
+    enabled: true
+    social_skill_bonus: 0.5
+    network_bonus_per_friend: 0.05
+    network_bonus_cap: 0.3
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.0
+  grid_size: 8
+  regeneration_rate: 0.02
+  base_carrying_capacity: 30
+  terrain_weights:
+    plains: 0.35
+    forest: 0.25
+    mountains: 0.15
+    coast: 0.25
+  terrain_properties:
+    plains:
+      resource_min: 0.6
+      resource_max: 1.0
+      harshness_modifier: 0.8
+      skill_bonus: null
+      skill_bonus_amount: 0.0
+    forest:
+      resource_min: 0.4
+      resource_max: 0.7
+      harshness_modifier: 1.0
+      skill_bonus: survival
+      skill_bonus_amount: 0.02
+    mountains:
+      resource_min: 0.1
+      resource_max: 0.4
+      harshness_modifier: 1.5
+      skill_bonus: tech
+      skill_bonus_amount: 0.03
+    coast:
+      resource_min: 0.4
+      resource_max: 0.8
+      harshness_modifier: 0.7
+      skill_bonus: social
+      skill_bonus_amount: 0.02
+  tech_breakthroughs:
+    enabled: true
+    thresholds:
+      - name: agriculture
+        tech_level: 0.3
+        resource_bonus: 0.2
+        terrain: null
+        requires_social: 0.0
+        capacity_bonus: 0
+        description: "Farming increases food production"
+      - name: mining
+        tech_level: 0.5
+        resource_bonus: 0.15
+        terrain: mountains
+        requires_social: 0.0
+        capacity_bonus: 0
+        description: "Mining extracts mountain resources"
+      - name: trade_networks
+        tech_level: 0.7
+        resource_bonus: 0.1
+        terrain: null
+        requires_social: 0.5
+        capacity_bonus: 5
+        description: "Trade redistributes resources"
+      - name: industrialization
+        tech_level: 0.9
+        resource_bonus: 0.25
+        terrain: null
+        requires_social: 0.0
+        capacity_bonus: 15
+        description: "Industry increases capacity"
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.35
+    social_pull: 0.20
+    curiosity_pull: 0.20
+    safety_penalty: 0.15
+    inertia: 0.10
+  movement_speed: 0.03
+  protagonists:
+    max_count: 3
+    decision_interval: 10
+    auto_weights:
+      generation: 0.3
+      bonds: 0.3
+      intelligence: 0.2
+      age: 0.2
+
+# ── Narrator / LLM ──
+narrator:
+  enabled: true
+  provider: ollama
+  ollama_model: qwen3.5
+  hf_model: Qwen/Qwen2.5-72B-Instruct
+  hf_token_env: HF_TOKEN
+  narration_interval: 100
+  event_interval: 50
+
+# ── Persistence ──
+persistence:
+  db_path: output/simulation.db
+  snapshot_interval: 50
+
+# ── Batch ──
+batch:
+  default_ticks: 500
+  progress_interval: 10
+
+# ═══════════════════════════════════════════════════════════════
+# NEW SYSTEMS (6-11)
+# ═══════════════════════════════════════════════════════════════
+
+# ── System 6: Emotions & Psychology ──
+emotions:
+  decay_rate: 0.10              # how fast emotions return to baseline (was 0.05 — fear runaway)
+  contagion_radius: 0.1         # proximity for emotional spread
+  contagion_rate: 0.02          # how fast emotions spread (was 0.03 — mass panic too easy)
+  grief_on_bond_death: 0.4      # grief multiplier when bonded agent dies
+  trauma_heal_rate: 0.002       # how fast trauma heals per tick
+
+# ── System 7: Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.005  # how fast beliefs change from experience
+  transmission_rate: 0.02       # memetic transmission speed through bonds
+  transmission_noise: 0.02      # mutation during belief transmission
+  faction_formation_similarity: 0.65  # belief similarity threshold for faction
+  faction_formation_radius: 0.2      # spatial proximity for faction formation
+  min_faction_size: 4                # minimum members to form faction
+  faction_check_interval: 20         # ticks between faction formation checks
+  faction_leave_threshold: 1.5       # belief distance to leave a faction
+  prophet_check_interval: 50         # ticks between prophet emergence checks
+  prophet_extremism_threshold: 0.7   # min belief extremism to become prophet
+  prophet_charisma_threshold: 0.65   # min charisma to become prophet
+  schism_check_interval: 100         # ticks between schism checks
+  schism_min_size: 4                 # minimum splinter size
+  schism_variance_threshold: 0.5     # internal variance to trigger schism
+
+# ── System 8: Economy, Property & Power ──
+economy:
+  gather_rate: 0.20             # base resource gathering per tick (tuned: 0.15 still near-zero with competition)
+  wealth_decay: 0.015           # base wealth consumption per tick (was 0.02)
+  trade_radius: 0.12            # max distance for trade
+  trade_rate: 0.15              # fraction of wealth difference traded
+  theft_aggression_threshold: 0.45 # min aggression to attempt theft (tuned: 0.35 caused theft spirals)
+  faction_tax_rate: 0.02        # fraction taxed for faction redistribution
+  inheritance_rate: 0.7         # fraction passed to heirs on death
+
+# ── System 9: Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.003        # base awareness growth per tick (tuned: 0.005 caused 9 resets/2000 ticks)
+  trauma_awareness_boost: 0.005       # awareness boost from trauma
+  awareness_contagion_radius: 0.12    # proximity for awareness spread
+  awareness_transfer_rate: 0.01       # how fast awareness spreads
+  glitch_probability: 0.02            # chance of glitch per tick
+  glitch_awareness_boost: 0.05        # awareness gained from witnessing glitch
+  redpill_check_interval: 25          # ticks between red pill events
+  redpill_threshold: 0.5              # min awareness for red pill choice
+  sentinel_deploy_threshold: 0.6      # control_index below this triggers sentinels
+  sentinel_suppress_power: 0.05       # awareness suppression per sentinel attack
+  max_sentinels: 5                    # base max sentinels (scales with population: 1 per 20 agents)
+  sentinels_per_deploy: 1             # sentinels spawned per deployment
+  oracle_guidance_interval: 30        # ticks between oracle nudges
+  comfort_injection_interval: 40      # ticks between system comfort injections
+  max_ticks_per_cycle: 5000           # forced reset after this many ticks
+
+# ── System 10: Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.35   # effective aggression to initiate combat (was 0.5)
+  combat_radius: 0.08                 # proximity for combat (was 0.06)
+  combat_damage: 0.08                 # base damage per combat tick
+  war_check_interval: 25              # ticks between war condition checks (was 30)
+  war_threshold: 0.4                  # combined score threshold to start war (was 0.6)
+  war_ideology_weight: 0.4            # belief distance weight in war score
+  war_rivalry_weight: 0.35            # mutual enemy count weight
+  war_territory_weight: 0.25          # territorial overlap weight
+
+# ── System 11: Communication & Information ──
+communication:
+  info_creation_interval: 10          # ticks between info creation rounds
+  transmission_radius: 0.12           # max distance for info transmission
+  transmission_rate: 0.3              # probability modifier for transmission
+  mutation_rate: 0.15                 # chance of info degradation per hop
+  knowledge_skill_boost: 0.001        # skill boost from received knowledge
+  system_narrative_interval: 50       # ticks between system narrative injections
+  info_lifetime: 500                  # ticks before info expires

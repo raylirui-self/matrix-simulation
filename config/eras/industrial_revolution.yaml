@@ -1,0 +1,230 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Industrial Revolution — Victorian Britain
+# ═══════════════════════════════════════════════════════════════
+
+name: "Industrial Revolution"
+description: "Victorian Britain — factories, empire, class war, and the death of the old world"
+time_period: "~1850 CE"
+region: "Britain (Manchester / London industrial city archetype)"
+historical_context: |
+  Mid-Victorian Britain was the workshop of the world and the epicenter of
+  modernity's birth pangs. The factory system had transformed social relations:
+  artisans became wage laborers, villages emptied into cities, and a new
+  industrial working class emerged (Thompson 1963). Life expectancy in
+  industrial cities was horrifying — ~25-30 in Manchester vs ~45 in rural
+  areas (Chadwick Report 1842). Child labor was endemic until reform acts.
+  The Great Exhibition of 1851 showcased British industrial supremacy while
+  Engels documented working-class misery. Class consciousness was crystallizing:
+  Chartism (1838-57), trade unions, and Marx's Communist Manifesto (1848).
+  Religion was under siege: Darwin's Origin of Species (1859), geological
+  discoveries, and biblical criticism eroded traditional faith. Yet evangelicalism
+  drove reform movements (abolition, temperance, education). Literacy was
+  rising rapidly — ~60-70% by 1850 (Vincent 1989). The British Empire
+  controlled a quarter of the world's surface, feeding raw materials into
+  the industrial machine. Population grew explosively: Britain went from
+  ~10 million in 1800 to ~27 million by 1850.
+
+# ── Population ──
+population:
+  initial_size: 100            # urban industrial neighborhood (Dyos 1968: factory towns ~10,000+; neighborhood scale ~100-300)
+  max_size: 500                # dense urban growth — bounded by simulation scale
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 65             # adult survivors reached ~60-70; but urban poor died much younger (Szreter 2005)
+  max_age_variance: 25         # extreme variance by class — wealthy lived 30 years longer than poor (Chadwick 1842)
+  base_health_decay: 0.003     # moderate — improving nutrition but terrible urban sanitation
+  elder_decay_multiplier: 2.5  # elders vulnerable — workhouses for the poor; slightly better care for middle class
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.10          # very large population — low genetic drift; immigration from Ireland, colonies
+  trait_blend_noise: 0.04      # moderate variation
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.9     # rising — Sunday schools, mechanics' institutes, Factory Acts mandating education
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality in cities (~150-200 per 1000, Woods 2000)
+    child: 1.0                 # child labor competes with schooling; Factory Act 1833 begins reform
+    adolescent: 1.4            # apprenticeships, mechanics' institutes, some grammar school access
+    adult: 0.6                 # self-improvement culture (Smiles 1859); but exhausting labor limits time
+    elder: 0.2                 # retirement barely exists — work until you drop or enter the workhouse
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 6             # moderate-low — urban anomie, factory discipline fragments community (Thompson 1963)
+  friend_formation_distance: 0.08  # neighborhood proximity; factory floor camaraderie
+  friend_min_sociability: 0.45     # harder to form bonds — long work hours, urban anonymity
+  friend_ticks_to_form: 7          # moderate-slow — industrial pace of life, but pub culture helps
+  decay_rates:
+    friend: 0.010              # friendships moderately fragile — urban mobility, factory turnover
+    rival: 0.005               # class resentment persists — structural not personal
+    mate: 0.005                # marriages moderately stable — divorce illegal/expensive until 1857 Act
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 18                  # later marriage than medieval — ~22-25 typical (Wrigley & Schofield 1981)
+  max_age: 45                  # moderate reproductive window
+  min_health: 0.35             # lower bar — widespread poor health in cities, people mate regardless
+  search_radius: 0.20          # moderate — urban mixing, but class segregation strong
+  top_n_stochastic: 3          # more options in urban setting; working class has more choice than medieval
+  base_reproduction_chance: 0.10  # high fertility — large families, limited birth control (TFR ~5-6, Woods 2000)
+  weights:
+    competition: 0.40          # economic status dominates — income, trade skill, respectability
+    compatibility: 0.15        # rising — romantic love ideal emerging (Victorian novels) but still secondary
+    proximity: 0.20            # neighborhood/factory proximity matters — class segregation
+    bond: 0.25                 # courtship period exists; family networks still influence
+  compatibility_mode: assortative  # strong class endogamy — workers marry workers (Vincent 1989)
+  fitness_weights:
+    resilience: 0.30           # physical hardiness for factory labor and survival in slums
+    intelligence: 0.25         # rising value — literacy correlates with better employment
+    health: 0.25               # visible health in disease-heavy cities is a strong signal
+    avg_skill: 0.20            # trade skills command better wages — skilled vs unskilled divide
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.08     # parents at factory 12-16 hours/day — less time with children
+    top_skills_taught: 2       # trade skills + basic literacy if parent is literate
+    transfer_rate: 0.09        # lower — parents exhausted from factory work; children in mills
+  cultural_memory:
+    floor_cap: 0.55            # rising literacy (~60-70%, Vincent 1989), cheap print, mechanics' institutes
+    decay_rate: 0.001          # print culture preserves knowledge well — newspapers, penny dreadfuls, pamphlets
+    contribution_on_death: 0.05  # middle class contributes through publications; workers through oral/trade tradition
+    pool_absorption_rate: 0.002  # faster — public libraries (1850 Act), Sunday schools, cheap print
+  social_amplifier:
+    social_skill_bonus: 0.35   # social learning through trade unions, Chartist meetings, pub discussion
+    network_bonus_per_friend: 0.04  # moderate network effects — class solidarity emerging
+    network_bonus_cap: 0.25    # cross-class knowledge sharing limited by segregation
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.3               # urban industrial conditions are harsh — pollution, overcrowding, cholera
+  regeneration_rate: 0.02      # industrial pollution + deforestation slow regeneration
+  base_carrying_capacity: 40   # industrial agriculture + global imports support large urban population
+  terrain_weights:
+    plains: 0.50               # industrial flatlands — factories, worker housing
+    forest: 0.05               # heavily deforested — timber consumed by industry
+    mountains: 0.15            # mining regions — coal, iron, tin (Welsh valleys, Pennines)
+    coast: 0.30                # port cities critical — Liverpool, Bristol, London docks
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.35        # wages and survival dominate — working class lives paycheck to paycheck
+    social_pull: 0.15          # rising class solidarity, but individualist self-improvement ideology too
+    curiosity_pull: 0.15       # self-improvement ethos (Smiles 1859); mechanics' institutes; Great Exhibition
+    safety_penalty: 0.20       # factory accidents, disease, destitution (no welfare state yet)
+    inertia: 0.15              # moderate — urban workers move for jobs, but factory/housing ties create inertia
+  movement_speed: 0.03         # higher than pre-industrial — railways transform mobility (1830s onward)
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.05             # moderate — Victorian emotional suppression ("stiff upper lip") vs intense private feeling
+  contagion_radius: 0.10       # factory floor, pub, church, Chartist rally — multiple contagion venues
+  contagion_rate: 0.04         # moderate — crowd psychology at rallies and strikes; but emotional restraint valued
+  grief_on_bond_death: 0.45    # Victorian mourning culture was elaborate — Queen Victoria mourned Albert for 40 years
+  trauma_heal_rate: 0.002      # no formal therapy; religion helps some; gin and opium for others
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.008   # rapid drift — industrialization shatters old certainties (Thompson 1963)
+  transmission_rate: 0.03        # moderate — pamphlets, sermons, union meetings, Chartist newspapers
+  transmission_noise: 0.025      # moderate noise — competing ideologies (liberalism, socialism, evangelicalism)
+  faction_formation_similarity: 0.45  # factions form readily — trade unions, Chartists, religious denominations
+  faction_formation_radius: 0.15
+  min_faction_size: 5
+  faction_check_interval: 12     # rapid — political/labor organizing is constant
+  prophet_extremism_threshold: 0.55   # prophets emerge readily — Owen, Cobden, Feargus O'Connor, Marx
+  prophet_charisma_threshold: 0.55    # oratorical charisma matters — Chartist orators, Methodist preachers
+  schism_check_interval: 60
+  schism_variance_threshold: 0.35     # frequent splits — Chartist factions, Methodist schisms, liberal vs radical
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.09            # industrial productivity — much higher than agricultural; but workers see little surplus
+  wealth_decay: 0.012          # moderate — industrial goods durable; but workers spend most income on survival
+  trade_radius: 0.18           # global trade networks — British Empire, free trade (repeal of Corn Laws 1846)
+  trade_rate: 0.15             # active market economy — free trade ideology ascendant (Cobden, Bright)
+  theft_aggression_threshold: 0.40  # property crime endemic in cities — Dickensian underworld (Mayhew 1851)
+  faction_tax_rate: 0.04       # moderate taxation — income tax reintroduced 1842; factory regulations
+  inheritance_rate: 0.80       # strong inheritance — primogeniture for land, capital accumulation for bourgeoisie
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0006     # moderate — industrial alienation + Darwin + Marx question foundations
+  trauma_awareness_boost: 0.003     # industrial misery drives questioning — "this system is wrong" (Engels 1845)
+  glitch_probability: 0.02          # glitches appear as industrial contradictions — poverty amid plenty
+  glitch_awareness_boost: 0.05      # glitches taken seriously — reform movements, socialism, religious doubt
+  redpill_threshold: 0.50           # moderate bar — Victorian certainties are cracking but still hold
+  max_ticks_per_cycle: 5000         # moderate cycles — rapid change but institutional stability
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.45   # violence semi-normalized — strikes, police brutality, Peterloo (1819)
+  combat_radius: 0.06                # close-range — fists, truncheons, sabotage; early firearms for military
+  combat_damage: 0.07                # moderate — industrial-era weapons more lethal, but domestic conflict is suppressed
+  war_check_interval: 25             # moderate — class conflict is constant; imperial wars distant
+  war_threshold: 0.55                # moderate bar — strikes and riots common; outright war is rarer domestically
+  war_ideology_weight: 0.45          # class ideology is THE driver — Chartism, socialism vs liberalism
+  war_rivalry_weight: 0.20           # factory owner vs worker; rival union factions
+  war_territory_weight: 0.35         # imperial territorial conflicts; domestic: factory/neighborhood control
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 6          # fast — cheap print revolution; penny press, pamphlets, Hansard
+  transmission_radius: 0.15          # print reaches far — newspapers, rail-distributed publications
+  transmission_rate: 0.30            # high — mass literacy + cheap print + postal system (penny post 1840)
+  mutation_rate: 0.10                # lower mutation — print preserves accuracy; but propaganda distorts
+  knowledge_skill_boost: 0.0015      # moderate — practical knowledge from mechanics' institutes and manuals
+  system_narrative_interval: 25      # frequent — newspapers, sermons, political speeches reinforce worldview
+  info_lifetime: 600                 # print records durable — libraries, archives, newspapers
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                      # established since Neolithic; agricultural revolution 1700s
+  - mining                           # coal mining is the foundation of industrialization
+  - trade_networks                   # global British Empire trade network
+  - industrialization                # steam power, factories, railways — the defining technology
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: 0.2, std: 0.30 }    # rising individualism (liberal self-help) vs collectivist solidarity (unions)
+  tradition:     { mean: 0.1, std: 0.35 }     # tradition eroding fast — industrialization destroys old customs (Thompson 1963)
+  system_trust:  { mean: 0.0, std: 0.40 }     # polarized — middle class trusts system; working class increasingly does not
+  spirituality:  { mean: 0.3, std: 0.35 }     # declining — Darwin, secularism; but evangelicalism still strong among some
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A northern industrial city, 1850. Brick factory chimneys blacken the sky.
+    Rows of identical back-to-back terraced houses stretch from the mill gates
+    to the railway line. The air smells of coal smoke and the river runs with
+    dye. At 5:30 AM, a factory bell splits the darkness and thousands of workers
+    pour through the gates. In a chapel hall, a Chartist organizer reads aloud
+    from a pamphlet. In a counting house, a mill owner tallies his profits.
+    Two worlds, one city — and the cracks between them are widening.
+  vocabulary:
+    - factory
+    - mill
+    - workhouse
+    - Chartist
+    - trade union
+    - steam engine
+    - railway
+    - slum
+    - cholera
+    - reform
+    - franchise
+    - empire
+    - penny press
+  themes:
+    - the shock of industrialization — old world dying, new world not yet born
+    - class as destiny — born poor, die poor, unless the system changes
+    - reform vs revolution — Chartists, unions, and the parliamentary struggle
+    - religion under siege — Darwin, geology, and the crisis of faith
+    - the factory as both miracle and prison — productivity and exploitation
+    - empire as the shadow behind prosperity — colonial extraction funding domestic growth

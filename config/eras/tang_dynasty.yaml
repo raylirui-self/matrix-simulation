@@ -1,0 +1,226 @@
+# ═══════════════════════════════════════════════════════════════
+# Era: Tang Dynasty China
+# ═══════════════════════════════════════════════════════════════
+
+name: "Tang Dynasty"
+description: "Cosmopolitan China — Silk Road, civil exams, poetry, and three teachings"
+time_period: "~700 CE"
+region: "Tang Empire (Chang'an / Yellow River basin archetype)"
+historical_context: |
+  The Tang Dynasty (618–907 CE) was China's cosmopolitan golden age. Under
+  Empress Wu Zetian and Emperor Xuanzong, Chang'an was the world's largest
+  city (~1 million people) and a hub of Silk Road trade. The civil service
+  examination system (keju), formalized under the Sui/Tang, created a
+  revolutionary path of social mobility — any man could theoretically rise
+  to high office through scholarly merit (Elman 2000). In practice, elite
+  families dominated exam preparation, but the system was real and transformative.
+  Religious life was uniquely syncretic: Buddhism, Daoism, and Confucianism
+  coexisted alongside Nestorian Christianity, Manichaeism, and Zoroastrianism
+  (Lewis 2009). Tang poetry (Li Bai, Du Fu, Wang Wei) represented a cultural
+  peak. Life expectancy at birth was ~30-35 (similar to other pre-modern
+  societies); adult survivors reached 55-65. Villages typically held 50-300
+  people. The equal-field system (juntian) theoretically distributed land
+  to peasants, though large estates grew over time. The An Lushan Rebellion
+  (755–763) would eventually weaken the dynasty catastrophically.
+
+# ── Population ──
+population:
+  initial_size: 60             # Tang village / small town scale (Lewis 2009: villages 50-300)
+  max_size: 450                # bounded by agricultural capacity — rice paddies support dense population
+
+# ── Lifecycle ──
+lifecycle:
+  base_max_age: 62             # adult survivors reached ~55-65 (similar to other ancient civilizations)
+  max_age_variance: 18         # moderate-high variance — disease, famine, occasional military service
+  base_health_decay: 0.0028    # slightly better than Mediterranean — Chinese medicine tradition (Needham 2000)
+  elder_decay_multiplier: 2.5  # elders highly respected (filial piety) and somewhat better cared for
+
+# ── Genetics & Traits ──
+genetics:
+  mutation_rate: 0.10          # very large population — low genetic drift; gene flow via Silk Road
+  trait_blend_noise: 0.04      # moderate variation
+
+# ── Skills ──
+skills:
+  learning_multiplier: 0.85    # higher than most pre-modern — exam system incentivizes learning (Elman 2000)
+  phase_growth_multipliers:
+    infant: 0.2                # high infant mortality; early childhood largely unstructured
+    child: 1.5                 # formal schooling begins early for exam-track families; village schools exist
+    adolescent: 1.8            # peak exam preparation period — intense study of Classics (Elman 2000)
+    adult: 0.7                 # continued study for exams; but most peasants plateau at agricultural skills
+    elder: 0.2                 # elders are teachers and advisors — Confucian respect for age
+
+# ── Social Fabric ──
+social:
+  bond_capacity: 9             # moderate-high — Confucian emphasis on social relationships (wu lun: five relationships)
+  friend_formation_distance: 0.10  # village/town proximity; but exam networks create long-distance ties
+  friend_min_sociability: 0.35     # Confucian sociality — relationships are moral obligations
+  friend_ticks_to_form: 5          # moderate — guanxi (relationships) form through ritual and reciprocity
+  decay_rates:
+    friend: 0.005              # friendships stable — Confucian loyalty (yi) highly valued
+    rival: 0.004               # rivalries persist but Confucian propriety (li) constrains expression
+    mate: 0.002                # marriages very stable — divorce rare, family honor at stake (Ebrey 1993)
+
+# ── Mate Selection ──
+mate_selection:
+  min_age: 15                  # Tang marriage: typically 13-16 for women, 15-20 for men (Ebrey 1993)
+  max_age: 43                  # moderate reproductive window
+  min_health: 0.4              # moderate bar — agricultural labor demands
+  search_radius: 0.18          # limited — village endogamy common; but exam success widens marriage market
+  top_n_stochastic: 2          # marriages largely arranged by families — limited individual choice
+  base_reproduction_chance: 0.09  # high fertility — Confucian emphasis on male heirs; large families valued
+  weights:
+    competition: 0.45          # high — exam rank, family status, land ownership dominate (Ebrey 1993)
+    compatibility: 0.10        # minimal — marriages are family alliances, not love matches
+    proximity: 0.20            # village endogamy, but exam networks enable some geographic mobility
+    bond: 0.25                 # family bonds and matchmaker networks drive pairings
+  compatibility_mode: assortative  # strong class endogamy — scholar-gentry marry scholar-gentry
+  fitness_weights:
+    resilience: 0.25           # physical fitness valued for agricultural labor and military
+    intelligence: 0.35         # intelligence is THE social mobility lever — exam system (Elman 2000)
+    health: 0.25               # visible health important — disease prevalent
+    avg_skill: 0.15            # craft skill valued for artisans; literary skill for scholar-gentry
+
+# ── Knowledge Transfer ──
+knowledge:
+  parent_teaching:
+    proximity_radius: 0.12     # children in family compound; Confucian family is primary education unit
+    top_skills_taught: 3       # Confucian classics, practical agriculture, craft skills
+    transfer_rate: 0.14        # strong family teaching tradition — Three Character Classic as primer
+  cultural_memory:
+    floor_cap: 0.50            # Chinese writing preserves knowledge well; printing (woodblock) emerging ~700 CE
+    decay_rate: 0.0015         # written records on paper/silk durable; state archives extensive
+    contribution_on_death: 0.05  # scholars contribute poetry, officials contribute records; peasants less so
+    pool_absorption_rate: 0.0015  # faster than Mediterranean — village schools, exam culture promotes literacy
+  social_amplifier:
+    social_skill_bonus: 0.45   # strong social learning — Confucian master-student relationships
+    network_bonus_per_friend: 0.05  # guanxi networks are powerful — exam cohort bonds
+    network_bonus_cap: 0.30    # strong network effects — literary salons, tea houses, Buddhist temples
+
+# ── Environment & Resources ──
+environment:
+  harshness: 1.1               # productive but vulnerable — Yellow River floods, droughts, locust plagues
+  regeneration_rate: 0.035     # rice paddy agriculture highly productive; managed irrigation systems
+  base_carrying_capacity: 35   # high — wet rice agriculture supports dense population (Bray 1986)
+  terrain_weights:
+    plains: 0.45               # Yellow/Yangtze river plains — primary agricultural zone
+    forest: 0.15               # bamboo forests, timber — being cleared for agriculture
+    mountains: 0.15            # significant — tea cultivation, mining, defensive borders
+    coast: 0.25                # Grand Canal, river trade, maritime activity beginning
+  tech_breakthroughs:
+    enabled: true
+
+# ── Agency ──
+agency:
+  utility_weights:
+    resource_pull: 0.30        # agricultural subsistence for most; exam success for ambitious
+    social_pull: 0.25          # Confucian obligations dominate — filial piety, social harmony
+    curiosity_pull: 0.15       # higher than most pre-modern — exam system rewards learning; Buddhist inquiry
+    safety_penalty: 0.15       # moderate threats — banditry, border warfare, but internal peace mostly
+    inertia: 0.15              # moderate — peasants tied to land, but exam system enables mobility
+  movement_speed: 0.02         # low-moderate — Grand Canal and road system enable travel, but most stay local
+
+# ── Emotions & Psychology ──
+emotions:
+  decay_rate: 0.04             # emotions persist — intense family life, poetic culture values emotional depth
+  contagion_radius: 0.10       # village proximity, festival gatherings, Buddhist temple assemblies
+  contagion_rate: 0.04         # moderate contagion — Confucian propriety restrains emotional display somewhat
+  grief_on_bond_death: 0.50    # grief intense — Confucian mourning rituals last up to 3 years (27 months for parent)
+  trauma_heal_rate: 0.002      # Buddhist meditation, Daoist practices offer some healing; but limited
+
+# ── Beliefs, Ideology & Factions ──
+beliefs:
+  experience_drift_rate: 0.004   # moderate drift — syncretic environment allows more exploration
+  transmission_rate: 0.04        # active transmission — Confucian education, Buddhist preaching, Daoist practice
+  transmission_noise: 0.02       # moderate noise — three teachings compete; no single orthodoxy enforced
+  faction_formation_similarity: 0.50  # factions form readily — literary cliques, Buddhist sects, court factions
+  faction_formation_radius: 0.15
+  min_faction_size: 4
+  faction_check_interval: 15     # moderate — court politics, literary rivalries, sectarian competition
+  prophet_extremism_threshold: 0.60   # prophetic figures emerge — Buddhist monks, Daoist masters, millenarian leaders
+  prophet_charisma_threshold: 0.55    # moderate bar — poetic/scholarly charisma valued (Li Bai as cultural hero)
+  schism_check_interval: 70
+  schism_variance_threshold: 0.40     # moderate schisms — Buddhist sectarian splits (Chan vs Pure Land)
+
+# ── Economy, Property & Power ──
+economy:
+  gather_rate: 0.07            # productive agriculture — rice paddies, managed irrigation (Bray 1986)
+  wealth_decay: 0.012          # stored grain, silk, coinage (kai yuan tong bao); moderate durability
+  trade_radius: 0.15           # extensive — Silk Road, Grand Canal, maritime trade beginning
+  trade_rate: 0.12             # active commerce — Silk Road merchants, market towns (Twitchett 1970)
+  theft_aggression_threshold: 0.45  # banditry exists; Tang legal code (Tang lü shuyi) punishes severely
+  faction_tax_rate: 0.06       # state taxation — grain tax + corvée labor (zu yong diao system)
+  inheritance_rate: 0.75       # strong inheritance — family property divided among sons (Ebrey 1993)
+
+# ── Matrix Meta-Layer ──
+matrix:
+  awareness_growth_rate: 0.0004     # low-moderate — Buddhist concept of maya (illusion) plants seeds
+  trauma_awareness_boost: 0.003     # Buddhist meditation on suffering could trigger deeper questioning
+  glitch_probability: 0.025         # Buddhist/Daoist mystical experiences — meditation visions, dream revelations
+  glitch_awareness_boost: 0.06      # glitches interpreted through Buddhist/Daoist lens — emptiness, illusion
+  redpill_threshold: 0.45           # moderate bar — Buddhist/Daoist traditions explicitly question reality
+  max_ticks_per_cycle: 5500         # long cycles — dynastic stability until An Lushan Rebellion
+
+# ── Conflict & Warfare ──
+conflict:
+  aggression_combat_threshold: 0.45   # military valued but Confucian culture prefers civil over martial
+  combat_radius: 0.09                # melee + cavalry range — Tang cavalry was formidable (Graff 2002)
+  combat_damage: 0.09                # moderate-high — iron weapons, cavalry charges; but armor widespread
+  war_check_interval: 25             # periodic border campaigns — Turkic, Tibetan, Korean fronts
+  war_threshold: 0.55                # moderate bar — border defense is constant; internal war rare (pre-An Lushan)
+  war_ideology_weight: 0.25          # Mandate of Heaven justifies war but Confucian preference for peace
+  war_rivalry_weight: 0.25           # court faction rivalries can escalate to military conflict
+  war_territory_weight: 0.50         # border defense and Silk Road control are primary military objectives
+
+# ── Communication & Information ──
+communication:
+  info_creation_interval: 8          # moderate — bureaucratic records, poetry, Buddhist sutras
+  transmission_radius: 0.12          # voice + written dispatches; early woodblock printing emerging
+  transmission_rate: 0.25            # moderate — literacy higher than Europe; village schools exist
+  mutation_rate: 0.12                # lower mutation than oral — written Chinese is standardized
+  knowledge_skill_boost: 0.0015      # moderate — exam culture makes knowledge directly useful for advancement
+  info_lifetime: 550                 # paper records durable; woodblock printing emerging — better than papyrus
+
+# ── Pre-Unlocked Technologies ──
+pre_unlocked_tech:
+  - agriculture                      # rice paddy agriculture since Neolithic
+  - mining                           # iron smelting since Warring States period
+  - trade_networks                   # Silk Road and Grand Canal well-established
+
+# ── Starting Belief Distribution ──
+starting_beliefs:
+  individualism: { mean: -0.3, std: 0.25 }   # collectivist — Confucian family/state obligations dominate (Ebrey 1993)
+  tradition:     { mean: 0.5, std: 0.25 }     # moderate-high tradition — Confucian reverence for antiquity, but syncretic openness
+  system_trust:  { mean: 0.6, std: 0.20 }     # high trust — Mandate of Heaven legitimizes the system; exam system feels fair
+  spirituality:  { mean: 0.6, std: 0.30 }     # moderate-high — Buddhist devotion widespread; Daoist practice; Confucian this-worldly focus
+
+# ── Era-Specific Flavor ──
+narrator_hints:
+  setting: |
+    A prosperous market town along the Grand Canal, within a day's journey
+    of Chang'an. Tiled-roof houses line canals and cobblestone lanes. Silk Road
+    merchants — Sogdians, Persians, Turks — haggle in the marketplace alongside
+    local farmers selling rice and tea. A Buddhist temple's bell rings at dawn.
+    In a scholar's courtyard, a young man memorizes the Classics by lamplight,
+    dreaming of passing the imperial examination and lifting his family's station.
+    Beyond the town walls: endless green rice paddies and the blue haze of mountains.
+  vocabulary:
+    - keju (examination)
+    - Mandate of Heaven
+    - filial piety
+    - guanxi
+    - Silk Road
+    - Chang'an
+    - scholar-gentry
+    - corvée
+    - Buddhist sutra
+    - Confucian classic
+    - tea house
+    - magistrate
+  themes:
+    - the examination dream — merit as the ladder out of poverty
+    - three teachings in harmony — Buddhism, Daoism, Confucianism as complementary paths
+    - Silk Road cosmopolitanism — the world meeting in Chang'an's markets
+    - filial piety as both love and chain — obligation to family above all
+    - poetry as the soul's mirror — Tang poets turning private feeling into art
+    - the fragility of golden ages — An Lushan's rebellion lurking on the horizon
