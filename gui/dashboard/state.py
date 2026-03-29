@@ -228,7 +228,7 @@ def generate_drama(engine, result, prev_agents_snapshot):
         elif dead.generation >= 3:
             title = f"Elder of Gen {dead.generation} "
         elif len(dead.child_ids) >= 3:
-            title = f"Prolific parent "
+            title = "Prolific parent "
         if title or dead.age > 60:
             drama.append(("death", f"{title}#{dead.id} has perished at age {dead.age} (IQ: {dead.intelligence:.2f}, {len(dead.child_ids)} children)", result.tick))
 

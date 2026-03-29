@@ -9,11 +9,11 @@ project_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from gui.backend.api.routes import simulation, agents, world, god_mode, websocket
-from gui.backend.api.state import manager
+from gui.backend.api.routes import simulation, agents, world, god_mode, websocket  # noqa: E402
+from gui.backend.api.state import manager  # noqa: E402
 
 app = FastAPI(
     title="The Construct — Human Matrix Sim API",

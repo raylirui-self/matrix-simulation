@@ -1,18 +1,15 @@
 """In-memory simulation engine management for the API server."""
 from __future__ import annotations
 
-import math
 import threading
 from typing import Optional
 
 from src.config_loader import SimConfig
-from src.engine import SimulationEngine, RunState, WorldEvent, TickResult
+from src.engine import SimulationEngine, TickResult
 from src.persistence import SimulationDB
 from src.agents import set_id_counter, get_id_counter
 from src.beliefs import set_faction_id_counter, get_faction_id_counter
 from src.communication import set_info_id_counter, get_info_id_counter
-from src.narrator import Narrator
-from src.agency import generate_protagonist_thought
 
 
 class EngineManager:
@@ -93,13 +90,6 @@ class EngineManager:
             return None
 
         self._sync_id_counters(engine)
-
-        # Capture pre-tick state for delta computation
-        prev_agents = {
-            a.id: {"x": a.x, "y": a.y, "health": a.health, "alive": a.alive}
-            for a in engine.agents if a.alive
-        }
-        prev_alive_ids = set(prev_agents.keys())
 
         result = engine.tick()
         self.db.save_tick_stats(run_id, result)

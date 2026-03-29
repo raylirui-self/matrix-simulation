@@ -152,7 +152,7 @@ def render_protagonists_tab(engine, alive, sidebar_state=None):
                             tick_str = p.stem.split("_t")[-1]
                             st.image(str(p), caption=f"t={tick_str}", width='stretch')
 
-                if st.button(f"View Portrait Full Size", key=f"enlarge_portrait_{agent.id}"):
+                if st.button("View Portrait Full Size", key=f"enlarge_portrait_{agent.id}"):
                     _show_portrait(agent_portraits[0], name, agent_portraits)
 
             # Skills radar + emotions side by side
@@ -218,7 +218,7 @@ def render_protagonists_tab(engine, alive, sidebar_state=None):
 
             # Portrait generation
             with st.expander("\U0001f3a8 Generate / Update Portrait"):
-                if st.button(f"Generate New Portrait", key=f"gen_portrait_{agent.id}",
+                if st.button("Generate New Portrait", key=f"gen_portrait_{agent.id}",
                              width='stretch'):
                     s = sidebar_state or {}
                     with st.spinner("Generating portrait..."):

@@ -10,8 +10,6 @@ import time
 
 import streamlit as st
 
-from src.agents import PHASES, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
-
 from gui.dashboard.styles import MATRIX_CSS
 from gui.dashboard.state import init_state, get_db, get_era
 from gui.dashboard.controls import render_sidebar
@@ -247,7 +245,7 @@ def main():
         ns1.metric(f"{_mood_icon} Mood", f"{_avg_happy:.0%}",
                    help="Average happiness of the population. High mood = less conflict, more bonding. Low mood = unrest, aggression, and fear spread faster.")
         ns2.metric("\u2694\ufe0f Factions", _factions,
-                   help=f"Ideological groups that agents form based on shared beliefs. Factions provide learning bonuses to members but can go to war with each other.")
+                   help="Ideological groups that agents form based on shared beliefs. Factions provide learning bonuses to members but can go to war with each other.")
         ns3.metric("\U0001f4b0 Avg Wealth", f"{_wealth:.1f}",
                    help="Average material wealth per agent. Wealth comes from resource gathering and trade. Rich agents live longer and attract better mates. Poor agents struggle to survive.")
         ns4.metric("\U0001f7e2 Stability", f"{_control:.0%}",
@@ -255,7 +253,7 @@ def main():
         ns5.metric("\U0001f441\ufe0f Awakened", _aware,
                    help="Agents who have 'seen through the simulation' — they've become aware that their world may not be real. Awakened agents behave unpredictably and can influence others. (Think: Neo in The Matrix.)")
         ns6.metric("\U0001f6e1\ufe0f Wars", _wars,
-                   help=f"Active wars between factions. Wars cause combat damage, deaths, and emotional trauma. They end when one faction surrenders or is destroyed.")
+                   help="Active wars between factions. Wars cause combat damage, deaths, and emotional trauma. They end when one faction surrenders or is destroyed.")
 
     # ── Achievement Badges ──
     recent_achv = st.session_state.achievements[-5:] if st.session_state.achievements else []

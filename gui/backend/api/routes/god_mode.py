@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from gui.backend.api.state import manager
-from src.agents import create_agent, Agent, Bond
+from src.agents import create_agent
 from src.engine import WorldEvent
 
 router = APIRouter(prefix="/api/sim/{run_id}/god", tags=["god_mode"])

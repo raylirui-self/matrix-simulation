@@ -312,7 +312,6 @@ def render_matrix_tab(engine, alive):
         # System status
         mx1, mx2, mx3, mx4, mx5 = st.columns(5)
         mx1.metric("Cycle", ms.cycle_number, help="How many times the Matrix has been reset. Each reset wipes awareness but agents start fresh.")
-        control_color = "normal" if ms.control_index > 0.5 else "inverse"
         mx2.metric("Control Index", f"{ms.control_index:.2f}", help="System stability. 1.0 = total control. Below 0.5 = the system is losing grip. Below 0.2 = cycle reset imminent.")
         mx3.metric("Total Awareness", f"{ms.total_awareness:.2f}", help="Sum of all agents' awareness. When this exceeds the reset threshold, the Architect considers wiping the simulation.")
         sentinels = [a for a in alive if a.is_sentinel]

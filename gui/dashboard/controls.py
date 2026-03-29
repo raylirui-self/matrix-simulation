@@ -3,17 +3,13 @@ run controls, god mode, agent/cell actions, event injector, load/fork/export."""
 from __future__ import annotations
 
 import copy
-import random
 
 import streamlit as st
 
 from src.config_loader import SimConfig
-from src.agents import SKILL_NAMES, create_agent, set_id_counter
-from src.engine import SimulationEngine, RunState, WorldEvent
+from src.engine import SimulationEngine, RunState
 from src.world import ResourceGrid
 from src.persistence import SimulationDB
-
-from gui.dashboard.state import get_db, get_cfg
 
 
 def render_sidebar(db: SimulationDB):

@@ -1,7 +1,6 @@
 """Simulation CRUD and tick endpoints."""
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
