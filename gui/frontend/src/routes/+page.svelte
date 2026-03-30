@@ -28,6 +28,9 @@
 	import SoulView from '$lib/canvas/SoulView.svelte';
 	import EdgePanels from '$lib/panels/EdgePanels.svelte';
 	import Terminal from '$lib/terminal/Terminal.svelte';
+	import ControlDrawer from '$lib/panels/ControlDrawer.svelte';
+	import ChartsPanel from '$lib/panels/ChartsPanel.svelte';
+	import EraBanner from '$lib/panels/EraBanner.svelte';
 
 	let ws: SimWebSocket | null = null;
 	let connected = $state(false);
@@ -38,6 +41,8 @@
 	let selectedEra = $state('');
 	let selectedScenario = $state('');
 	let creating = $state(false);
+	let controlDrawerOpen = $state(false);
+	let chartsPanelOpen = $state(false);
 
 	async function loadMeta() {
 		try {
@@ -289,13 +294,24 @@
 	<SoulView />
 	<EdgePanels />
 	<Terminal />
+	<ControlDrawer bind:open={controlDrawerOpen} />
+	<ChartsPanel bind:open={chartsPanelOpen} />
+	<EraBanner />
 
 	<!-- Floating Controls -->
 	<div class="controls">
-		<button class="ctrl-btn" onclick={() => doTick(1)} title="Advance 1 tick (Space)">▶ 1</button>
-		<button class="ctrl-btn" onclick={() => doTick(10)} title="Advance 10 ticks">▶ 10</button>
+		<button class="ctrl-btn" onclick={() => controlDrawerOpen = !controlDrawerOpen} title="Architect Controls (Tune, God Mode, Whisper)">
+			&#9881;
+		</button>
+		<button class="ctrl-btn" onclick={() => chartsPanelOpen = !chartsPanelOpen} title="Analytics & Charts">
+			&#9776;
+		</button>
+		<span class="ctrl-sep"></span>
+		<button class="ctrl-btn" onclick={() => doTick(1)} title="Advance 1 tick (Space)">&#9654; 1</button>
+		<button class="ctrl-btn" onclick={() => doTick(10)} title="Advance 10 ticks">&#9654; 10</button>
+		<button class="ctrl-btn" onclick={() => doTick(50)} title="Advance 50 ticks">&#9654; 50</button>
 		<button class="ctrl-btn" class:active={$isRunning} onclick={toggleAutoRun} title="Auto-run (P)">
-			{$isRunning ? '⏸' : '⏵'}
+			{$isRunning ? '&#9646;&#9646;' : '&#9654;&#9654;'}
 		</button>
 		<input
 			type="range"
@@ -313,8 +329,26 @@
 	<div class="zoom-indicator">
 		<button class:active={$zoomLevel === 0} onclick={() => zoomLevel.set(0)}>RAIN</button>
 		<button class:active={$zoomLevel === 1} onclick={() => zoomLevel.set(1)}>GRID</button>
-		<button class:active={$zoomLevel === 2} onclick={() => { if ($focusCell) zoomLevel.set(2); }}>CELL</button>
-		<button class:active={$zoomLevel === 3} onclick={() => { if ($focusAgentId) zoomLevel.set(3); }}>SOUL</button>
+		<button class:active={$zoomLevel === 2} class:disabled={!$focusCell} onclick={() => {
+			if (!$focusCell) {
+				// Default to center cell
+				focusCell.set({ row: 3, col: 3 });
+			}
+			zoomLevel.set(2);
+		}}>CELL</button>
+		<button class:active={$zoomLevel === 3} class:disabled={!$focusAgentId} onclick={() => {
+			if (!$focusAgentId) {
+				// Pick the first available agent
+				const firstAgent = Array.from($agents.values())[0];
+				if (firstAgent) {
+					const row = Math.min(7, Math.floor(firstAgent.y * 8));
+					const col = Math.min(7, Math.floor(firstAgent.x * 8));
+					focusCell.set({ row, col });
+					focusAgentId.set(firstAgent.id);
+				}
+			}
+			zoomLevel.set(3);
+		}}>SOUL</button>
 	</div>
 {/if}
 
@@ -481,6 +515,12 @@
 		background: var(--green-dim);
 		border-color: var(--green-primary);
 	}
+	.ctrl-sep {
+		width: 1px;
+		height: 18px;
+		background: var(--green-dim);
+		margin: 0 2px;
+	}
 	.speed-slider {
 		width: 80px;
 		accent-color: var(--green-primary);
@@ -507,10 +547,11 @@
 		border: 1px solid rgba(0, 255, 136, 0.1);
 		color: var(--text-dim);
 		font-family: var(--font-mono);
-		font-size: 9px;
+		font-size: 11px;
 		letter-spacing: 1px;
-		padding: 4px 8px;
+		padding: 6px 12px;
 		cursor: pointer;
+		white-space: nowrap;
 	}
 	.zoom-indicator button.active {
 		color: var(--green-primary);
@@ -518,4 +559,6 @@
 		background: var(--green-dim);
 	}
 	.zoom-indicator button:hover { color: var(--green-primary); }
+	.zoom-indicator button.disabled { opacity: 0.4; }
+	.zoom-indicator button.disabled:hover { opacity: 0.7; }
 </style>

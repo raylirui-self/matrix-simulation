@@ -12,7 +12,7 @@ if str(project_root) not in sys.path:
 from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
-from gui.backend.api.routes import simulation, agents, world, god_mode, websocket  # noqa: E402
+from gui.backend.api.routes import simulation, agents, world, god_mode, websocket, media  # noqa: E402
 from gui.backend.api.state import manager  # noqa: E402
 
 app = FastAPI(
@@ -36,6 +36,7 @@ app.include_router(agents.router)
 app.include_router(world.router)
 app.include_router(god_mode.router)
 app.include_router(websocket.router)
+app.include_router(media.router)
 
 
 @app.get("/api/runs")

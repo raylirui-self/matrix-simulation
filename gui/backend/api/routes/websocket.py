@@ -161,6 +161,7 @@ async def _send_full_state(websocket: WebSocket, engine):
             "protagonist_name": a.protagonist_name,
             "faction_id": a.faction_id,
             "wealth": round(a.wealth, 3),
+            "trauma": round(a.trauma, 3),
         })
 
     msg = {

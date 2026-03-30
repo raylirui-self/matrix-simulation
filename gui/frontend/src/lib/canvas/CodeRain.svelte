@@ -34,7 +34,7 @@
 		width = canvas.width = window.innerWidth;
 		height = canvas.height = window.innerHeight;
 
-		const colWidth = 16;
+		const colWidth = 20; // wider spacing for cleaner look
 		const numCols = Math.floor(width / colWidth);
 		columns = [];
 
@@ -47,14 +47,14 @@
 			columns.push({
 				x: i * colWidth,
 				y: Math.random() * height,
-				speed: agent ? 0.5 + (1 - agent.age / 100) * 2 : 1 + Math.random() * 2,
+				speed: agent ? 0.4 + (1 - agent.age / 100) * 1.2 : 0.6 + Math.random() * 1.2,
 				brightness: agent ? 0.3 + agent.health * 0.7 : 0.5 + Math.random() * 0.5,
 				hue: awarenessHue,
-				chars: Array.from({ length: 20 + Math.floor(Math.random() * 15) }, () =>
+				chars: Array.from({ length: 12 + Math.floor(Math.random() * 10) }, () =>
 					CHARS[Math.floor(Math.random() * CHARS.length)]
 				),
 				agentId: agent?.id ?? -1,
-				length: 15 + Math.floor(Math.random() * 20)
+				length: 10 + Math.floor(Math.random() * 15)
 			});
 		}
 	}
@@ -65,7 +65,8 @@
 			return;
 		}
 
-		ctx.fillStyle = 'rgba(3, 13, 3, 0.08)';
+		// Faster fade = sharper characters, shorter trails (more like the movie)
+		ctx.fillStyle = 'rgba(3, 13, 3, 0.15)';
 		ctx.fillRect(0, 0, width, height);
 
 		const controlIndex = $matrixState.control_index;
@@ -88,17 +89,19 @@
 				const alpha = col.brightness * (1 - fade * 0.7);
 
 				if (j === 0) {
-					// Leading character is brightest (white-ish)
-					ctx.fillStyle = `rgba(220, 255, 220, ${alpha})`;
-					ctx.font = 'bold 14px JetBrains Mono';
+					// Leading character is brightest (white-ish) — movie-accurate bright tip
+					ctx.fillStyle = `rgba(230, 255, 230, ${Math.min(1, alpha * 1.5)})`;
+					ctx.font = 'bold 15px JetBrains Mono';
 				} else {
 					// Glitch: low control index causes random red flashes
 					let h = col.hue;
 					if (controlIndex < 0.5 && Math.random() < (0.5 - controlIndex) * 0.1) {
 						h = 0; // red flash
 					}
-					ctx.fillStyle = `hsla(${h}, 100%, 50%, ${alpha * 0.8})`;
-					ctx.font = '14px JetBrains Mono';
+					// Sharper green, less saturated for movie-like look
+					const lightness = 40 + (1 - fade) * 20;
+					ctx.fillStyle = `hsla(${h}, 80%, ${lightness}%, ${alpha * 0.9})`;
+					ctx.font = '15px JetBrains Mono';
 				}
 
 				ctx.fillText(col.chars[j], col.x, charY);

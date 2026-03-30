@@ -37,13 +37,13 @@ export const showParameterTuner = writable(false);
 // Mouse position for edge panel proximity detection
 export const mousePosition = writable({ x: 0, y: 0 });
 
-// Derived: which edge panels should show based on mouse proximity
-export const edgePanelVisibility = derived(
+// Raw proximity detection (instant)
+const edgeProximity = derived(
 	[mousePosition, panelPinned, zoomLevel],
 	([$mouse, $pinned, $zoom]) => {
 		if ($zoom !== 1) return { left: false, right: false, top: false, bottom: false };
 
-		const threshold = 60; // pixels from edge
+		const threshold = 80; // pixels from edge (increased for easier access)
 		const w = typeof window !== 'undefined' ? window.innerWidth : 1920;
 		const h = typeof window !== 'undefined' ? window.innerHeight : 1080;
 
@@ -55,6 +55,32 @@ export const edgePanelVisibility = derived(
 		};
 	}
 );
+
+// Debounced panel visibility: show instantly, hide after 400ms delay
+function createDebouncedVisibility() {
+	const store = writable({ left: false, right: false, top: false, bottom: false });
+	const timers: Record<string, ReturnType<typeof setTimeout>> = {};
+
+	edgeProximity.subscribe(($prox) => {
+		for (const side of ['left', 'right', 'top', 'bottom'] as const) {
+			if ($prox[side]) {
+				// Show instantly
+				clearTimeout(timers[side]);
+				store.update((v) => ({ ...v, [side]: true }));
+			} else {
+				// Hide after delay
+				clearTimeout(timers[side]);
+				timers[side] = setTimeout(() => {
+					store.update((v) => ({ ...v, [side]: false }));
+				}, 400);
+			}
+		}
+	});
+
+	return { subscribe: store.subscribe };
+}
+
+export const edgePanelVisibility = createDebouncedVisibility();
 
 // Overlay toggle
 export function toggleOverlay(name: string) {

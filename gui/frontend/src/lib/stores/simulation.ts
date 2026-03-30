@@ -151,9 +151,16 @@ export function applyTickMessage(msg: TickMessage) {
 				if (delta.x !== undefined) existing.x = delta.x;
 				if (delta.y !== undefined) existing.y = delta.y;
 				if (delta.health !== undefined) existing.health = delta.health;
+				if (delta.intelligence !== undefined) existing.intelligence = delta.intelligence;
 				if (delta.phase !== undefined) existing.phase = delta.phase;
 				if (delta.emotion !== undefined) existing.emotion = delta.emotion;
 				if (delta.awareness !== undefined) existing.awareness = delta.awareness;
+				if (delta.age !== undefined) existing.age = delta.age;
+				if (delta.redpilled !== undefined) existing.redpilled = delta.redpilled;
+				if (delta.is_anomaly !== undefined) existing.is_anomaly = delta.is_anomaly;
+				if (delta.is_sentinel !== undefined) existing.is_sentinel = delta.is_sentinel;
+				if (delta.is_protagonist !== undefined) existing.is_protagonist = delta.is_protagonist;
+				if (delta.faction_id !== undefined) existing.faction_id = delta.faction_id;
 			}
 		}
 		return $agents;

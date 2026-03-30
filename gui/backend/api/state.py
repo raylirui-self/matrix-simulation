@@ -135,9 +135,16 @@ class EngineManager:
                         "id": a.id,
                         "x": round(a.x, 4), "y": round(a.y, 4),
                         "health": round(a.health, 4),
+                        "intelligence": round(a.intelligence, 4),
                         "emotion": a.dominant_emotion,
                         "awareness": round(a.awareness, 4),
                         "phase": a.phase,
+                        "age": a.age,
+                        "redpilled": a.redpilled,
+                        "is_anomaly": a.is_anomaly,
+                        "is_sentinel": a.is_sentinel,
+                        "is_protagonist": a.is_protagonist,
+                        "faction_id": a.faction_id,
                     })
 
         # Deaths

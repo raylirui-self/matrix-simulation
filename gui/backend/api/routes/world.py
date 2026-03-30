@@ -39,7 +39,7 @@ def get_world(run_id: str):
 
     # Agents grouped by cell
     alive = engine.get_alive_agents()
-    grid_size = grid.grid_size
+    grid_size = grid.size
     agent_positions = []
     for a in alive:
         row = min(grid_size - 1, int(a.y * grid_size))

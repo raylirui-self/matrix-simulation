@@ -65,6 +65,25 @@ export const api = {
 			body: JSON.stringify({ action, target_id: targetId, params: params || {} })
 		}),
 
+	// Media / LLM
+	generatePortrait: (runId: string, agentId: number) =>
+		request<any>(`/api/sim/${runId}/media/portrait/${agentId}`, { method: 'POST' }),
+
+	getPortraitUrl: (runId: string, agentId: number) =>
+		`${BASE}/api/sim/${runId}/media/portrait/${agentId}/image`,
+
+	generateLandscape: (runId: string) =>
+		request<any>(`/api/sim/${runId}/media/landscape`, { method: 'POST' }),
+
+	getLandscapeUrl: (runId: string, era: string) =>
+		`${BASE}/api/sim/${runId}/media/landscape/image?era=${encodeURIComponent(era)}`,
+
+	generateNarrative: (runId: string) =>
+		request<any>(`/api/sim/${runId}/media/narrate`, { method: 'POST' }),
+
+	generateMonologue: (runId: string, agentId: number) =>
+		request<any>(`/api/sim/${runId}/media/monologue/${agentId}`, { method: 'POST' }),
+
 	// Meta
 	listRuns: () => request<any>('/api/runs'),
 	listEras: () => request<any>('/api/config/eras'),

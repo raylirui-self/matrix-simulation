@@ -1,0 +1,550 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats } from '$lib/stores/simulation';
+
+	let { open = $bindable(false) } = $props();
+
+	// Chart dimensions
+	const W = 320;
+	const H = 120;
+	const PAD = { top: 20, right: 10, bottom: 20, left: 40 };
+	const plotW = W - PAD.left - PAD.right;
+	const plotH = H - PAD.top - PAD.bottom;
+
+	// ── Population chart data ──
+	let popPath = $derived.by(() => {
+		const data = $tickHistory;
+		if (data.length < 2) return '';
+		const maxPop = Math.max(1, ...data.map(d => d.alive));
+		const points = data.map((d, i) => {
+			const x = PAD.left + (i / (data.length - 1)) * plotW;
+			const y = PAD.top + plotH - (d.alive / maxPop) * plotH;
+			return `${x},${y}`;
+		});
+		return `M${points.join(' L')}`;
+	});
+
+	let iqPath = $derived.by(() => {
+		const data = $tickHistory;
+		if (data.length < 2) return '';
+		const maxIQ = Math.max(0.01, ...data.map(d => d.intelligence));
+		const points = data.map((d, i) => {
+			const x = PAD.left + (i / (data.length - 1)) * plotW;
+			const y = PAD.top + plotH - (d.intelligence / maxIQ) * plotH;
+			return `${x},${y}`;
+		});
+		return `M${points.join(' L')}`;
+	});
+
+	let healthPath = $derived.by(() => {
+		const data = $tickHistory;
+		if (data.length < 2) return '';
+		const points = data.map((d, i) => {
+			const x = PAD.left + (i / (data.length - 1)) * plotW;
+			const y = PAD.top + plotH - d.health * plotH;
+			return `${x},${y}`;
+		});
+		return `M${points.join(' L')}`;
+	});
+
+	// ── Phase distribution data ──
+	let phaseData = $derived.by(() => {
+		const pc = $stats.phase_counts || {};
+		const phases = ['infant', 'child', 'adolescent', 'adult', 'elder'];
+		const colors: Record<string, string> = {
+			infant: '#66ff66', child: '#00ddff', adolescent: '#ffaa00', adult: '#ff4466', elder: '#aa66ff'
+		};
+		const total = Object.values(pc).reduce((s: number, v: any) => s + (v as number), 0) || 1;
+		let cumulative = 0;
+		return phases.map(p => {
+			const count = (pc[p] || 0) as number;
+			const pct = count / total;
+			const start = cumulative;
+			cumulative += pct;
+			return { phase: p, count, pct, start, color: colors[p] || '#00ff88' };
+		});
+	});
+
+	// ── Era detection ──
+	let currentEra = $derived.by(() => {
+		const s = $stats;
+		const m = $matrixState;
+		const pop = s.alive_count;
+		const avgIQ = s.avg_intelligence;
+		// Check for techs - we'd need breakthroughs store but approximate
+		if (pop === 0) return { name: 'The Void', color: '#ff4466', desc: 'Nothing remains...' };
+		if (avgIQ > 0.6) return { name: 'Industrial Age', color: '#ffd700', desc: 'Machines reshape the world' };
+		if (avgIQ > 0.45) return { name: 'Trade Era', color: '#00ccff', desc: 'Commerce connects communities' };
+		if (avgIQ > 0.3) return { name: 'Age of Awakening', color: '#aa66ff', desc: 'Knowledge grows rapidly' };
+		if (pop > 80) return { name: 'Tribal Expansion', color: '#ff8844', desc: 'Clans spread across the land' };
+		if (pop > 20) return { name: 'Dawn of Tribes', color: '#00ff88', desc: 'Small groups form bonds' };
+		return { name: 'Genesis', color: '#5a8a5a', desc: 'Life stirs in the void' };
+	});
+
+	// ── Emotion stats ──
+	let emotionBars = $derived.by(() => {
+		const e = $emotionStats;
+		const emotions = [
+			{ key: 'avg_happiness', label: 'HAPPY', color: '#00ff88' },
+			{ key: 'avg_fear', label: 'FEAR', color: '#ffff00' },
+			{ key: 'avg_anger', label: 'ANGER', color: '#ff2200' },
+			{ key: 'avg_grief', label: 'GRIEF', color: '#6644cc' },
+			{ key: 'avg_hope', label: 'HOPE', color: '#00aaff' },
+		];
+		return emotions.map(em => ({
+			...em,
+			value: (e as any)?.[em.key] ?? 0
+		}));
+	});
+
+	// ── Economy stats ──
+	let econ = $derived($economyStats || {});
+
+	// Max population
+	let popStats = $derived.by(() => {
+		const data = $tickHistory;
+		if (data.length === 0) return { max: 0, min: 0, current: 0 };
+		return {
+			max: Math.max(...data.map(d => d.alive)),
+			min: Math.min(...data.map(d => d.alive)),
+			current: data[data.length - 1]?.alive || 0
+		};
+	});
+</script>
+
+{#if open}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="charts-backdrop" onclick={() => open = false}></div>
+	<div class="charts-panel">
+		<div class="charts-header">
+			<span class="charts-title">ANALYTICS</span>
+			<button class="close-btn" onclick={() => open = false}>✕</button>
+		</div>
+
+		<div class="charts-content">
+			<!-- Era Banner -->
+			<div class="era-banner" style="border-color: {currentEra.color};">
+				<span class="era-name" style="color: {currentEra.color};">{currentEra.name}</span>
+				<span class="era-desc">{currentEra.desc}</span>
+				<span class="era-tick">TICK {$tickStore} | POP {$stats.alive_count}</span>
+			</div>
+
+			<!-- Population Trend -->
+			<div class="chart-card">
+				<div class="chart-title">POPULATION & VITALS</div>
+				<div class="pop-metrics">
+					<span>PEAK: {popStats.max}</span>
+					<span>NOW: {popStats.current}</span>
+					<span>BORN: {$stats.births}</span>
+					<span>DIED: {$stats.deaths}</span>
+				</div>
+				{#if $tickHistory.length >= 2}
+					<svg viewBox="0 0 {W} {H}" class="chart-svg">
+						<!-- Grid lines -->
+						{#each [0, 0.25, 0.5, 0.75, 1] as pct}
+							<line
+								x1={PAD.left} y1={PAD.top + plotH * (1 - pct)}
+								x2={PAD.left + plotW} y2={PAD.top + plotH * (1 - pct)}
+								stroke="rgba(0,255,136,0.08)" stroke-width="0.5"
+							/>
+						{/each}
+						<!-- Population line -->
+						<path d={popPath} fill="none" stroke="#00ff88" stroke-width="1.5" />
+						<!-- IQ line -->
+						<path d={iqPath} fill="none" stroke="#00ddff" stroke-width="1" stroke-dasharray="3,2" />
+						<!-- Health line -->
+						<path d={healthPath} fill="none" stroke="#ffaa00" stroke-width="1" stroke-dasharray="2,2" />
+						<!-- Legend -->
+						<line x1={PAD.left} y1={H - 4} x2={PAD.left + 15} y2={H - 4} stroke="#00ff88" stroke-width="1.5" />
+						<text x={PAD.left + 18} y={H - 1} fill="#00ff88" font-size="8" font-family="var(--font-mono)">POP</text>
+						<line x1={PAD.left + 50} y1={H - 4} x2={PAD.left + 65} y2={H - 4} stroke="#00ddff" stroke-width="1" stroke-dasharray="3,2" />
+						<text x={PAD.left + 68} y={H - 1} fill="#00ddff" font-size="8" font-family="var(--font-mono)">IQ</text>
+						<line x1={PAD.left + 90} y1={H - 4} x2={PAD.left + 105} y2={H - 4} stroke="#ffaa00" stroke-width="1" stroke-dasharray="2,2" />
+						<text x={PAD.left + 108} y={H - 1} fill="#ffaa00" font-size="8" font-family="var(--font-mono)">HP</text>
+					</svg>
+				{:else}
+					<div class="chart-empty">Awaiting data...</div>
+				{/if}
+			</div>
+
+			<!-- Demographics -->
+			<div class="chart-card">
+				<div class="chart-title">DEMOGRAPHICS</div>
+				<div class="demo-bar">
+					{#each phaseData as p}
+						{#if p.pct > 0}
+							<div
+								class="demo-segment"
+								style="width: {p.pct * 100}%; background: {p.color};"
+								title="{p.phase}: {p.count}"
+							></div>
+						{/if}
+					{/each}
+				</div>
+				<div class="demo-legend">
+					{#each phaseData as p}
+						<span class="demo-item">
+							<span class="demo-dot" style="background: {p.color};"></span>
+							{p.phase}: {p.count}
+						</span>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Emotions -->
+			<div class="chart-card">
+				<div class="chart-title">EMOTIONAL STATE</div>
+				<div class="emotion-bars">
+					{#each emotionBars as em}
+						<div class="emo-row">
+							<span class="emo-label">{em.label}</span>
+							<div class="emo-track">
+								<div class="emo-fill" style="width: {em.value * 100}%; background: {em.color};"></div>
+							</div>
+							<span class="emo-val">{(em.value * 100).toFixed(0)}</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Matrix Status -->
+			<div class="chart-card matrix-card">
+				<div class="chart-title" style="color: var(--system-color);">MATRIX STATUS</div>
+				<div class="matrix-metrics">
+					<div class="matrix-row">
+						<span>CONTROL</span>
+						<div class="matrix-gauge">
+							<div class="gauge-fill" style="width: {$matrixState.control_index * 100}%; background: {
+								$matrixState.control_index > 0.7 ? 'var(--system-color)' :
+								$matrixState.control_index > 0.4 ? '#ffaa00' : '#ff4466'
+							};"></div>
+						</div>
+						<span class="matrix-val">{($matrixState.control_index * 100).toFixed(0)}%</span>
+					</div>
+					<div class="matrix-stats-row">
+						<span>CYCLE: {$matrixState.cycle_number}</span>
+						<span>SENTINELS: {$matrixState.sentinels_deployed}</span>
+						<span>GLITCHES: {$matrixState.glitches_this_cycle}</span>
+					</div>
+					<div class="matrix-stats-row">
+						<span>AWARENESS: {$matrixState.total_awareness.toFixed(1)}</span>
+						<span>ANOMALY: {$matrixState.anomaly_id ? `#${$matrixState.anomaly_id}` : 'NONE'}</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Economy -->
+			<div class="chart-card">
+				<div class="chart-title" style="color: var(--gold);">ECONOMY</div>
+				<div class="econ-metrics">
+					<div class="econ-item">
+						<span class="econ-label">TOTAL WEALTH</span>
+						<span class="econ-val">{(econ as any)?.total_wealth?.toFixed(1) ?? '0'}</span>
+					</div>
+					<div class="econ-item">
+						<span class="econ-label">AVG WEALTH</span>
+						<span class="econ-val">{(econ as any)?.avg_wealth?.toFixed(2) ?? '0'}</span>
+					</div>
+					<div class="econ-item">
+						<span class="econ-label">GINI INDEX</span>
+						<span class="econ-val">{(econ as any)?.gini?.toFixed(3) ?? '0'}</span>
+					</div>
+					<div class="econ-item">
+						<span class="econ-label">TRADES</span>
+						<span class="econ-val">{(econ as any)?.trades ?? '0'}</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Factions -->
+			{#if $factions.length > 0}
+				<div class="chart-card">
+					<div class="chart-title" style="color: var(--cyan);">FACTIONS ({$factions.length})</div>
+					<div class="faction-cards">
+						{#each $factions as f}
+							<div class="faction-card">
+								<div class="faction-header">
+									<span class="faction-name">{f.name || `Faction #${f.id}`}</span>
+									{#if f.at_war}<span class="war-badge">WAR</span>{/if}
+									{#if f.is_resistance}<span class="resist-badge">RESIST</span>{/if}
+								</div>
+								<div class="faction-stats">
+									<span>Members: {f.member_count || '?'}</span>
+									<span>Leader: #{f.leader_id || '?'}</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
+
+<style>
+	.charts-backdrop {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 30;
+	}
+	.charts-panel {
+		position: fixed;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 380px;
+		background: var(--bg-secondary);
+		border-left: 1px solid var(--green-dim);
+		z-index: 31;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	.charts-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--green-dim);
+	}
+	.charts-title {
+		font-size: 12px;
+		letter-spacing: 3px;
+		color: var(--green-primary);
+		font-weight: bold;
+	}
+	.close-btn {
+		background: none;
+		border: none;
+		color: var(--text-dim);
+		font-size: 16px;
+		cursor: pointer;
+		font-family: var(--font-mono);
+	}
+	.close-btn:hover { color: var(--green-primary); }
+
+	.charts-content {
+		flex: 1;
+		overflow-y: auto;
+		padding: 12px 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	/* Era Banner */
+	.era-banner {
+		text-align: center;
+		padding: 12px;
+		border: 1px solid;
+		border-radius: 4px;
+		background: var(--bg-primary);
+	}
+	.era-name {
+		display: block;
+		font-size: 16px;
+		font-weight: bold;
+		letter-spacing: 3px;
+	}
+	.era-desc {
+		display: block;
+		font-size: 10px;
+		color: var(--text-dim);
+		margin-top: 4px;
+	}
+	.era-tick {
+		display: block;
+		font-size: 9px;
+		color: var(--text-muted);
+		margin-top: 6px;
+		letter-spacing: 2px;
+	}
+
+	/* Charts */
+	.chart-card {
+		background: var(--bg-primary);
+		border: 1px solid rgba(0, 255, 136, 0.08);
+		border-radius: 4px;
+		padding: 10px 12px;
+	}
+	.chart-title {
+		font-size: 10px;
+		letter-spacing: 2px;
+		color: var(--green-primary);
+		margin-bottom: 8px;
+		font-weight: bold;
+	}
+	.chart-svg {
+		width: 100%;
+		height: auto;
+	}
+	.chart-empty {
+		text-align: center;
+		padding: 20px;
+		color: var(--text-muted);
+		font-size: 11px;
+	}
+
+	.pop-metrics {
+		display: flex;
+		gap: 12px;
+		font-size: 9px;
+		color: var(--text-dim);
+		margin-bottom: 6px;
+	}
+
+	/* Demographics bar */
+	.demo-bar {
+		display: flex;
+		height: 12px;
+		border-radius: 6px;
+		overflow: hidden;
+		margin-bottom: 6px;
+	}
+	.demo-segment {
+		transition: width 0.3s ease;
+		min-width: 1px;
+	}
+	.demo-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		font-size: 9px;
+		color: var(--text-dim);
+	}
+	.demo-item { display: flex; align-items: center; gap: 3px; }
+	.demo-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		display: inline-block;
+	}
+
+	/* Emotion bars */
+	.emotion-bars {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.emo-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 9px;
+	}
+	.emo-label { width: 40px; color: var(--text-dim); text-align: right; }
+	.emo-track {
+		flex: 1;
+		height: 6px;
+		background: var(--bg-secondary);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.emo-fill {
+		height: 100%;
+		border-radius: 3px;
+		transition: width 0.3s ease;
+	}
+	.emo-val { width: 24px; text-align: right; color: var(--text-dim); }
+
+	/* Matrix card */
+	.matrix-card {
+		border-color: rgba(0, 170, 204, 0.15);
+	}
+	.matrix-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 10px;
+		color: var(--text-dim);
+		margin-bottom: 6px;
+	}
+	.matrix-gauge {
+		flex: 1;
+		height: 8px;
+		background: var(--bg-secondary);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+	.gauge-fill {
+		height: 100%;
+		border-radius: 4px;
+		transition: width 0.5s ease, background 0.5s ease;
+	}
+	.matrix-val { font-weight: bold; width: 30px; text-align: right; }
+	.matrix-stats-row {
+		display: flex;
+		gap: 12px;
+		font-size: 9px;
+		color: var(--text-dim);
+		margin-top: 4px;
+	}
+
+	/* Economy */
+	.econ-metrics {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 8px;
+	}
+	.econ-item { text-align: center; }
+	.econ-label {
+		display: block;
+		font-size: 9px;
+		color: var(--text-dim);
+		letter-spacing: 1px;
+	}
+	.econ-val {
+		display: block;
+		font-size: 14px;
+		color: var(--gold);
+		font-weight: bold;
+		margin-top: 2px;
+	}
+
+	/* Factions */
+	.faction-cards {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.faction-card {
+		padding: 6px 8px;
+		background: var(--bg-secondary);
+		border: 1px solid rgba(0, 255, 136, 0.05);
+		border-radius: 3px;
+	}
+	.faction-header {
+		display: flex;
+		gap: 6px;
+		align-items: center;
+	}
+	.faction-name {
+		color: var(--cyan);
+		font-size: 11px;
+		flex: 1;
+	}
+	.war-badge {
+		font-size: 8px;
+		padding: 1px 4px;
+		background: rgba(255, 68, 102, 0.2);
+		color: var(--red-warning);
+		border: 1px solid var(--red-dim);
+		border-radius: 2px;
+	}
+	.resist-badge {
+		font-size: 8px;
+		padding: 1px 4px;
+		background: rgba(255, 215, 0, 0.1);
+		color: var(--gold);
+		border: 1px solid var(--gold-dim);
+		border-radius: 2px;
+	}
+	.faction-stats {
+		display: flex;
+		gap: 12px;
+		font-size: 9px;
+		color: var(--text-dim);
+		margin-top: 3px;
+	}
+</style>

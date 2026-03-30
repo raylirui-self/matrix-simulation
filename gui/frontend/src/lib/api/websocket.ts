@@ -34,6 +34,7 @@ export type AgentDelta = {
 	born?: boolean;
 	died?: boolean;
 	sex?: string;
+	age?: number;
 	intelligence?: number;
 	is_protagonist?: boolean;
 	redpilled?: boolean;

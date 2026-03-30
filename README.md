@@ -58,11 +58,12 @@ human-matrix-sim/
 │   │           ├── agents.py         <- Agent queries with filtering
 │   │           ├── world.py          <- World grid + bond network
 │   │           ├── god_mode.py       <- God mode actions
+│   │           ├── media.py          <- Portrait, landscape, narrative, monologue generation
 │   │           └── websocket.py      <- Real-time tick stream (delta protocol)
 │   ├── frontend/                     <- SvelteKit web frontend ("The Construct")
 │   │   └── src/
 │   │       ├── lib/canvas/           <- Zoom levels: CodeRain, WorldMap, CellView, SoulView
-│   │       ├── lib/panels/           <- Edge panels (Society, Matrix, Knowledge, Feed)
+│   │       ├── lib/panels/           <- EdgePanels, ControlDrawer, ChartsPanel, EraBanner
 │   │       ├── lib/terminal/         <- Architect's Terminal (command console)
 │   │       ├── lib/stores/           <- Svelte stores (simulation state, UI state)
 │   │       ├── lib/api/              <- REST + WebSocket client
@@ -161,7 +162,24 @@ make api
 make frontend
 
 # Open http://localhost:5173
+
+# To stop: press Ctrl+C in each terminal
 ```
+
+<details>
+<summary><b>Windows users without GNU Make</b></summary>
+
+Install Make via conda-forge (`conda install -c conda-forge make`) or run the commands directly:
+
+```powershell
+# Terminal 1: Start the API server
+uv run uvicorn gui.backend.api.main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2: Start the frontend
+cd gui/frontend && npm run dev
+```
+
+</details>
 
 **Controls:**
 - **Scroll** — Zoom between levels (Code Rain → Grid → Cell → Soul)
@@ -173,11 +191,14 @@ make frontend
 - **1-9** — Toggle data overlays (emotions, awareness, wealth, etc.)
 - **ESC** — Zoom out one level
 - **Hover screen edges** — Reveal data panels (Society, Matrix, Knowledge, Feed)
+- **Gear icon (⚙)** — Open Architect Controls drawer (parameter tuning, god mode, whisper)
+- **Menu icon (☰)** — Open Analytics panel (charts, era status, economy, factions)
 
 ### Launch the Streamlit Dashboard (Legacy)
 
 ```bash
 streamlit run dashboard.py
+# To stop: press Ctrl+C
 ```
 
 ### Run Tests
@@ -227,6 +248,23 @@ Translucent data panels appear when your cursor approaches the viewport edges �
 | Top | Knowledge | Avg IQ, avg health, births, deaths |
 | Bottom | Feed | Live event ticker, economy snapshot, narrator text |
 
+**Architect Controls (⚙ button):**
+A slide-out drawer with four tabs:
+- **TUNE** — 12 parameter sliders (harshness, mutation rate, learning speed, combat damage, etc.) with live application
+- **GOD** — One-click catastrophes and blessings (plague, famine, blessing, bounty, spawn 10) plus custom event injection
+- **AGENT** — Target any agent by ID (with quick-pick chips) and apply actions: heal, smite, red pill, gift wealth, make prophet, kill
+- **WHISPER** — Plant thoughts directly into an agent's mind. LLM-connected agents respond with unique behaviors. 8 preset messages (Awaken, The One, Paranoia, Lead, War, Resist, Calm, Teach) or write your own
+
+**Analytics Panel (☰ button):**
+A slide-out panel with real-time data:
+- **Era Banner** — Auto-detected civilization era (Genesis → Industrial Age) with color and description
+- **Population Chart** — SVG trend lines for population, intelligence, and health over time
+- **Demographics** — Phase distribution bar (infant/child/adolescent/adult/elder)
+- **Emotions** — Average population emotion bars (happiness, fear, anger, grief, hope)
+- **Matrix Status** — Control index gauge, cycle, sentinels, glitches, anomaly tracking
+- **Economy** — Total wealth, average wealth, Gini index, trade count
+- **Factions** — Faction cards with member counts, leader IDs, war/resistance badges
+
 **Architect's Terminal (press backtick):**
 A command console themed as the Architect's interface. Supports commands like:
 - `god spawn`, `god kill <id>`, `god plague`, `god whisper <id> <msg>` — God mode actions
@@ -234,11 +272,18 @@ A command console themed as the Architect's interface. Supports commands like:
 - `find awareness > 0.5` — Query agents
 - `agent <id>`, `matrix`, `factions`, `status` — Inspect simulation state
 
+**Media Generation (LLM-powered):**
+When an LLM provider is configured (Ollama or HuggingFace), The Construct can generate:
+- **Agent Portraits** — Character art generated from agent traits, emotions, and status via image models
+- **Era Landscapes** — Cinematic banner images matching the current civilization era
+- **Narratives** — Prose descriptions of civilization state
+- **Inner Monologues** — Protagonist thought generation reflecting their circumstances and memories
+
 **The Glitch Layer:**
 When the Matrix `control_index` drops below 0.5, the UI itself starts glitching — block displacement, scan lines, color shifts. Cycle resets cause screen tears. The One's emergence flashes gold. The interface is part of the simulation.
 
 **Casual vs Power User:**
-Casual users stay at Level 0-1 with play/pause. Power users access the terminal, data overlays (keys 1-9), bond constellation mode (B), and the timeline scrubber.
+Casual users stay at Level 0-1 with play/pause and the Analytics panel. Power users open the Architect Controls to tune parameters and whisper to agents, use the terminal for precise commands, toggle data overlays (keys 1-9), and enable bond constellation mode (B).
 
 ---
 
