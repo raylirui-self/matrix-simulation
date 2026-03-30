@@ -54,12 +54,20 @@ human-matrix-sim/
 │   │       ├── main.py               <- FastAPI app, CORS, route mounting
 │   │       ├── state.py              <- In-memory engine manager singleton
 │   │       └── routes/               <- REST + WebSocket endpoints
-│   ├── frontend/                     <- SvelteKit web frontend
-│   │   ├── src/lib/canvas/           <- WebGL world map, code rain, agent views
-│   │   ├── src/lib/panels/           <- Edge panels, terminal
-│   │   ├── src/lib/stores/           <- Svelte stores (simulation, UI state)
-│   │   └── src/lib/api/              <- REST + WebSocket client
-│   └── dashboard/                    <- Streamlit dashboard (15 tabs)
+│   │           ├── simulation.py     <- Simulation CRUD + tick
+│   │           ├── agents.py         <- Agent queries with filtering
+│   │           ├── world.py          <- World grid + bond network
+│   │           ├── god_mode.py       <- God mode actions
+│   │           └── websocket.py      <- Real-time tick stream (delta protocol)
+│   ├── frontend/                     <- SvelteKit web frontend ("The Construct")
+│   │   └── src/
+│   │       ├── lib/canvas/           <- Zoom levels: CodeRain, WorldMap, CellView, SoulView
+│   │       ├── lib/panels/           <- Edge panels (Society, Matrix, Knowledge, Feed)
+│   │       ├── lib/terminal/         <- Architect's Terminal (command console)
+│   │       ├── lib/stores/           <- Svelte stores (simulation state, UI state)
+│   │       ├── lib/api/              <- REST + WebSocket client
+│   │       └── routes/+page.svelte   <- Main single-page app
+│   └── dashboard/                    <- Streamlit dashboard (15 tabs, legacy)
 │       ├── app.py                    <- Main orchestrator
 │       ├── state.py                  <- Session state, helpers, achievements
 │       ├── controls.py               <- Sidebar controls and parameter overrides
@@ -70,8 +78,6 @@ human-matrix-sim/
 │   ├── default.yaml                  <- All parameters (single source of truth)
 │   ├── eras/                         <- Historically-researched era presets (8 eras)
 │   └── scenarios/                    <- Gameplay-tuned partial overrides
-├── scripts/                          <- Utility scripts
-│   └── sweep.py                      <- Parameter sweep tool (outputs CSV)
 ├── tests/                            <- Test suite (pytest)
 │   ├── conftest.py                   <- Shared fixtures
 │   └── test_systems.py              <- All 11 systems + integration tests
@@ -143,7 +149,32 @@ python main.py --era hunter_gatherer --scenario harsh_world new
 python main.py eras
 ```
 
-### Launch the Dashboard
+### Launch The Construct (Recommended)
+
+The Construct is the primary frontend — a spatial, immersive interface where the world IS the UI. Navigate by zooming into a living civilization across 4 depth levels.
+
+```bash
+# Terminal 1: Start the API server
+make api
+
+# Terminal 2: Start the frontend
+make frontend
+
+# Open http://localhost:5173
+```
+
+**Controls:**
+- **Scroll** — Zoom between levels (Code Rain → Grid → Cell → Soul)
+- **Click** agent/cell — Zoom into that entity
+- **Space** — Advance 1 tick
+- **P** — Play/pause auto-run
+- **Backtick (`)** — Open Architect's Terminal (command console)
+- **B** — Toggle bond constellation mode
+- **1-9** — Toggle data overlays (emotions, awareness, wealth, etc.)
+- **ESC** — Zoom out one level
+- **Hover screen edges** — Reveal data panels (Society, Matrix, Knowledge, Feed)
+
+### Launch the Streamlit Dashboard (Legacy)
 
 ```bash
 streamlit run dashboard.py
@@ -173,9 +204,47 @@ python scripts/sweep.py --param economy.trade_rate --values 0.0,0.1,0.2,0.3 --ti
 
 ---
 
-## The Dashboard
+## The Construct (Primary Frontend)
 
-The Streamlit dashboard provides 15 tabs for monitoring and interacting with the simulation:
+The Construct is a spatial, immersive web interface built with SvelteKit and Canvas. Instead of tabs and charts, the world IS the interface — navigate by zooming in and out of a living civilization.
+
+**Four Zoom Levels:**
+
+| Level | Name | What You See |
+|-------|------|-------------|
+| 0 | **Code Rain** | Matrix digital rain — each falling column is a living agent. Brightness = health, speed = age, color shifts green → red with awareness. Zero-effort ambient mode. |
+| 1 | **The Grid** | 8x8 terrain map with agents as drifting particles, bond lines, faction territories, sentinel scan beams, resource glow. Hover viewport edges for data panels. |
+| 2 | **The Cell** | Zoom into one grid cell. Agents rendered as shaped glyphs: shape = life phase, size = intelligence, color = dominant emotion, outline glow = awareness level. |
+| 3 | **The Soul** | Full agent deep dive — identity stats, trait bars, skill bars, emotion ring gauges, belief compass, bond web, memory stream, inner monologue. Background shifts with emotional state. |
+
+**Edge Panels (Level 1):**
+Translucent data panels appear when your cursor approaches the viewport edges — peripheral vision, not navigation.
+
+| Edge | Name | Systems |
+|------|------|---------|
+| Left | Society | Factions, demographics, wars, bond summary |
+| Right | The Matrix | Control index gauge, sentinels, awareness, The One status |
+| Top | Knowledge | Avg IQ, avg health, births, deaths |
+| Bottom | Feed | Live event ticker, economy snapshot, narrator text |
+
+**Architect's Terminal (press backtick):**
+A command console themed as the Architect's interface. Supports commands like:
+- `god spawn`, `god kill <id>`, `god plague`, `god whisper <id> <msg>` — God mode actions
+- `set population.max_size 1000` — Direct parameter editing
+- `find awareness > 0.5` — Query agents
+- `agent <id>`, `matrix`, `factions`, `status` — Inspect simulation state
+
+**The Glitch Layer:**
+When the Matrix `control_index` drops below 0.5, the UI itself starts glitching — block displacement, scan lines, color shifts. Cycle resets cause screen tears. The One's emergence flashes gold. The interface is part of the simulation.
+
+**Casual vs Power User:**
+Casual users stay at Level 0-1 with play/pause. Power users access the terminal, data overlays (keys 1-9), bond constellation mode (B), and the timeline scrubber.
+
+---
+
+## Streamlit Dashboard (Legacy)
+
+The Streamlit dashboard provides 15 tabs for monitoring and interacting with the simulation. Launch with `streamlit run dashboard.py`.
 
 **Controls:**
 - Quick step buttons (+1, +10, +50, +100 ticks) with descriptive tooltips
