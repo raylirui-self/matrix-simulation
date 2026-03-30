@@ -29,7 +29,7 @@ Cognitive Matrix models civilization through **11 interconnected systems** that 
 ## Project Structure
 
 ```text
-human-matrix-sim/
+matrix-simulation/
 ├── src/                              <- Core simulation engine
 │   ├── agents.py                     <- Agent, Traits, Bond, emotions, beliefs, awareness
 │   ├── world.py                      <- 8x8 resource grid, terrain, depletion, tech unlocks
@@ -103,8 +103,8 @@ human-matrix-sim/
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/human-matrix-sim.git
-cd human-matrix-sim
+git clone https://github.com/raylirui-self/matrix-simulation.git
+cd matrix-simulation
 
 # Create environment
 conda create -n matrix python=3.11 -y
