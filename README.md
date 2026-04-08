@@ -791,124 +791,25 @@ Sources used to calibrate historically-researched era presets:
 
 ## Roadmap
 
-### Completed
+| Phase | Focus |
+|-------|-------|
+| **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience |
+| **0.1** | Quick-start scenario cards and preset gameplay scenarios |
+| **1** | Deepen Matrix lore — Zion, Programs (Smith, Merovingian, Keymaker), deeper red pill mechanics, The Source |
+| **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
+| **3** | Multiplayer — role-based shared world (Architect/Oracle/Morpheus/Merovingian), plugin API, spectator mode |
+| **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
+| **5** | Consciousness frontier — dream cycles, Gnostic mythology layer, nested simulations, emergent agent language, free will gradient |
+| **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
 
-- [x] Full system state persistence (factions, wars, matrix state, protagonists, info objects survive save/load)
-- [x] Live Mode with auto-run and mid-simulation interventions
-- [x] Agent interaction panel (Heal, Smite, Red Pill, Gift, Prophet, Protagonist, Whisper)
-- [x] Visual character cards for protagonists with HP/emotion/trait bars
-- [x] Header metrics with trend deltas and new systems row
-- [x] Comprehensive tooltips for all parameters, controls, metrics, and achievements
-- [x] Full world state restoration from snapshots (terrain, resources, techs all preserved)
-- [x] Protagonist LLM decision overrides (inner monologue priority biases utility weights)
-- [x] Emotion-modified agency (`get_emotion_utility_modifiers` integrated into `compute_move` — fear → safety seeking, grief → paralysis, hope → exploration)
-- [x] Faction-specific cultural memory (each faction maintains independent knowledge pools with 1.5x contribution/absorption rates and 0.5x decay)
-- [x] Matrix cycle reset (awareness wipe, sentinel removal, partial cultural memory preservation at 70%, resource regeneration, war dissolution)
-- [x] Parameter sweep tooling (`scripts/sweep.py` — sweep any parameter with `--param`/`--values`/`--range`, outputs CSV with full stats)
-- [x] Export simulation history to CSV/JSON (dashboard buttons + `db.export_run_csv()`/`db.export_run_json()`)
-- [x] Performance optimization (spatial indexing with `SpatialIndex` for O(1) neighbor lookups, dict-based bond decay — 447 agents at ~106ms/tick)
+### What's Done
 
-### Phase 0: Polish & Improve Current Systems
-
-> **Empirical findings**: We ran 6+ simulations across default, harsh, peaceful, high-awareness (10x), conflict-tuned (low threshold + high wealth), and god-mode scenarios, totaling 12,000+ agents. Results: zero combat, zero wars, zero redpilled agents, converging faction beliefs, and near-zero wealth under default parameters. Even with 10x awareness growth, agents die (~age 70-94) long before reaching the 0.5 redpill threshold. Even with low war thresholds and agents within combat range holding rival bonds, fear suppresses all effective aggression to negative values. God mode actions (red pill, gift wealth, whisper) have no lasting effect — modified agents die and replacements start from scratch.
-
-#### Critical Balance Fixes (Systems Are Too Quiet)
-
-- [x] **Conflict system is dead — fear suppresses all combat**: Fear no longer fully cancels aggression (capped at 50% penalty). Rival bonds now form naturally through social proximity between aggressive agents. Agents with rival/enemy bonds get a 30% chance to fight even below the aggression threshold. Combat threshold lowered from 0.5 to 0.35, combat radius increased.
-- [x] **Awareness is mathematically unreachable**: Growth rate increased 10x (0.0005→0.005) with additive passive baseline so all agents accumulate. Awareness now partially inherits from parents (15%, 30% if redpilled). Elders gain awareness 1.5x faster. System trust suppression capped at 70%. Agents now routinely reach the 0.5 redpill threshold.
-- [x] **God mode actions are ephemeral**: Awareness and redpilled status now inheritable. Redpilled parents pass 30% awareness and low system trust to children. Wealth inherits via the existing inheritance system. Whispered memories persist through the memory system.
-- [x] **Faction beliefs converge**: Added faction core belief anchoring (members drift toward core beliefs). Cross-faction memetic transmission reduced to 30%, same-faction amplified 1.5x (echo chamber). Added environmental belief pressures: bond count affects individualism, combat experience shifts tradition, poverty breeds collectivism.
-- [x] **Economy produces near-zero wealth**: Default gather_rate tripled from 0.05 to 0.15. Theft threshold lowered from 0.5 to 0.35. Economy now produces meaningful wealth, trades, and thefts that cascade into rival bonds and combat.
-- [x] **Bonds never decay**: Removed proximity reinforcement (was canceling decay). Far-apart bonds now decay at 2x rate. Base decay rates increased for all non-family bond types. Bonds now properly churn.
-- [x] **"Harsh world" grows 9x larger than default**: Scenario now includes hard population cap (120), lower carrying capacity (12), faster health decay (2x), harder reproduction (min health 0.6, half reproduction chance), scarcer resources, and higher maintenance costs.
-- [x] **Tune faction warfare threshold**: Lowered from 0.6 to 0.4. War check interval reduced from 30 to 25 ticks. Rival bonds now actually form (see conflict fix), enabling the rivalry component of war score.
-- [x] **Duplicate faction names**: Added uniqueness check with fallback to numbered names if all 380 prefix-suffix combinations are exhausted.
-
-#### Additional Balance & Bug Fixes
-
-- [x] **Fix Sentinel suppression scaling**: Max sentinels now scales with population (1 per 20 agents, minimum from config). System can deploy proportionally to population size.
-- [ ] **Add population floor / soft reset**: When population drops below a critical threshold, trigger immigration or divine intervention instead of running empty.
-- [x] **Fix communication mutation bug**: Hop count now increments before mutation check. Later recipients receive more degraded info (correct telephone-game behavior) while earlier recipients retain their version's truth level.
-- [ ] **Move hardcoded values to config**: Baseline emotions, breakthrough population threshold, spatial index cell size, system narrative text, Sentinel trait templates, protagonist priority thresholds.
-- [ ] **CLI Unicode crash on Windows**: `main.py` outputs Unicode characters (checkmarks, arrows) that crash on Windows cp1252 terminals without `PYTHONIOENCODING=utf-8`.
-
-#### Missing Feedback Loops
-
-- [x] **Economy ↔ Beliefs**: Wealth now drives individualism (wealth > 1.0 → individualist drift), poverty drives collectivism (wealth < 0.2 → collectivist drift). Rich agents with many bonds trend collectivist; isolated wealthy agents trend individualist.
-- [ ] **Beliefs ↔ Economy**: Collectivist vs. individualist factions should have different trade/taxation behaviors instead of identical economic rules.
-- [ ] **Conflict ↔ Knowledge**: Wars should produce innovation (wartime breakthroughs) and tactical knowledge, not just destruction.
-- [ ] **Communication ↔ Conflict**: Propaganda info objects should influence war initiation and faction loyalty, not just belief drift.
-- [ ] **Memory ↔ Decisions**: Agents keep 50 memories but never reference them. Traumatic memories should trigger avoidance; positive memories should create place attachment.
-- [x] **Leadership ↔ Faction behavior**: Leader traits now affect faction bonuses — charismatic leaders boost recruitment, aggressive leaders lower war threshold, intelligent leaders improve cohesion, low-intelligence leaders cause faster member drift.
-
-#### Agent Behavior Depth
-
-- [ ] **Persistent goals**: Agents recalculate decisions from scratch every tick. Add multi-tick goals (find mate, reach resource, join faction) that create consistent character arcs.
-- [x] **Emotional intensity scaling**: Emotion utility modifiers doubled/tripled. Fear now has 1.0x safety multiplier (was 0.5x). Grief causes near-paralysis at high levels (0.8x inertia). Anger overrides safety (0.6x reduction). Emotion baselines retuned: fear 0.05 (was 0.1), anger 0.05 (was 0.1), hope 0.35 (was 0.3).
-- [ ] **Revenge and loyalty**: Agents who are robbed or whose mates are killed should actively hunt enemies. Agents should prioritize protecting bonded allies.
-- [ ] **Faction cultural norms**: Factions should develop localized customs — trade-only-with-members, mandatory tithes, warrior culture bonuses, pacifist combat penalties.
-- [ ] **Risk-taking**: Add a boldness trait or state so agents occasionally take suboptimal actions for ideological, emotional, or relational reasons — sacrifice for love, gamble on unlikely ventures.
-
-#### Dashboard & UX
-
-- [ ] **LLM budget slider**: "Narrative Richness" control — Off / Low / Medium / High — controlling how many LLM calls per tick cycle.
-- [ ] **Confirmation dialogs for God Mode**: Plague, Meteor, and Famine trigger instantly with no undo. Add confirmation with consequence preview.
-- [ ] **Cause-of-death breakdown**: Chart showing starvation vs. old age vs. combat vs. sentinel kills. Critical for diagnosing systemic problems.
-- [ ] **Age distribution pyramid**: Standard demographic visualization — immediately reveals aging populations or baby booms.
-- [ ] **Tech progress indicators**: Show proximity to next breakthrough, not just unlocked techs.
-- [ ] **War detail panel**: Territory control visualization, casualty breakdown by faction, war progress (who's winning), and combat history timeline.
-- [ ] **Belief evolution timeline**: Track how a faction's core beliefs shifted over time — "How did this faction radicalize?"
-- [ ] **Emotional contagion visualization**: Trace how panic or hope spreads through the population. Identify emotional epicenters.
-- [ ] **Feed pagination**: With 10,000+ entries, the live feed renders all items into the DOM. Add pagination or virtual scrolling.
-- [ ] **Mobile-responsive layout**: Metric rows (7 columns) and 15 tabs break on small screens. Use adaptive columns and icon-only tabs on mobile.
-
-#### Developer Experience & Community Readiness
-
-- [ ] **CONTRIBUTING.md**: How to add a new system, a new config parameter, a new scenario, and a new dashboard tab. Essential before open-sourcing.
-- [ ] **More scenarios**: Only 2 scenarios for 11 systems. Add: `matrix_aware` (high awareness growth), `tribal` (small bonds, fast rumor decay), `tech_race` (high mutation, fast breakthroughs), `knowledge_paradise` (strong cultural memory), `isolated_cells` (high terrain variation, low trade radius). *(Partially fulfilled: 8 historically-researched era presets now provide rich initial conditions; gameplay-focused scenarios still needed.)*
-- [x] **Fix harsh_world scenario**: Added hard population cap (120), lower carrying capacity (12 per cell), 2x health decay, 3.5x elder decay, halved reproduction chance, higher health threshold to reproduce (0.6), scarcer resources (gather_rate 0.08), and higher maintenance costs.
-- [ ] **CLI export command**: `persistence.py` has `export_run_csv()` and `export_run_json()` but no CLI interface. Add `python main.py export --format csv`.
-- [ ] **CLI parameter overrides**: Allow `python main.py run --set environment.harshness=2.0` for quick experiments without creating scenario files.
-- [ ] **Test coverage gaps**: Add tests for extinction recovery, bond capacity overflow, extreme parameter ranges, info object expiration, war triggering thresholds, and Matrix cycle reset with scaling populations.
-- [ ] **CI improvements**: Add coverage reporting (pytest-cov), linting (ruff/black), sweep.py validation, and scenario YAML schema checks.
-
-### Phase 0.1: Quick-Start & Scenario UX
-
-- [ ] **One-click scenario cards**: Replace the scenario dropdown with visual cards showing scenario name, description, and key parameter highlights. Click to start a new sim with that config instantly.
-- [x] **Choosable initial conditions**: ~~Let users pick starting population size, world size, initial era (e.g., "start in Bronze Age" with pre-leveled skills and techs), and seed agent archetypes (warriors, scholars, prophets) before launching.~~ Fulfilled by the Historical Era system (`--era` flag) — 8 researched presets from hunter-gatherer bands to near-future dystopia, each with calibrated demographics, economy, beliefs, and pre-unlocked tech.
-- [ ] **Scenario preview**: Before starting, show a brief summary of what to expect — "This scenario typically produces wars by tick 200 and Matrix awakening by tick 500" — based on pre-run statistics.
-- [ ] **Preset "interesting" scenarios**: Bundle scenarios that are known to produce drama — e.g., `awakening` (high awareness + low trust), `warworld` (high aggression + low war threshold + high gather rate), `dark_ages` (high harshness + low regen), `prophet_era` (high charisma variance + low faction threshold).
-
-### Phase 1: Deepen the Matrix Lore
-
-- [ ] **Zion — The Real World**: A second, harsher world layer where redpilled agents "jack out" to. Zion agents can jack back in on missions (rescue candidates, fight Sentinels, contact the Oracle). Zion has its own council politics, resource scarcity, and internal tensions — mirroring the films' Morpheus-vs-pragmatist divide. Both worlds run in parallel each tick, connected by jack-in/jack-out events.
-- [ ] **Programs as first-class entities**: The Matrix is populated by programs with their own agendas beyond the Architect's control:
-  - **Agent Smith** — a replicating agent. When Smith defeats an agent, that agent becomes another Smith copy. A runaway Smith swarm is an existential threat that forces cycle resets.
-  - **The Merovingian** — an exile who hoards information and trades in secrets. Runs a black market for awareness, wealth, and forbidden knowledge.
-  - **Seraph** — Oracle's protector. Intercepts Sentinel attacks on Oracle-guided agents.
-  - **The Keymaker** — rare NPC who creates shortcuts (teleportation between grid cells) for resistance agents.
-- [ ] **The Choice — Deeper Red Pill / Blue Pill**: Agents who take the red pill lose Matrix comforts (health regen, system trust buffs) but gain abilities (see through glitches, detect Sentinels, form resistance bonds). Blue pill agents forget their awareness spike and get a happiness/trust boost — but a lingering "splinter in the mind" that can resurface. Morpheus-type agents actively recruit high-awareness candidates with persuasion checks.
-- [ ] **The Source & The Path of The One**: The Anomaly's journey follows the films — visit the Oracle (gain prophecy), find the Keymaker, reach the Source (map center). At the Source, the Architect presents the choice: reset the cycle (preserving Zion) or fight (risking total extinction). Each cycle's One can make a different choice, creating branching history.
-
-### Phase 2: Make It Fun to Watch & Share
-
-- [ ] **LLM budget slider**: A "Narrative Richness" control in the dashboard — Off (deterministic fallback), Low (narrator summaries every N ticks), Medium (narrator + protagonist inner monologue), High (narrator + monologue + agent dialogue during key events + Oracle prophecies).
-- [ ] **Cinematic event system**: Key Matrix moments get special dashboard treatment — The One emerging (full-screen banner with narrative), cycle resets (dramatic countdown with age summary), Smith swarm (escalating warnings), Zion's last stand (Sentinel breach sequence).
-- [ ] **Agent stories & chronicle**: Each agent accumulates structured life events (born, taught by, joined faction, witnessed war, took red pill). "Obituary" button generates an LLM summary of any agent's life. A Civilization Chronicle tab auto-generates narrative history organized by era.
-
-### Phase 3: Multiplayer & Community
-
-- [ ] **Role-based shared world**: One player hosts a simulation, others connect via browser. Each player picks a role with different powers:
-  - **Architect** — god mode, system controls, deploy Sentinels
-  - **Oracle** — whisper to agents, influence awareness, guide candidates
-  - **Morpheus** — red-pill agents, recruit for Zion, lead resistance
-  - **Merovingian** — manipulate economy, trade information, hoard secrets
-- [ ] **System plugin API**: A clean interface (`class System: def tick(self, agents, world, config) -> events`) so contributors can add new systems without touching the engine core.
-- [ ] **Scenario & event pack sharing**: A community folder for user-submitted YAML scenarios and LLM prompt packs (noir, comedy, documentary narrative styles).
-- [ ] **Spectator mode**: A lightweight read-only web view with auto-narrated LLM commentary and optional chat overlay where spectators vote on god-mode interventions.
-
-### Phase 4: Scale & Research
-
-- [ ] **Larger worlds**: 16x16 or 32x32 grids with chunked spatial indexing. Natural geography (rivers as borders, ocean crossings, mountain passes as chokepoints). Isolated civilizations that eventually make "first contact."
-- [ ] **Batch research mode**: Headless runs with no dashboard overhead. Run 100+ simulations, aggregate stats (Anomaly emergence rate, average civilization lifespan, Gini distributions), export research datasets.
-- [ ] **Causal event graphs**: Track causality chains ("Agent X died → Agent Y traumatized → Y became prophet → Founded faction Z → War with faction A"). Visualize as interactive graphs in the dashboard.
+- 11-system simulation engine with full tick orchestration and SQLite persistence
+- SvelteKit "The Construct" frontend (4-level zoom) + FastAPI backend (REST + WebSocket)
+- Streamlit dashboard (legacy, 15 tabs)
+- 8 historically-researched era presets (hunter-gatherer to near-future)
+- LLM narrator integration (Ollama + HuggingFace + deterministic fallback)
+- God Mode, Architect Controls, Architect's Terminal, Analytics panel
+- Parameter sweep tooling, CSV/JSON export
+- Performance optimization (spatial indexing, O(1) neighbor lookups)
+- All critical balance fixes (combat, awareness, economy, factions, bonds, wars)
