@@ -42,3 +42,6 @@ htmlcov/
 
 # Claude AI workspace
 .claude/
+
+# Local roadmap (not for GitHub)
+TODO.md
