@@ -173,8 +173,7 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="drawer-backdrop" onclick={() => open = false}></div>
+	<button class="drawer-backdrop" onclick={() => open = false} aria-label="Close controls drawer"></button>
 	<div class="drawer">
 		<div class="drawer-header">
 			<span class="drawer-title">ARCHITECT CONTROLS</span>
@@ -305,8 +304,9 @@
 					<p class="whisper-hint">Whisper directly into an agent's mind. Agents with LLM integration will respond with unique behaviors based on your message. Awareness +0.05.</p>
 
 					<div class="whisper-target">
-						<label>TARGET</label>
+						<label for="whisper-target-id">TARGET</label>
 						<input
+							id="whisper-target-id"
 							type="text"
 							placeholder="Agent ID..."
 							bind:value={whisperTargetId}
@@ -330,8 +330,9 @@
 					</div>
 
 					<div class="whisper-compose">
-						<label>MESSAGE</label>
+						<label for="whisper-message">MESSAGE</label>
 						<textarea
+							id="whisper-message"
 							bind:value={whisperMessage}
 							placeholder="Wake up... the world you see is not real..."
 							rows={4}

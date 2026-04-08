@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats } from '$lib/stores/simulation';
 
 	let { open = $bindable(false) } = $props();
@@ -68,7 +67,6 @@
 	// ── Era detection ──
 	let currentEra = $derived.by(() => {
 		const s = $stats;
-		const m = $matrixState;
 		const pop = s.alive_count;
 		const avgIQ = s.avg_intelligence;
 		// Check for techs - we'd need breakthroughs store but approximate
@@ -114,8 +112,7 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="charts-backdrop" onclick={() => open = false}></div>
+	<button class="charts-backdrop" onclick={() => open = false} aria-label="Close analytics panel"></button>
 	<div class="charts-panel">
 		<div class="charts-header">
 			<span class="charts-title">ANALYTICS</span>
