@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { agents, runId, type Agent } from '$lib/stores/simulation';
+	import { agents, type Agent } from '$lib/stores/simulation';
 	import { zoomLevel, focusCell, focusAgentId } from '$lib/stores/ui';
-	import { api } from '$lib/api/rest';
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -165,11 +164,7 @@
 			}
 		}
 
-		// Draw bonds between agents in this cell
-		const agentIds = new Set(cellAgents.map((a) => a.id));
-		for (const agent of cellAgents) {
-			// We'd need bond data — for now draw simple proximity lines
-		}
+		// Bond rendering between agents in this cell could be added here
 
 		animFrame = requestAnimationFrame(draw);
 	}

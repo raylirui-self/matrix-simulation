@@ -144,8 +144,9 @@ def update_config(run_id: str, overrides: dict):
         raise HTTPException(status_code=500, detail="Config not found")
 
     new_cfg = cfg.override(overrides)
-    engine.cfg = new_cfg
-    manager._configs[run_id] = new_cfg
+    with manager._lock:
+        engine.cfg = new_cfg
+        manager._configs[run_id] = new_cfg
 
     return {"status": "ok", "message": "Config updated"}
 

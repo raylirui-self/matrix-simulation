@@ -462,16 +462,23 @@
 		}
 	}
 
-	// Load world data
+	// Load world data (with request deduplication)
+	let loadingWorld = false;
 	async function loadWorld() {
 		const rid = $runId;
-		if (!rid) return;
+		if (!rid || loadingWorld) return;
+		loadingWorld = true;
 		try {
-			worldData = await api.getWorld(rid);
-			const bondData = await api.getBonds(rid, 0.15, 150);
+			const [world, bondData] = await Promise.all([
+				api.getWorld(rid),
+				api.getBonds(rid, 0.15, 150)
+			]);
+			worldData = world;
 			bonds = bondData.bonds || [];
 		} catch (e) {
 			console.error('Failed to load world:', e);
+		} finally {
+			loadingWorld = false;
 		}
 	}
 

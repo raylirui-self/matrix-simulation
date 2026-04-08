@@ -61,7 +61,7 @@ function createDebouncedVisibility() {
 	const store = writable({ left: false, right: false, top: false, bottom: false });
 	const timers: Record<string, ReturnType<typeof setTimeout>> = {};
 
-	edgeProximity.subscribe(($prox) => {
+	const unsubProximity = edgeProximity.subscribe(($prox) => {
 		for (const side of ['left', 'right', 'top', 'bottom'] as const) {
 			if ($prox[side]) {
 				// Show instantly
@@ -77,7 +77,13 @@ function createDebouncedVisibility() {
 		}
 	});
 
-	return { subscribe: store.subscribe };
+	return {
+		subscribe: store.subscribe,
+		destroy() {
+			unsubProximity();
+			for (const key in timers) clearTimeout(timers[key]);
+		}
+	};
 }
 
 export const edgePanelVisibility = createDebouncedVisibility();
