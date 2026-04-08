@@ -42,8 +42,8 @@ def get_world(run_id: str):
     grid_size = grid.size
     agent_positions = []
     for a in alive:
-        row = min(grid_size - 1, int(a.y * grid_size))
-        col = min(grid_size - 1, int(a.x * grid_size))
+        row = max(0, min(grid_size - 1, int(a.y * grid_size)))
+        col = max(0, min(grid_size - 1, int(a.x * grid_size)))
         agent_positions.append({
             "id": a.id,
             "row": row, "col": col,

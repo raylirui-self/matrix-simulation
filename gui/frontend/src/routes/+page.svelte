@@ -6,7 +6,8 @@
 		runId,
 		tick,
 		agents,
-		stats,
+		matrixState,
+		factions as factionsStore,
 		loadFullState,
 		applyTickMessage,
 		isRunning
@@ -33,7 +34,6 @@
 	import EraBanner from '$lib/panels/EraBanner.svelte';
 
 	let ws: SimWebSocket | null = null;
-	let connected = $state(false);
 	let showLanding = $state(true);
 	let eras = $state<any[]>([]);
 	let scenarios = $state<any[]>([]);
@@ -89,7 +89,6 @@
 		ws = new SimWebSocket(rid);
 		await ws.connect();
 		ws.onMessage(handleWSMessage);
-		connected = true;
 		showLanding = false;
 
 		// Request initial state sync
@@ -107,6 +106,12 @@
 			}
 			agents.set(agentMap);
 			tick.set(msg.tick);
+			if (msg.matrix) {
+				matrixState.set(msg.matrix);
+			}
+			if (msg.factions) {
+				factionsStore.set(msg.factions);
+			}
 		} else if (msg.type === 'stopped') {
 			isRunning.set(false);
 		} else if (msg.type === 'auto_started') {

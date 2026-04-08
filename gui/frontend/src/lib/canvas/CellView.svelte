@@ -82,8 +82,8 @@
 		// Draw agents as large glyphs
 		for (const agent of cellAgents) {
 			// Map agent position within cell to screen
-			const cellFracX = (agent.x * 8 - cell.col) / 1;
-			const cellFracY = (agent.y * 8 - cell.row) / 1;
+			const cellFracX = Math.max(0, Math.min(1, agent.x * 8 - cell.col));
+			const cellFracY = Math.max(0, Math.min(1, agent.y * 8 - cell.row));
 			const ax = padding + cellFracX * areaW;
 			const ay = padding + cellFracY * areaH;
 
@@ -187,8 +187,8 @@
 		let closestDist = 30;
 
 		for (const agent of cellAgents) {
-			const cellFracX = (agent.x * 8 - cell.col) / 1;
-			const cellFracY = (agent.y * 8 - cell.row) / 1;
+			const cellFracX = Math.max(0, Math.min(1, agent.x * 8 - cell.col));
+			const cellFracY = Math.max(0, Math.min(1, agent.y * 8 - cell.row));
 			const ax = padding + cellFracX * areaW;
 			const ay = padding + cellFracY * areaH;
 

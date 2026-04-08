@@ -104,9 +104,10 @@
 	let popStats = $derived.by(() => {
 		const data = $tickHistory;
 		if (data.length === 0) return { max: 0, min: 0, current: 0 };
+		const aliveValues = data.map(d => d.alive);
 		return {
-			max: Math.max(...data.map(d => d.alive)),
-			min: Math.min(...data.map(d => d.alive)),
+			max: aliveValues.reduce((a, b) => Math.max(a, b), 0),
+			min: aliveValues.reduce((a, b) => Math.min(a, b), Infinity),
 			current: data[data.length - 1]?.alive || 0
 		};
 	});

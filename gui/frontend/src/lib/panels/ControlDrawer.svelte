@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { runId, agents, stats, matrixState, factions } from '$lib/stores/simulation';
+	import { runId, agents } from '$lib/stores/simulation';
 	import { api } from '$lib/api/rest';
 
 	let { open = $bindable(false) } = $props();
@@ -60,6 +60,7 @@
 	const GOD_ACTIONS = [
 		{ id: 'plague', label: 'PLAGUE', icon: '☣', desc: 'Disease sweep', color: '#ff4466' },
 		{ id: 'famine', label: 'FAMINE', icon: '🌾', desc: 'Resources to 30%', color: '#ff8844' },
+		{ id: 'meteor', label: 'METEOR', icon: '☄', desc: 'Destroy random cell', color: '#ff2200' },
 		{ id: 'blessing', label: 'BLESSING', icon: '✦', desc: '+HP, +skills', color: '#00ff88' },
 		{ id: 'bounty', label: 'BOUNTY', icon: '◆', desc: 'Resources to 150%', color: '#ffd700' },
 		{ id: 'spawn10', label: 'SPAWN 10', icon: '✚', desc: '10 new agents', color: '#00ddff' },
@@ -73,31 +74,19 @@
 				await api.godAction(rid, 'plague', undefined, { severity: 0.25 });
 				showFeedback('Plague unleashed');
 			} else if (actionId === 'famine') {
-				await api.godAction(rid, 'event', undefined, {
-					name: 'Great Famine', description: 'Resources vanish.',
-					effects: { health_delta: -0.15, target: 'all' }
-				});
+				await api.godAction(rid, 'famine', undefined, { resource_factor: 0.3 });
 				showFeedback('Famine strikes the land');
+			} else if (actionId === 'meteor') {
+				const result = await api.godAction(rid, 'meteor');
+				showFeedback(result.message);
 			} else if (actionId === 'blessing') {
-				await api.godAction(rid, 'event', undefined, {
-					name: 'Divine Blessing', description: 'Grace from above.',
-					effects: { health_delta: 0.2, target: 'all' }
-				});
+				await api.godAction(rid, 'blessing');
 				showFeedback('Blessing bestowed');
 			} else if (actionId === 'bounty') {
-				// Add resources to all cells
-				for (let r = 0; r < 8; r++) {
-					for (let c = 0; c < 8; c++) {
-						await api.godAction(rid, 'add_resources', undefined, { row: r, col: c, amount: 0.5 });
-					}
-				}
+				await api.godAction(rid, 'bounty', undefined, { amount: 0.5 });
 				showFeedback('Bounty granted to all cells');
 			} else if (actionId === 'spawn10') {
-				for (let i = 0; i < 10; i++) {
-					await api.godAction(rid, 'spawn', undefined, {
-						x: Math.random(), y: Math.random()
-					});
-				}
+				await api.godAction(rid, 'spawn_n', undefined, { count: 10 });
 				showFeedback('10 agents spawned');
 			}
 		} catch (e: any) {
@@ -107,8 +96,6 @@
 
 	// ── Agent Actions ──
 	let targetAgentId = $state('');
-	let agentActionFeedback = $state('');
-
 	const AGENT_ACTIONS = [
 		{ id: 'heal', label: 'HEAL', desc: 'Full HP restore', color: '#00ff88' },
 		{ id: 'smite', label: 'SMITE', desc: 'HP to 0.1, max fear', color: '#ff4466' },
@@ -137,13 +124,13 @@
 				await api.godAction(rid, 'modify', id, { awareness: 0.9, redpilled: true });
 				showFeedback(`Agent #${id} red-pilled`);
 			} else if (actionId === 'gift') {
-				await api.godAction(rid, 'modify', id, { wealth: 10.0, happiness: 0.7 });
+				await api.godAction(rid, 'modify', id, { wealth_add: 10.0, happiness: 0.7 });
 				showFeedback(`Gifted wealth to #${id}`);
 			} else if (actionId === 'prophet') {
-				await api.godAction(rid, 'modify', id, {});
-				showFeedback(`Agent #${id} marked`);
+				await api.godAction(rid, 'prophet', id);
+				showFeedback(`Agent #${id} is now a prophet`);
 			} else if (actionId === 'protagonist') {
-				await api.godAction(rid, 'modify', id, {});
+				await api.godAction(rid, 'protagonist', id);
 				showFeedback(`Tracking agent #${id}`);
 			} else if (actionId === 'kill') {
 				await api.godAction(rid, 'kill', id);

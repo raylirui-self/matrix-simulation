@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { terminalOpen, showParameterTuner } from '$lib/stores/ui';
-	import { runId, agents } from '$lib/stores/simulation';
+	import { runId } from '$lib/stores/simulation';
 	import { api } from '$lib/api/rest';
 
 	let input = $state('');
@@ -11,6 +10,8 @@
 	]);
 	let inputEl = $state<HTMLInputElement>();
 	let scrollEl = $state<HTMLDivElement>();
+	let cmdHistory: string[] = [];
+	let cmdHistoryIndex = $state(-1);
 
 	function scrollToBottom() {
 		if (scrollEl) {
@@ -24,6 +25,8 @@
 		const trimmed = cmd.trim();
 		if (!trimmed) return;
 
+		cmdHistory.push(trimmed);
+		cmdHistoryIndex = -1;
 		history.push({ type: 'cmd', text: `ARCHITECT> ${trimmed}` });
 		const parts = trimmed.split(/\s+/);
 		const command = parts[0].toLowerCase();
@@ -38,8 +41,15 @@
 						'  status                     — Current simulation status',
 						'  find <field> <op> <value>  — Query agents (e.g., find awareness > 0.5)',
 						'  god spawn [x] [y]          — Spawn agent at coordinates',
+						'  god spawn_n [count]        — Spawn N agents randomly',
 						'  god kill <id>              — Terminate agent',
 						'  god plague [severity]       — Unleash plague',
+						'  god famine [factor]        — Deplete resources (0.3=30%)',
+						'  god meteor                 — Destroy random cell',
+						'  god blessing               — Heal all + boost skills',
+						'  god bounty [amount]        — Add resources to all cells',
+						'  god prophet <id>           — Make agent a prophet',
+						'  god protagonist <id>       — Track agent as protagonist',
 						'  god whisper <id> <msg>     — Whisper to agent',
 						'  god modify <id> <key>=<v>  — Modify agent attribute',
 						'  god event <name>           — Inject world event',
@@ -136,6 +146,34 @@
 					const y = parseFloat(parts[3]) || 0.5;
 					const result = await api.godAction(rid, 'spawn', undefined, { x, y });
 					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'spawn_n') {
+					const count = parseInt(parts[2]) || 10;
+					const result = await api.godAction(rid, 'spawn_n', undefined, { count });
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'famine') {
+					const factor = parseFloat(parts[2]) || 0.3;
+					const result = await api.godAction(rid, 'famine', undefined, { resource_factor: factor });
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'meteor') {
+					const result = await api.godAction(rid, 'meteor');
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'blessing') {
+					const result = await api.godAction(rid, 'blessing');
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'bounty') {
+					const amount = parseFloat(parts[2]) || 0.5;
+					const result = await api.godAction(rid, 'bounty', undefined, { amount });
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'prophet') {
+					const id = parseInt(parts[2]);
+					if (isNaN(id)) { history.push({ type: 'error', text: 'Usage: god prophet <agent_id>' }); return; }
+					const result = await api.godAction(rid, 'prophet', id);
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
+				} else if (action === 'protagonist') {
+					const id = parseInt(parts[2]);
+					if (isNaN(id)) { history.push({ type: 'error', text: 'Usage: god protagonist <agent_id>' }); return; }
+					const result = await api.godAction(rid, 'protagonist', id);
+					history.push({ type: 'result', text: `INJECT: ${result.message}` });
 				} else if (action === 'kill') {
 					const id = parseInt(parts[2]);
 					if (isNaN(id)) { history.push({ type: 'error', text: 'Usage: god kill <agent_id>' }); return; }
@@ -207,6 +245,27 @@
 			execute(input);
 		} else if (e.key === 'Escape') {
 			terminalOpen.set(false);
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			if (cmdHistory.length > 0) {
+				if (cmdHistoryIndex === -1) {
+					cmdHistoryIndex = cmdHistory.length - 1;
+				} else if (cmdHistoryIndex > 0) {
+					cmdHistoryIndex--;
+				}
+				input = cmdHistory[cmdHistoryIndex];
+			}
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			if (cmdHistoryIndex >= 0) {
+				if (cmdHistoryIndex < cmdHistory.length - 1) {
+					cmdHistoryIndex++;
+					input = cmdHistory[cmdHistoryIndex];
+				} else {
+					cmdHistoryIndex = -1;
+					input = '';
+				}
+			}
 		}
 	}
 

@@ -183,7 +183,11 @@
 
 				const color = BOND_COLORS[bond.type] || '#00ff88';
 				const alpha = bondMode ? bond.strength * 0.8 : bond.strength * 0.3;
-				ctx.strokeStyle = color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+				// Convert hex to rgba
+				const r = parseInt(color.slice(1, 3), 16);
+				const g = parseInt(color.slice(3, 5), 16);
+				const b = parseInt(color.slice(5, 7), 16);
+				ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
 				ctx.globalAlpha = alpha;
 				ctx.lineWidth = bondMode ? bond.strength * 3 : bond.strength * 1.5;
 				ctx.beginPath();

@@ -108,7 +108,10 @@ def generate_landscape(run_id: str):
 @router.get("/landscape/image")
 def get_landscape_image(run_id: str, era: str = "genesis"):
     """Get the landscape image for an era."""
-    safe_name = era.lower().replace(" ", "_")
+    # Sanitize era name to prevent path traversal
+    safe_name = "".join(c for c in era.lower().replace(" ", "_") if c.isalnum() or c == "_")
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Invalid era name")
     landscape_dir = Path("output/era_landscapes")
     path = landscape_dir / f"{safe_name}.png"
     if not path.exists():

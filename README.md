@@ -251,8 +251,8 @@ Translucent data panels appear when your cursor approaches the viewport edges �
 **Architect Controls (⚙ button):**
 A slide-out drawer with four tabs:
 - **TUNE** — 12 parameter sliders (harshness, mutation rate, learning speed, combat damage, etc.) with live application
-- **GOD** — One-click catastrophes and blessings (plague, famine, blessing, bounty, spawn 10) plus custom event injection
-- **AGENT** — Target any agent by ID (with quick-pick chips) and apply actions: heal, smite, red pill, gift wealth, make prophet, kill
+- **GOD** — One-click catastrophes and blessings (plague, famine, meteor, blessing, bounty, spawn 10) plus custom event injection
+- **AGENT** — Target any agent by ID (with quick-pick chips) and apply actions: heal, smite, red pill, gift wealth, make prophet, make protagonist, kill
 - **WHISPER** — Plant thoughts directly into an agent's mind. LLM-connected agents respond with unique behaviors. 8 preset messages (Awaken, The One, Paranoia, Lead, War, Resist, Calm, Teach) or write your own
 
 **Analytics Panel (☰ button):**
@@ -266,8 +266,9 @@ A slide-out panel with real-time data:
 - **Factions** — Faction cards with member counts, leader IDs, war/resistance badges
 
 **Architect's Terminal (press backtick):**
-A command console themed as the Architect's interface. Supports commands like:
-- `god spawn`, `god kill <id>`, `god plague`, `god whisper <id> <msg>` — God mode actions
+A command console themed as the Architect's interface with up/down arrow command history. Supports commands like:
+- `god spawn`, `god spawn_n 10`, `god kill <id>`, `god plague`, `god famine`, `god meteor`, `god blessing`, `god bounty` — God mode actions
+- `god prophet <id>`, `god protagonist <id>`, `god whisper <id> <msg>` — Agent-targeted god actions
 - `set population.max_size 1000` — Direct parameter editing
 - `find awareness > 0.5` — Query agents
 - `agent <id>`, `matrix`, `factions`, `status` — Inspect simulation state
