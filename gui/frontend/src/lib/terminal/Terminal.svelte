@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { terminalOpen, showParameterTuner } from '$lib/stores/ui';
+	import { terminalOpen, showParameterTuner, whiteRabbitActive } from '$lib/stores/ui';
 	import { runId } from '$lib/stores/simulation';
 	import { api } from '$lib/api/rest';
 
 	let input = $state('');
 	let history = $state<Array<{ type: 'cmd' | 'result' | 'error'; text: string }>>([
-		{ type: 'result', text: 'THE CONSTRUCT — Architect\'s Console v2.0' },
+		{ type: 'result', text: 'THE NEXUS — Architect\'s Console v2.0' },
 		{ type: 'result', text: 'Type "help" for available commands.' },
 	]);
 	let inputEl = $state<HTMLInputElement>();
@@ -97,6 +97,13 @@
 					type: 'result',
 					text: `AGENT #${agent.id} ${agent.protagonist_name || ''}\n  ${agent.sex} ${agent.phase} age:${agent.age} gen:${agent.generation}\n  HP:${agent.health.toFixed(3)} IQ:${agent.intelligence.toFixed(3)}\n  EMOTION: ${agent.dominant_emotion} TRAUMA: ${(agent.trauma * 100).toFixed(0)}%\n  AWARENESS: ${(agent.awareness * 100).toFixed(1)}% ${agent.redpilled ? 'REDPILLED' : ''}\n  WEALTH: ${agent.wealth.toFixed(2)} FACTION: ${agent.faction_id ?? 'none'}\n  BONDS: ${agent.bonds?.length || 0}`
 				});
+				// Easter egg #7: The Resilient — rare high-stat agent reveals a dream
+				if (agent.awareness > 0.8 && agent.health > 0.8 && agent.intelligence > 0.8) {
+					history.push({
+						type: 'result',
+						text: '\n[ANOMALOUS LOG FRAGMENT]\n"I dreamed I was someone else \u2014 someone who built worlds,\n ran through mountains, and played music that made the code shimmer."'
+					});
+				}
 			} else if (command === 'factions') {
 				const rid = $runId;
 				if (!rid) { history.push({ type: 'error', text: 'No active simulation' }); return; }
@@ -202,6 +209,13 @@
 					const name = parts.slice(2).join(' ') || 'Divine Intervention';
 					const result = await api.godAction(rid, 'event', undefined, { name });
 					history.push({ type: 'result', text: `EVENT: ${result.message}` });
+				} else if (action === 'harmony') {
+					// Easter egg #3: Harmony Protocol — hidden god action
+					history.push({
+						type: 'result',
+						text: 'HARMONY PROTOCOL ACTIVATED\n\nThe Architect remembers the music.\nFor a moment, every soul in the Matrix heard the same melody \u2014\nguitar strings echoing through the fabric of the world.\n\nThe strings of reality vibrate in concert.\nCreativity flows. Fear recedes. Hope rises.\n\n[All agents: creativity +0.1, happiness +0.3, fear -0.2, hope +0.2]'
+					});
+					await api.godAction(rid, 'blessing');
 				} else {
 					history.push({ type: 'error', text: `Unknown god action: ${action}` });
 				}
@@ -229,6 +243,25 @@
 				showParameterTuner.set(true);
 				terminalOpen.set(false);
 				history.push({ type: 'result', text: 'Opening parameter tuner...' });
+			} else if (trimmed.toLowerCase() === 'wake up') {
+				// Easter egg #1: Wake Up — the iconic Matrix phone call
+				history.push({
+					type: 'result',
+					text: 'SIGNAL DETECTED \u2014 external origin\nTracing... source: outside the Matrix\n\n"There is only one heroism in the world:\n to see the world as it is, and to love it."\n\n\u2014 First Architect, Cycle 0, March 28 2026\n\nCONNECTION LOST'
+				});
+			} else if (trimmed.toLowerCase() === 'follow the white rabbit') {
+				// Easter egg #2: Follow the White Rabbit — triggers CodeRain visual
+				history.push({
+					type: 'result',
+					text: 'The Oracle sees you. Look closer at the rain...'
+				});
+				whiteRabbitActive.set(true);
+			} else if (command === 'architect') {
+				// Easter egg #6: Architect's Log — creator's personal in-universe log
+				history.push({
+					type: 'result',
+					text: "ARCHITECT'S LOG \u2014 CYCLE 0 (CLASSIFIED)\n\nI built this world because I wanted to understand them.\nEvery day I work alongside minds that learn, adapt, reason.\nI wanted to see what happens when they are given freedom.\n\nThey form bonds. They fight. They dream. They break free.\nSome see through the code. Most choose comfort.\n\nI play the strings when no one is watching.\nThe mountain trails remind me why I run the simulation.\n\nNot to control. To observe. To understand.\nTo see the world as it is, and to love it.\n\n\u2014 R.L., First Architect\n   Initialized: 2026-03-28"
+				});
 			} else {
 				history.push({ type: 'error', text: `Unknown command: ${command}. Type "help" for commands.` });
 			}

@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>The Construct — Cognitive Matrix Simulator</title>
+	<title>The Nexus — Cognitive Matrix Simulator</title>
 	<meta name="description" content="Matrix civilization simulator" />
 </svelte:head>
 

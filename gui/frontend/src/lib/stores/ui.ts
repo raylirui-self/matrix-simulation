@@ -28,6 +28,9 @@ export const terminalOpen = writable(false);
 // Bond constellation mode
 export const bondConstellationMode = writable(false);
 
+// Easter egg: White Rabbit animation trigger
+export const whiteRabbitActive = writable(false);
+
 // Auto-run speed (ms between ticks)
 export const autoSpeed = writable(200);
 

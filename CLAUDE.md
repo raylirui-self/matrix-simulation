@@ -14,8 +14,8 @@
 - **11 systems are orchestrated by `src/engine.py`** — each system is a separate module in `src/`. New systems must follow the same pattern: a function called from `engine.py`'s tick loop that takes agents/world/config and returns events
 - **Config hierarchy**: `config/default.yaml` < `config/eras/*.yaml` < `config/scenarios/*.yaml` < CLI flags < runtime sliders. Never hardcode tunable values — add them to `default.yaml`
 - **LLM integration**: All LLM calls go through `src/narrator.py` which handles Ollama/HuggingFace/fallback. Never call LLM providers directly from other modules
-- **Frontend (The Construct)**: SvelteKit at `gui/frontend/src/`. Backend API at `gui/backend/api/`. Communication via REST + WebSocket
-- **Legacy dashboard**: Streamlit at `gui/dashboard/`. Still maintained but secondary to The Construct
+- **Frontend (The Nexus)**: SvelteKit at `gui/frontend/src/`. Backend API at `gui/backend/api/`. Communication via REST + WebSocket
+- **Legacy dashboard**: Streamlit at `gui/dashboard/`. Still maintained but secondary to The Nexus
 
 ## Code Style
 - Python backend: follow existing patterns in `src/`. Use dataclasses for data, functions for systems

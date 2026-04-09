@@ -251,7 +251,7 @@ def main():
         ns4.metric("\U0001f7e2 Stability", f"{_control:.0%}",
                    help="How stable the simulation is. High = the world runs smoothly. Low = glitches appear, agents start noticing anomalies, and the fabric of reality frays. (Think: how well the Matrix is holding together.)")
         ns5.metric("\U0001f441\ufe0f Awakened", _aware,
-                   help="Agents who have 'seen through the simulation' — they've become aware that their world may not be real. Awakened agents behave unpredictably and can influence others. (Think: Neo in The Matrix.)")
+                   help="Agents who have 'seen through the simulation' — they've become aware that their world may not be real. Awakened agents behave unpredictably and can influence others.")
         ns6.metric("\U0001f6e1\ufe0f Wars", _wars,
                    help="Active wars between factions. Wars cause combat damage, deaths, and emotional trauma. They end when one faction surrenders or is destroyed.")
 

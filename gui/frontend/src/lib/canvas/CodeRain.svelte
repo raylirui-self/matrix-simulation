@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { agents, tick, stats, matrixState, events } from '$lib/stores/simulation';
-	import { zoomLevel } from '$lib/stores/ui';
+	import { zoomLevel, whiteRabbitActive } from '$lib/stores/ui';
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -28,6 +28,16 @@
 	let eventText = '';
 	let eventAlpha = 0;
 	let flashAlpha = 0; // For dramatic events
+
+	// Easter egg state
+	const HIDDEN_MSG = 'SEE THE WORLD AS IT IS AND LOVE IT';
+	let hiddenMsgIndex = 0;
+	let rabbitX = -1; // White rabbit column x position (-1 = inactive)
+	let rabbitChars = 'FOLLOW THE WHITE RABBIT';
+	let rabbitDone = false; // Show "R.L. was here" after sweep
+	let rabbitDoneAlpha = 0;
+	let statsOverrideText = ''; // Temporary stats override for marathon/328
+	let statsOverrideTimer: ReturnType<typeof setTimeout> | null = null;
 
 	function initColumns() {
 		if (!canvas) return;
@@ -88,9 +98,22 @@
 				const fade = j / col.chars.length;
 				const alpha = col.brightness * (1 - fade * 0.7);
 
+				// Easter egg #5: Message in the Rain — quote appears when Matrix loses control
+				let charToRender = col.chars[j];
+				let useHiddenStyle = false;
+				if (controlIndex < 0.2 && j > 0 && Math.random() < 0.02) {
+					charToRender = HIDDEN_MSG[hiddenMsgIndex % HIDDEN_MSG.length];
+					hiddenMsgIndex++;
+					useHiddenStyle = true;
+				}
+
 				if (j === 0) {
 					// Leading character is brightest (white-ish) — movie-accurate bright tip
 					ctx.fillStyle = `rgba(230, 255, 230, ${Math.min(1, alpha * 1.5)})`;
+					ctx.font = 'bold 15px JetBrains Mono';
+				} else if (useHiddenStyle) {
+					// Hidden message chars: slightly brighter, distinct green
+					ctx.fillStyle = `rgba(100, 255, 180, ${Math.min(1, alpha * 1.2)})`;
 					ctx.font = 'bold 15px JetBrains Mono';
 				} else {
 					// Glitch: low control index causes random red flashes
@@ -104,7 +127,42 @@
 					ctx.font = '15px JetBrains Mono';
 				}
 
-				ctx.fillText(col.chars[j], col.x, charY);
+				ctx.fillText(charToRender, col.x, charY);
+			}
+		}
+
+		// Easter egg #2: White Rabbit — white column sweeps across screen
+		if (rabbitX >= 0) {
+			const rabbitSpeed = width / (5 * 60); // cross screen in ~5 seconds at 60fps
+			rabbitX += rabbitSpeed;
+			for (let j = 0; j < rabbitChars.length; j++) {
+				const ry = 100 + j * 18;
+				if (ry > height) break;
+				const charAlpha = 1.0 - j * 0.03;
+				ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.3, charAlpha)})`;
+				ctx.font = 'bold 16px JetBrains Mono';
+				ctx.textAlign = 'left';
+				ctx.fillText(rabbitChars[j], rabbitX, ry);
+			}
+			ctx.textAlign = 'center'; // restore
+			if (rabbitX > width) {
+				rabbitX = -1;
+				rabbitDone = true;
+				rabbitDoneAlpha = 1.0;
+			}
+		}
+
+		// Easter egg #2 continued: "R.L. was here" flash after rabbit sweep
+		if (rabbitDone && rabbitDoneAlpha > 0) {
+			ctx.font = 'bold 28px JetBrains Mono';
+			ctx.fillStyle = `rgba(255, 215, 0, ${rabbitDoneAlpha * 0.8})`;
+			ctx.textAlign = 'center';
+			ctx.fillText('R.L. was here', width / 2, height / 2);
+			rabbitDoneAlpha *= 0.985;
+			if (rabbitDoneAlpha < 0.01) {
+				rabbitDoneAlpha = 0;
+				rabbitDone = false;
+				whiteRabbitActive.set(false);
 			}
 		}
 
@@ -118,9 +176,16 @@
 
 		// Ambient stats overlay
 		ctx.font = '24px JetBrains Mono';
-		ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
-		ctx.textAlign = 'center';
-		ctx.fillText(statsText, width / 2, 60);
+		if (statsOverrideText) {
+			// Easter egg override: gold text for marathon/328 events
+			ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+			ctx.textAlign = 'center';
+			ctx.fillText(statsOverrideText, width / 2, 60);
+		} else {
+			ctx.fillStyle = 'rgba(0, 255, 136, 0.15)';
+			ctx.textAlign = 'center';
+			ctx.fillText(statsText, width / 2, 60);
+		}
 
 		// Ticker at bottom
 		if (eventAlpha > 0) {
@@ -154,6 +219,37 @@
 			if (last.type === 'matrix') {
 				flashAlpha = 0.15;
 			}
+		}
+	});
+
+	// Easter egg #2: Watch for white rabbit trigger
+	$effect(() => {
+		if ($whiteRabbitActive && rabbitX < 0 && !rabbitDone) {
+			rabbitX = 0;
+		}
+	});
+
+	// Easter egg #4 & #8: Tick-based events (Marathon + Sacred 328)
+	$effect(() => {
+		const t = $tick;
+		if (t === 2620) {
+			// Easter egg #4a: The Long Run (reachable marathon marker)
+			eventText = 't=2620: THE LONG RUN \u2014 An elder dreamed of running forever, past mountains, through forests, along coasts.';
+			eventAlpha = 1.0;
+			flashAlpha = 0.15;
+		} else if (t === 42195) {
+			// Easter egg #4b: The full marathon distance
+			statsOverrideText = '42195m \u2014 THE ARCHITECT RUNS ALONGSIDE YOU';
+			flashAlpha = 0.25;
+			if (statsOverrideTimer) clearTimeout(statsOverrideTimer);
+			statsOverrideTimer = setTimeout(() => { statsOverrideText = ''; }, 5000);
+		}
+		// Easter egg #8: Sacred 328 — project birthday flashes
+		if (t > 0 && t % 328 === 0) {
+			statsOverrideText = statsText + '  |  3-28';
+			flashAlpha = Math.max(flashAlpha, 0.08);
+			if (statsOverrideTimer) clearTimeout(statsOverrideTimer);
+			statsOverrideTimer = setTimeout(() => { statsOverrideText = ''; }, 3000);
 		}
 	});
 

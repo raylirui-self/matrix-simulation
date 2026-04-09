@@ -1,4 +1,4 @@
-"""FastAPI application — The Construct backend."""
+"""FastAPI application — The Nexus backend."""
 from __future__ import annotations
 
 import sys
@@ -16,7 +16,7 @@ from gui.backend.api.routes import simulation, agents, world, god_mode, websocke
 from gui.backend.api.state import manager  # noqa: E402
 
 app = FastAPI(
-    title="The Construct — Human Matrix Sim API",
+    title="The Nexus — Cognitive Matrix Sim API",
     description="Backend API for the Matrix civilization simulator",
     version="2.0.0",
 )

@@ -385,7 +385,7 @@ def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bo
         if avg_awareness > max(0.4, min(0.8, awareness_ratio)):
             return True
 
-    # Condition 2: The Anomaly reaches "The Source" (awareness = 1.0 + at center)
+    # Condition 2: The Anomaly reaches "The Core" (awareness = 1.0 + at center)
     if matrix_state.anomaly_id:
         anomaly = next((a for a in alive if a.id == matrix_state.anomaly_id), None)
         if anomaly and anomaly.awareness >= 0.99:

@@ -2,7 +2,9 @@
 
 An agent-based civilization simulator where emergent societies form, evolve, and collapse inside a simulated reality. Agents develop emotions, form factions around shared ideologies, build economies, wage wars, and — if they're perceptive enough — discover that their world is a simulation.
 
-Inspired by the Matrix trilogy, Sugarscape, and multi-agent social simulation research.
+Inspired by simulation theory, Sugarscape, and multi-agent social simulation research.
+
+> *Cognitive Matrix is an independent work of science fiction simulation. It is not affiliated with, endorsed by, or connected to Warner Bros. Entertainment, the Wachowskis, or The Matrix franchise. Thematic elements draw on simulation theory, philosophy, and science fiction traditions that predate and extend beyond any single work.*
 
 ---
 
@@ -49,7 +51,7 @@ matrix-simulation/
 │   ├── persistence.py                <- SQLite snapshots, tick stats, events, narratives
 │   └── prompts/                      <- LLM prompt templates
 ├── gui/                              <- All GUI/frontend code
-│   ├── backend/                      <- FastAPI backend (The Construct API)
+│   ├── backend/                      <- FastAPI backend (The Nexus API)
 │   │   └── api/
 │   │       ├── main.py               <- FastAPI app, CORS, route mounting
 │   │       ├── state.py              <- In-memory engine manager singleton
@@ -60,7 +62,7 @@ matrix-simulation/
 │   │           ├── god_mode.py       <- God mode actions
 │   │           ├── media.py          <- Portrait, landscape, narrative, monologue generation
 │   │           └── websocket.py      <- Real-time tick stream (delta protocol)
-│   ├── frontend/                     <- SvelteKit web frontend ("The Construct")
+│   ├── frontend/                     <- SvelteKit web frontend ("The Nexus")
 │   │   └── src/
 │   │       ├── lib/canvas/           <- Zoom levels: CodeRain, WorldMap, CellView, SoulView
 │   │       ├── lib/panels/           <- EdgePanels, ControlDrawer, ChartsPanel, EraBanner
@@ -150,9 +152,9 @@ python main.py --era hunter_gatherer --scenario harsh_world new
 python main.py eras
 ```
 
-### Launch The Construct (Recommended)
+### Launch The Nexus (Recommended)
 
-The Construct is the primary frontend — a spatial, immersive interface where the world IS the UI. Navigate by zooming into a living civilization across 4 depth levels.
+The Nexus is the primary frontend — a spatial, immersive interface where the world IS the UI. Navigate by zooming into a living civilization across 4 depth levels.
 
 ```bash
 # Terminal 1: Start the API server
@@ -225,9 +227,9 @@ python scripts/sweep.py --param economy.trade_rate --values 0.0,0.1,0.2,0.3 --ti
 
 ---
 
-## The Construct (Primary Frontend)
+## The Nexus (Primary Frontend)
 
-The Construct is a spatial, immersive web interface built with SvelteKit and Canvas. Instead of tabs and charts, the world IS the interface — navigate by zooming in and out of a living civilization.
+The Nexus is a spatial, immersive web interface built with SvelteKit and Canvas. Instead of tabs and charts, the world IS the interface — navigate by zooming in and out of a living civilization.
 
 **Four Zoom Levels:**
 
@@ -274,7 +276,7 @@ A command console themed as the Architect's interface with up/down arrow command
 - `agent <id>`, `matrix`, `factions`, `status` — Inspect simulation state
 
 **Media Generation (LLM-powered):**
-When an LLM provider is configured (Ollama or HuggingFace), The Construct can generate:
+When an LLM provider is configured (Ollama or HuggingFace), The Nexus can generate:
 - **Agent Portraits** — Character art generated from agent traits, emotions, and status via image models
 - **Era Landscapes** — Cinematic banner images matching the current civilization era
 - **Narratives** — Prose descriptions of civilization state
@@ -444,7 +446,7 @@ The simulation IS the Matrix. Most agents are asleep inside it.
 - **The Oracle**: A hidden system process that identifies promising candidates and subtly guides them toward awakening.
 - **The Architect**: Monitors total awareness via a control index. When control drops, deploys Sentinels, injects comfort (happiness + system trust boosts), and engineers distractions.
 - **Exiles**: Sentinels that survive too long refuse deletion and become independent agents with unique abilities.
-- **Cycles**: The Matrix resets when total awareness exceeds critical mass, The Anomaly reaches The Source, or too many ticks pass. Cultural memory partially persists across cycles.
+- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly reaches The Core, or too many ticks pass. Cultural memory partially persists across cycles.
 
 ### System 10: Conflict & Warfare
 
@@ -795,9 +797,9 @@ Sources used to calibrate historically-researched era presets:
 |-------|-------|
 | **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience |
 | **0.1** | Quick-start scenario cards and preset gameplay scenarios |
-| **1** | Deepen Matrix lore — Zion, Programs (Smith, Merovingian, Keymaker), deeper red pill mechanics, The Source |
+| **1** | Deepen lore — The Haven, Programs (The Enforcer, The Broker, The Locksmith), deeper red pill mechanics, The Core |
 | **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
-| **3** | Multiplayer — role-based shared world (Architect/Oracle/Morpheus/Merovingian), plugin API, spectator mode |
+| **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
 | **5** | Consciousness frontier — dream cycles, Gnostic mythology layer, nested simulations, emergent agent language, free will gradient |
 | **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
@@ -805,7 +807,7 @@ Sources used to calibrate historically-researched era presets:
 ### What's Done
 
 - 11-system simulation engine with full tick orchestration and SQLite persistence
-- SvelteKit "The Construct" frontend (4-level zoom) + FastAPI backend (REST + WebSocket)
+- SvelteKit "The Nexus" frontend (4-level zoom) + FastAPI backend (REST + WebSocket)
 - Streamlit dashboard (legacy, 15 tabs)
 - 8 historically-researched era presets (hunter-gatherer to near-future)
 - LLM narrator integration (Ollama + HuggingFace + deterministic fallback)

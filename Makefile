@@ -12,7 +12,7 @@ test:
 run:
 	python main.py new && python main.py run --ticks 500
 
-# ── The Construct (web frontend + API) ──
+# ── The Nexus (web frontend + API) ──
 api:
 	uv run uvicorn gui.backend.api.main:app --reload --host 0.0.0.0 --port 8000
 

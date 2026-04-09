@@ -239,7 +239,7 @@
 	<!-- Landing Screen -->
 	<div class="landing matrix-texture">
 		<div class="landing-content">
-			<h1 class="title">THE CONSTRUCT</h1>
+			<h1 class="title">THE NEXUS</h1>
 			<p class="subtitle">Cognitive Matrix Civilization Simulator</p>
 
 			<div class="landing-sections">
