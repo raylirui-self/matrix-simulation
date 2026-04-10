@@ -30,6 +30,7 @@ from src.matrix_layer import MatrixState, process_matrix, check_cycle_reset
 from src.conflict import FactionWar, process_conflict
 from src.communication import InfoObject, process_communication
 from src.haven import HavenState, init_haven, process_haven
+from src.programs import process_programs
 
 
 @dataclass
@@ -72,6 +73,7 @@ class TickResult:
     conflict_stats: dict = field(default_factory=dict)
     communication_stats: dict = field(default_factory=dict)
     haven_stats: dict = field(default_factory=dict)
+    program_stats: dict = field(default_factory=dict)
     death_causes: dict = field(default_factory=dict)
     age_distribution: dict = field(default_factory=dict)
     tech_progress: dict = field(default_factory=dict)
@@ -472,6 +474,12 @@ class SimulationEngine:
             self._perform_cycle_reset(tick)
             matrix_stats["cycle_reset"] = True
 
+        # ── Programs: First-Class Entities (Enforcer, Broker, Guardian, Locksmith) ──
+        program_stats = process_programs(
+            self.agents, tick, self.cfg,
+            oracle_target_id=self.matrix_state.oracle_target_id,
+        )
+
         # ── System 10: Conflict ──
         conflict_stats = process_conflict(
             self.agents, self.factions, self.wars, tick, self.cfg, self.world,
@@ -574,6 +582,7 @@ class SimulationEngine:
             conflict_stats=conflict_stats,
             communication_stats=communication_stats,
             haven_stats=haven_stats,
+            program_stats=program_stats,
             death_causes=tick_death_causes,
             age_distribution=age_dist,
             tech_progress=tech_progress,

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.agents import Agent, Bond, Traits, next_id, SKILL_NAMES
+from src.programs import guardian_intercept_sentinel
 
 
 def spatial_distance(a: Agent, b: Agent) -> float:
@@ -290,6 +291,8 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                     stats["sentinels_active"] += 1
 
     # ── Phase 7: Sentinel behavior ──
+    # Find active Guardian for interception checks
+    guardian = next((a for a in alive if getattr(a, 'is_guardian', False)), None)
     for sentinel in sentinels:
         # Find nearest high-awareness target
         targets = sorted(
@@ -309,6 +312,16 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
 
             # If close enough, suppress
             if dist < 0.05:
+                # Guardian interception: if Guardian is nearby, it fights the Sentinel instead
+                if guardian and guardian.alive and hasattr(cfg, 'programs'):
+                    intercepted = guardian_intercept_sentinel(
+                        guardian, sentinel, target, tick, cfg
+                    )
+                    if intercepted:
+                        stats.setdefault("guardian_interceptions", 0)
+                        stats["guardian_interceptions"] += 1
+                        continue  # Sentinel attack was blocked
+
                 suppress_power = mx_cfg.sentinel_suppress_power
                 # Anomaly is harder to suppress
                 if target.is_anomaly:

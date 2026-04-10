@@ -171,6 +171,13 @@ class Agent:
     is_exile: bool = False         # Rogue program
     redpilled: bool = False        # Permanently awakened
 
+    # ── Programs (First-Class Entities) ──
+    is_enforcer: bool = False      # The Enforcer — copies on kill
+    is_broker: bool = False        # The Broker — black market dealer
+    is_guardian: bool = False      # The Guardian — Oracle's bodyguard
+    is_locksmith: bool = False     # The Locksmith — creates teleport keys
+    teleport_keys: list = field(default_factory=list)  # list of (x, y) destination tuples
+
     # ── Location (simulation vs haven) ──
     location: str = "simulation"         # "simulation" or "haven"
 
@@ -389,6 +396,12 @@ class Agent:
             "is_sentinel": self.is_sentinel,
             "is_exile": self.is_exile,
             "redpilled": self.redpilled,
+            # Programs
+            "is_enforcer": self.is_enforcer,
+            "is_broker": self.is_broker,
+            "is_guardian": self.is_guardian,
+            "is_locksmith": self.is_locksmith,
+            "teleport_keys": [list(k) for k in self.teleport_keys],
             # Location
             "location": self.location,
             # Goals
@@ -434,6 +447,12 @@ class Agent:
             is_sentinel=d.get("is_sentinel", False),
             is_exile=d.get("is_exile", False),
             redpilled=d.get("redpilled", False),
+            # Programs
+            is_enforcer=d.get("is_enforcer", False),
+            is_broker=d.get("is_broker", False),
+            is_guardian=d.get("is_guardian", False),
+            is_locksmith=d.get("is_locksmith", False),
+            teleport_keys=[tuple(k) for k in d.get("teleport_keys", [])],
             # Location
             location=d.get("location", "simulation"),
             # Goals

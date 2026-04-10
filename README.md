@@ -849,7 +849,7 @@ Sources used to calibrate historically-researched era presets:
 |-------|-------|
 | **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
 | **0.1** | Quick-start scenario cards and preset gameplay scenarios (complete) |
-| **1** | Deepen lore — The Haven, Programs (The Enforcer, The Broker, The Locksmith), deeper red pill mechanics, The Core |
+| **1** | Deepen lore — The Haven (complete), Programs: Enforcer/Broker/Guardian/Locksmith (complete), deeper red pill mechanics, The Core |
 | **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
@@ -873,3 +873,5 @@ Sources used to calibrate historically-researched era presets:
 - LLM budget slider (Narrative Richness), feed virtual scrolling, mobile-responsive layout
 - Expanded CONTRIBUTING.md, test coverage improvements, CI with pytest-cov
 - One-click scenario cards on landing screen (4 presets: Awakening, War World, Dark Ages, Prophet Era) with preview metadata
+- The Haven: second world layer with jack-in missions and council politics
+- Programs as First-Class Entities: The Enforcer (copy-on-kill swarm), The Broker (black market trades), The Guardian (Oracle bodyguard), The Locksmith (teleport keys)

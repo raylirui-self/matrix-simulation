@@ -12,6 +12,7 @@ import random
 from dataclasses import dataclass
 
 from src.agents import Agent, Bond
+from src.programs import convert_to_enforcer
 
 
 def spatial_distance(a: Agent, b: Agent) -> float:
@@ -84,31 +85,34 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
     for a in alive:
         if a.is_sentinel:
             continue
-        # Aggression check: trait + anger + rival/enemy bonds
-        rival_bond_count = sum(1 for b in a.bonds if b.bond_type in ("rival", "enemy"))
-        effective_aggression = (
-            a.traits.aggression * 0.6 +
-            a.emotions.get("anger", 0) * 0.3 +
-            min(0.3, rival_bond_count * 0.1)
-        )
-        # Fear reduces aggression but never fully cancels it — cap fear penalty at 50%
-        fear = a.emotions.get("fear", 0)
-        if fear > 0.3:
-            effective_aggression *= max(0.5, 1.0 - (fear - 0.3) * 0.5)
-        # Faction norms: pacifist factions raise the threshold
-        a_norms = _get_faction_norms(a, faction_map)
-        agent_threshold = aggression_threshold
-        if a_norms.get("pacifist"):
-            agent_threshold += 0.2
+        # Enforcers always fight — skip aggression checks
+        is_enforcer_a = getattr(a, 'is_enforcer', False)
+        if not is_enforcer_a:
+            # Aggression check: trait + anger + rival/enemy bonds
+            rival_bond_count = sum(1 for b in a.bonds if b.bond_type in ("rival", "enemy"))
+            effective_aggression = (
+                a.traits.aggression * 0.6 +
+                a.emotions.get("anger", 0) * 0.3 +
+                min(0.3, rival_bond_count * 0.1)
+            )
+            # Fear reduces aggression but never fully cancels it — cap fear penalty at 50%
+            fear = a.emotions.get("fear", 0)
+            if fear > 0.3:
+                effective_aggression *= max(0.5, 1.0 - (fear - 0.3) * 0.5)
+            # Faction norms: pacifist factions raise the threshold
+            a_norms = _get_faction_norms(a, faction_map)
+            agent_threshold = aggression_threshold
+            if a_norms.get("pacifist"):
+                agent_threshold += 0.2
 
-        # Minimum combat chance: agents with rival/enemy bonds always have a chance
-        has_enemies = rival_bond_count > 0
-        if effective_aggression < agent_threshold and not has_enemies:
-            continue
-        # Agents with enemies but below threshold get a random chance to fight
-        if effective_aggression < agent_threshold and has_enemies:
-            if random.random() > 0.3:  # 30% chance to fight anyway
+            # Minimum combat chance: agents with rival/enemy bonds always have a chance
+            has_enemies = rival_bond_count > 0
+            if effective_aggression < agent_threshold and not has_enemies:
                 continue
+            # Agents with enemies but below threshold get a random chance to fight
+            if effective_aggression < agent_threshold and has_enemies:
+                if random.random() > 0.3:  # 30% chance to fight anyway
+                    continue
 
         key = (int(a.x / bucket_size), int(a.y / bucket_size))
         nearby = []
@@ -132,7 +136,12 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
                 and _factions_at_war(a.faction_id, b.faction_id, wars)
             )
 
-            if not is_enemy and not is_faction_enemy:
+            # Enforcers attack any non-enforcer, non-sentinel
+            is_enforcer_b = getattr(b, 'is_enforcer', False)
+            is_enforcer_attack = (is_enforcer_a and not is_enforcer_b) or \
+                                 (is_enforcer_b and not is_enforcer_a)
+
+            if not is_enemy and not is_faction_enemy and not is_enforcer_attack:
                 continue
 
             # Combat! Resolved by aggression + resilience + health + survival (weights sum to 1.0)
@@ -161,6 +170,26 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
             if b.health <= 0:
                 b.killed_by = a.id
                 b.death_cause = "combat"
+
+            # Enforcer copy-on-kill: defeated agent becomes an Enforcer copy
+            _enforcer_max = getattr(getattr(getattr(cfg, 'programs', None), 'enforcer', None), 'max_copies', 20) if hasattr(cfg, 'programs') else 20
+            _enforcer_count = sum(1 for x in agents if x.alive and x.is_enforcer)
+            if a.is_enforcer and b.health <= 0 and not b.is_enforcer:
+                if not getattr(b, 'is_guardian', False) or not getattr(getattr(getattr(cfg, 'programs', None), 'guardian', None), 'enforcer_immune', True):
+                    if _enforcer_count < _enforcer_max:
+                        b.alive = True  # resurrect as copy
+                        b.health = 0.8
+                        convert_to_enforcer(b, tick, cfg)
+                        b.death_cause = ""
+                        b.killed_by = None
+            elif b.is_enforcer and a.health <= 0 and not a.is_enforcer:
+                if not getattr(a, 'is_guardian', False) or not getattr(getattr(getattr(cfg, 'programs', None), 'guardian', None), 'enforcer_immune', True):
+                    if _enforcer_count < _enforcer_max:
+                        a.alive = True  # resurrect as copy
+                        a.health = 0.8
+                        convert_to_enforcer(a, tick, cfg)
+                        a.death_cause = ""
+                        a.killed_by = None
 
             # Emotional effects
             a.emotions["anger"] = min(1.0, a.emotions.get("anger", 0) + 0.1)

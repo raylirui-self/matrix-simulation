@@ -344,3 +344,42 @@ communication:
   knowledge_skill_boost: 0.001        # skill boost from received knowledge
   system_narrative_interval: 50       # ticks between system narrative injections
   info_lifetime: 500                  # ticks before info expires
+
+# ── Programs — First-Class Entities ──
+programs:
+  enforcer:
+    enabled: true
+    spawn_chance: 0.002                # per tick, when no enforcers exist
+    min_tick: 50                        # earliest tick an enforcer can spawn
+    combat_power: 0.85                  # combat stat multiplier
+    copy_trait_override:                # traits applied to copies (victims)
+      aggression: 0.8
+      resilience: 0.8
+      sociability: 0.0
+      curiosity: 0.0
+    awareness_share_radius: 0.5        # enforcers share target locations within this radius
+    max_copies: 20                      # hard cap to prevent runaway growth crashing sim
+  broker:
+    enabled: true
+    spawn_tick: 100                     # tick when the Broker appears
+    location: [0.5, 0.5]               # fixed cell ("the parlor")
+    trade_radius: 0.08                  # agents must be this close to trade
+    awareness_price: 3.0                # wealth cost per 0.1 awareness boost
+    info_price: 1.5                     # wealth cost for secret info
+    locksmith_info_price: 5.0           # wealth cost for Locksmith location
+    trade_cooldown: 10                  # min ticks between trades for same agent
+  guardian:
+    enabled: true
+    spawn_chance: 0.001                 # per tick, when no guardians exist
+    min_tick: 30                        # earliest tick a guardian can spawn
+    combat_power: 0.95                  # very high combat stats
+    patrol_radius: 0.15                 # patrols near Oracle-guided agents
+    interception_radius: 0.08           # range to intercept Sentinel attacks
+    enforcer_immune: true               # cannot be copied by Enforcer
+  locksmith:
+    enabled: true
+    spawn_chance: 0.0005                # rare spawn
+    min_tick: 80                        # earliest tick
+    key_creation_interval: 20           # ticks between key creation
+    max_keys_per_agent: 3               # max teleport keys an agent can hold
+    key_range: 0.4                      # max teleport distance for generated keys
