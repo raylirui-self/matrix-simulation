@@ -150,6 +150,13 @@ python main.py --era hunter_gatherer --scenario harsh_world new
 
 # List available eras
 python main.py eras
+
+# Override config parameters at runtime
+python main.py run --ticks 500 --set environment.harshness=2.0 population.initial_size=100
+
+# Export simulation data
+python main.py export --format csv              # CSV to output/export_<run_id>/
+python main.py export --format json -o run.json # JSON to specific path
 ```
 
 ### Launch The Nexus (Recommended)
@@ -465,7 +472,7 @@ Information objects (knowledge, rumors, warnings, propaganda, system narratives)
 1. `config/default.yaml` — Full defaults (every parameter)
 2. `config/eras/*.yaml` — Historically-researched era presets
 3. `config/scenarios/*.yaml` — Gameplay-tuned partial overrides
-4. CLI flags — `--era`, `--scenario`, `--ticks`
+4. CLI flags — `--era`, `--scenario`, `--ticks`, `--set key=value`
 5. Dashboard sliders — Runtime only
 
 ### Creating a Custom Scenario
@@ -547,17 +554,24 @@ era_specific:
 | Parameter | YAML Path | Effect |
 |-----------|-----------|--------|
 | Harshness | `environment.harshness` | Above 2.0 causes population collapse |
+| Population floor | `population.min_floor` | Spawn immigrants when pop drops below this |
 | Mutation rate | `genetics.mutation_rate` | High = genetic drift, low = convergence |
 | Competition weight | `mate_selection.weights.competition` | High = premature convergence risk |
 | Cultural floor cap | `knowledge.cultural_memory.floor_cap` | Higher = faster compound growth |
+| Emotion baselines | `emotions.baselines.*` | Target emotions for natural decay |
 | Emotional contagion | `emotions.contagion_rate` | Higher = mass panics, collective joy |
 | Faction similarity | `beliefs.faction_formation_similarity` | Lower = more factions, more fragmented |
 | Awareness growth | `matrix.awareness_growth_rate` | Higher = faster awakening, more system resistance |
 | Glitch probability | `matrix.glitch_probability` | Higher = more Matrix instability |
+| Sentinel traits | `matrix.sentinel_traits.*` | Customize Sentinel stats (resilience, aggression, speed) |
+| Comfort injection | `matrix.comfort_injection.*` | System comfort values (happiness, trust, awareness) |
+| Anomaly bonuses | `matrix.anomaly_bonuses.*` | The One's skill/health boosts |
 | Combat damage | `conflict.combat_damage` | Higher = deadlier wars |
 | War threshold | `conflict.war_threshold` | Lower = wars start more easily |
+| Wartime innovation | `conflict.wartime_innovation_bonus` | Tech/survival skill bonus during wars |
 | Trade rate | `economy.trade_rate` | Higher = faster wealth equalization |
 | Faction tax | `economy.faction_tax_rate` | Higher = more redistributive factions |
+| Narrative richness | `narrator.richness` | Off/Low/Medium/High LLM call frequency |
 
 ---
 
@@ -577,6 +591,11 @@ Phenomena that arise from system interactions without being explicitly coded:
 - **Grief Cascades**: Death of a central agent triggers trauma in bonded agents, suppressing happiness and productivity
 - **Trade Routes**: Agents in resource-rich terrain trade with agents in skill-bonus terrain, creating economic interdependence
 - **Information Decay**: Knowledge degrades as it spreads through long bond chains — misinformation emerges naturally
+- **Revenge Vendettas**: Robbery and combat losers pursue attackers across the map; mates avenge killed partners
+- **Cultural Protectionism**: Collectivist factions restrict trade to members only; warrior cultures gain combat bonuses
+- **Wartime Innovation**: Factions at war develop technology and survival skills faster than peacetime
+- **Propaganda Wars**: Cross-faction propaganda erodes loyalty and raises war likelihood
+- **Spatial Memory**: Agents avoid places where they were attacked, congregate near positive experiences
 
 ---
 

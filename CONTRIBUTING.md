@@ -92,6 +92,38 @@ Open an issue describing the feature, its motivation, and how it fits the projec
 - `tests/` — pytest test suite
 - `scripts/` — Utility scripts (parameter sweep)
 
+## Adding a New System
+
+All simulation systems follow the same pattern:
+
+1. Create a function in `src/your_system.py` with signature: `process_your_system(agents, tick, cfg, ...) -> dict`
+2. The function receives agents/world/config, mutates agent state, and returns a stats dict.
+3. Wire it into the tick loop in `src/engine.py` (see existing systems for ordering).
+4. Add any config parameters to `config/default.yaml` under a new section.
+5. Add the stats dict to `TickResult` in `src/engine.py` if needed.
+6. Add tests in `tests/test_systems.py`.
+
+## Adding a Config Parameter
+
+1. Add the parameter to `config/default.yaml` under the appropriate section (e.g., `population`, `environment`).
+2. Access it in code via `cfg.section.param` (e.g., `cfg.population.min_floor`).
+3. Never hardcode tunable values — always read from config.
+4. Override hierarchy: `default.yaml` < era YAML < scenario YAML < `--set` CLI flag < runtime sliders.
+
+## Creating a Scenario
+
+1. Create a YAML file in `config/scenarios/` (e.g., `my_scenario.yaml`).
+2. Add a `description:` key at the top for `python main.py scenarios` listing.
+3. Override only the parameters you want to change — everything else inherits from `default.yaml`.
+4. Run with: `python main.py --scenario my_scenario new && python main.py run`
+
+## Adding a Dashboard Tab
+
+1. Create a Svelte component in `gui/frontend/src/lib/panels/` (e.g., `MyPanel.svelte`).
+2. Import and add it to the tab list in `gui/frontend/src/routes/+page.svelte`.
+3. Fetch data from the FastAPI backend via the existing API client or add a new route in `gui/backend/api/routes/`.
+4. Follow existing panel patterns for layout, reactivity, and WebSocket subscriptions.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
