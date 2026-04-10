@@ -33,6 +33,8 @@ class MatrixState:
     awareness_threshold: float = 0.8    # triggers Anomaly designation
     reset_threshold: float = 50.0       # total awareness that triggers reset consideration
     ticks_since_reset: int = 0
+    core_choice: Optional[str] = None   # "reset" or "fight" — set when Anomaly reaches Core
+    core_choice_outcome: Optional[str] = None  # "status_quo", "freedom", "system_failure"
 
     def to_dict(self) -> dict:
         return {
@@ -46,6 +48,8 @@ class MatrixState:
             "awareness_threshold": self.awareness_threshold,
             "reset_threshold": self.reset_threshold,
             "ticks_since_reset": self.ticks_since_reset,
+            "core_choice": self.core_choice,
+            "core_choice_outcome": self.core_choice_outcome,
         }
 
     @classmethod
@@ -103,6 +107,19 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         # Redpilled agents gain awareness faster
         if a.redpilled:
             base_growth *= 2.5
+            # Red pill cost: emotional instability — baseline shifts toward fear/anger
+            fear_shift = getattr(mx_cfg, 'redpill_emotion_shift_fear', 0.05)
+            anger_shift = getattr(mx_cfg, 'redpill_emotion_shift_anger', 0.03)
+            a.emotions["fear"] = min(1.0, a.emotions.get("fear", 0) + fear_shift * 0.01)
+            a.emotions["anger"] = min(1.0, a.emotions.get("anger", 0) + anger_shift * 0.01)
+            # Red pill cost: no health regen from Matrix comfort
+            health_loss = getattr(mx_cfg, 'redpill_health_regen_loss', 0.005)
+            a.health = max(0.1, a.health - health_loss)
+
+        # Splinter-in-the-mind: blue-pilled agents who almost woke up
+        if a.splinter_in_mind and not a.redpilled:
+            splinter_mult = getattr(mx_cfg, 'splinter_awareness_multiplier', 1.5)
+            base_growth *= splinter_mult
 
         a.awareness = min(1.0, a.awareness + base_growth)
 
@@ -194,29 +211,109 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
             # Higher curiosity + lower trust = more likely to take red pill
             redpill_chance = (curiosity * 0.6 + (1.0 - system_trust) * 0.4) * a.awareness
             if random.random() < redpill_chance:
-                # Takes the red pill
+                # Takes the red pill — costs and benefits applied
                 a.redpilled = True
+                a.splinter_in_mind = False  # no longer splinter, fully awake
                 a.awareness = min(1.0, a.awareness + 0.2)
                 a.beliefs["system_trust"] = max(-1.0, a.beliefs["system_trust"] - 0.5)
+                # Cost: emotional instability — fear and anger spike
                 a.emotions["fear"] = min(1.0, a.emotions.get("fear", 0) + 0.3)
+                a.emotions["anger"] = min(1.0, a.emotions.get("anger", 0) + 0.15)
                 a.emotions["hope"] = min(1.0, a.emotions.get("hope", 0) + 0.2)
+                # Cost: loses happiness baseline (no more blissful ignorance)
+                a.emotions["happiness"] = max(0.0, a.emotions.get("happiness", 0) - 0.2)
                 a.add_memory(tick, "REDPILLED: The world is not what it seems")
 
-                # Form resistance bonds with other redpilled agents
+                # Gain: form resistance bonds with other redpilled agents
                 for other in non_sentinels:
                     if other.redpilled and other.id != a.id:
                         if spatial_distance(a, other) < 0.2:
                             a.add_bond(Bond(other.id, "resistance", 0.7, tick), 12)
                             other.add_bond(Bond(a.id, "resistance", 0.7, tick), 12)
             else:
-                # Takes the blue pill (or isn't ready)
+                # Takes the blue pill — awareness suppressed but splinter remains
                 if random.random() < 0.3:
-                    a.awareness = max(0.0, a.awareness - 0.1)
-                    a.beliefs["system_trust"] = min(1.0, a.beliefs["system_trust"] + 0.2)
-                    a.emotions["happiness"] = min(1.0, a.emotions.get("happiness", 0) + 0.1)
-                    a.add_memory(tick, "Chose ignorance. The world feels... comfortable")
+                    bp_floor = getattr(mx_cfg, 'bluepill_awareness_floor', 0.3)
+                    bp_trust = getattr(mx_cfg, 'bluepill_trust_boost', 0.3)
+                    bp_happy = getattr(mx_cfg, 'bluepill_happiness_boost', 0.15)
+                    a.awareness = max(bp_floor, a.awareness - 0.1)
+                    a.beliefs["system_trust"] = min(1.0, a.beliefs["system_trust"] + bp_trust)
+                    a.emotions["happiness"] = min(1.0, a.emotions.get("happiness", 0) + bp_happy)
+                    a.splinter_in_mind = True  # "Something is wrong but I can't remember what"
+                    a.add_memory(tick, "Chose ignorance... but a splinter remains in the mind")
 
-    # ── Phase 5: The Anomaly (The One) ──
+    # ── Phase 4b: Redpilled agent perks (glitch foresight, Sentinel detection) ──
+    glitch_foresight_radius = getattr(mx_cfg, 'redpill_glitch_foresight_radius', 0.15)
+    sentinel_detect_radius = getattr(mx_cfg, 'redpill_sentinel_detect_radius', 0.2)
+    sentinels_list = [a for a in alive if a.is_sentinel]
+    for a in non_sentinels:
+        if not a.redpilled:
+            continue
+        # Gain: detect Sentinels at distance and warn allies
+        for sentinel in sentinels_list:
+            if spatial_distance(a, sentinel) < sentinel_detect_radius:
+                # Warn nearby resistance bonds
+                for other in non_sentinels:
+                    if other.id == a.id:
+                        continue
+                    bond = a.has_bond_with(other.id)
+                    if bond and bond.bond_type == "resistance":
+                        if spatial_distance(a, other) < 0.2:
+                            other.emotions["fear"] = min(1.0, other.emotions.get("fear", 0) + 0.05)
+                break  # one warning per tick is enough
+
+    # ── Phase 4c: Guide-type recruiters ──
+    recruiter_interval = getattr(mx_cfg, 'recruiter_check_interval', 15)
+    if tick % recruiter_interval == 0:
+        recruiter_charisma = getattr(mx_cfg, 'recruiter_charisma_threshold', 0.6)
+        recruiter_radius = getattr(mx_cfg, 'recruiter_search_radius', 0.12)
+        target_min_awareness = getattr(mx_cfg, 'recruiter_target_min_awareness', 0.3)
+
+        # Identify/update recruiters
+        for a in non_sentinels:
+            if a.redpilled and a.traits.charisma >= recruiter_charisma and not a.is_recruiter:
+                a.is_recruiter = True
+
+        # Recruiters attempt persuasion
+        for recruiter in [a for a in non_sentinels if a.is_recruiter and a.alive]:
+            # Find nearby high-awareness non-redpilled candidates
+            candidates = [
+                c for c in non_sentinels
+                if c.id != recruiter.id and not c.redpilled
+                and c.awareness >= target_min_awareness
+                and spatial_distance(recruiter, c) < recruiter_radius
+            ]
+            if not candidates:
+                continue
+            target = max(candidates, key=lambda c: c.awareness)
+            # Persuasion check: recruiter charisma vs target system_trust
+            persuasion_power = recruiter.traits.charisma * 0.6 + recruiter.awareness * 0.4
+            resistance = target.beliefs.get("system_trust", 0.5) * 0.7 + (1.0 - target.awareness) * 0.3
+            if random.random() < (persuasion_power - resistance + 0.1):
+                # Success: target takes the red pill
+                target.redpilled = True
+                target.splinter_in_mind = False
+                target.awareness = min(1.0, target.awareness + 0.15)
+                target.beliefs["system_trust"] = max(-1.0, target.beliefs["system_trust"] - 0.4)
+                target.emotions["fear"] = min(1.0, target.emotions.get("fear", 0) + 0.2)
+                target.emotions["hope"] = min(1.0, target.emotions.get("hope", 0) + 0.15)
+                target.add_memory(tick, f"RECRUITED by #{recruiter.id}: Took the red pill")
+                recruiter.add_memory(tick, f"Recruited #{target.id} into the resistance")
+                # Form resistance bond
+                target.add_bond(Bond(recruiter.id, "resistance", 0.8, tick), 12)
+                recruiter.add_bond(Bond(target.id, "resistance", 0.8, tick), 12)
+                stats.setdefault("recruited_count", 0)
+                stats["recruited_count"] += 1
+            else:
+                # Failure: target reports to Sentinels (awareness spike detected)
+                target.beliefs["system_trust"] = min(1.0, target.beliefs["system_trust"] + 0.1)
+                target.add_memory(tick, f"Rejected strange offer from #{recruiter.id}")
+                # Sentinel awareness spike — makes recruiter a higher-priority target
+                recruiter.awareness = min(1.0, recruiter.awareness + 0.02)
+                stats.setdefault("recruitment_failures", 0)
+                stats["recruitment_failures"] += 1
+
+    # ── Phase 5: The Anomaly (The One) & Quest Stages ──
     current_anomaly = None
     if matrix_state.anomaly_id:
         current_anomaly = next((a for a in alive if a.id == matrix_state.anomaly_id), None)
@@ -229,6 +326,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         for a in non_sentinels:
             if a.awareness >= matrix_state.awareness_threshold and a.redpilled:
                 a.is_anomaly = True
+                a.anomaly_quest_stage = 0  # quest begins
                 matrix_state.anomaly_id = a.id
                 a.add_memory(tick, "THE ONE: You are the Anomaly")
                 # Stat boost
@@ -250,7 +348,74 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 if dist < 0.15:
                     other.awareness = min(1.0, other.awareness + 0.01)
 
+        # ── Anomaly Quest Stage Progression ──
+        if not current_anomaly.anomaly_quest_complete:
+            quest_oracle_awareness = getattr(mx_cfg, 'quest_oracle_contact_awareness', 0.85)
+            quest_locksmith_radius = getattr(mx_cfg, 'quest_locksmith_radius', 0.1)
+            quest_core_radius = getattr(mx_cfg, 'quest_core_radius', 0.1)
+
+            # Stage 0 -> 1: Oracle contact (awareness threshold + Oracle is guiding them)
+            if current_anomaly.anomaly_quest_stage == 0:
+                if (current_anomaly.awareness >= quest_oracle_awareness
+                        and matrix_state.oracle_target_id == current_anomaly.id):
+                    current_anomaly.anomaly_quest_stage = 1
+                    current_anomaly.add_memory(tick, "QUEST: The Oracle has shown me the path. I must find the Locksmith.")
+                    stats.setdefault("quest_stage_reached", 1)
+
+            # Stage 1 -> 2: Find the Locksmith (be near a living Locksmith)
+            elif current_anomaly.anomaly_quest_stage == 1:
+                locksmith = next((a for a in alive if getattr(a, 'is_locksmith', False)), None)
+                if locksmith and spatial_distance(current_anomaly, locksmith) < quest_locksmith_radius:
+                    current_anomaly.anomaly_quest_stage = 2
+                    current_anomaly.add_memory(tick, "QUEST: The Locksmith has opened the way. The Core awaits at the center.")
+                    # Locksmith gives Anomaly a key to the Core
+                    current_anomaly.teleport_keys.append((0.5, 0.5))
+                    stats.setdefault("quest_stage_reached", 2)
+
+            # Stage 2 -> 3: Reach the Core (map center)
+            elif current_anomaly.anomaly_quest_stage == 2:
+                center_dist = math.sqrt(
+                    (current_anomaly.x - 0.5) ** 2 + (current_anomaly.y - 0.5) ** 2
+                )
+                if center_dist < quest_core_radius:
+                    current_anomaly.anomaly_quest_stage = 3
+                    current_anomaly.add_memory(tick, "QUEST: Reached the Core. The Architect awaits. THE CHOICE is before me.")
+                    stats.setdefault("quest_stage_reached", 3)
+
+                    # ── The Architect's Choice ──
+                    choice_score = _compute_core_choice_score(current_anomaly)
+                    fight_threshold = getattr(mx_cfg, 'core_choice_fight_threshold', 0.5)
+
+                    if choice_score >= fight_threshold:
+                        # FIGHT — risk total system failure but possibility of freedom
+                        matrix_state.core_choice = "fight"
+                        failure_chance = getattr(mx_cfg, 'core_fight_failure_chance', 0.3)
+                        if random.random() < failure_chance:
+                            # System failure — catastrophic awareness wipe
+                            matrix_state.core_choice_outcome = "system_failure"
+                            current_anomaly.add_memory(tick, "CORE: Chose to fight. The system shattered... but so did everything else.")
+                            for a in non_sentinels:
+                                a.awareness = max(0.0, a.awareness * 0.3)
+                                a.emotions["fear"] = min(1.0, a.emotions.get("fear", 0) + 0.4)
+                        else:
+                            # Freedom — massive awareness boost for everyone
+                            matrix_state.core_choice_outcome = "freedom"
+                            awareness_boost = getattr(mx_cfg, 'core_fight_awareness_boost', 0.3)
+                            current_anomaly.add_memory(tick, "CORE: Chose to fight. The walls are cracking. Freedom is possible.")
+                            for a in non_sentinels:
+                                a.awareness = min(1.0, a.awareness + awareness_boost)
+                                a.emotions["hope"] = min(1.0, a.emotions.get("hope", 0) + 0.3)
+                    else:
+                        # RESET — preserve the Haven, maintain status quo
+                        matrix_state.core_choice = "reset"
+                        matrix_state.core_choice_outcome = "status_quo"
+                        current_anomaly.add_memory(tick, "CORE: Chose to reset. The cycle continues... but the Haven endures.")
+
+                    current_anomaly.anomaly_quest_complete = True
+
     stats["anomaly_active"] = current_anomaly is not None
+    if current_anomaly:
+        stats["anomaly_quest_stage"] = current_anomaly.anomaly_quest_stage
 
     # ── Phase 6: The Architect's response ──
     total_awareness = sum(a.awareness for a in non_sentinels)
@@ -392,6 +557,32 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     return stats
 
 
+def _compute_core_choice_score(anomaly: Agent) -> float:
+    """Compute the Anomaly's choice score at the Core.
+    Higher score = more likely to fight.
+    Based on beliefs, bonds, and experiences."""
+    score = 0.0
+    # Low system trust -> fight
+    trust = anomaly.beliefs.get("system_trust", 0.0)
+    score += (1.0 - (trust + 1.0) / 2.0) * 0.3  # normalized: trust -1->1 maps to 0.3->0
+
+    # High spirituality -> fight (seeking truth)
+    spirituality = anomaly.beliefs.get("spirituality", 0.0)
+    score += max(0.0, spirituality) * 0.15
+
+    # Resistance bonds -> fight (people worth fighting for)
+    resistance_bonds = [b for b in anomaly.bonds if b.bond_type == "resistance"]
+    score += min(0.25, len(resistance_bonds) * 0.05)
+
+    # High awareness -> fight
+    score += anomaly.awareness * 0.2
+
+    # Trauma -> fight (anger at the system)
+    score += anomaly.trauma * 0.1
+
+    return min(1.0, max(0.0, score))
+
+
 def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bool:
     """Check if the Matrix should reset (new cycle).
     Returns True if reset should happen."""
@@ -411,11 +602,16 @@ def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bo
         if avg_awareness > max(0.4, min(0.8, awareness_ratio)):
             return True
 
-    # Condition 2: The Anomaly reaches "The Core" (awareness = 1.0 + at center)
+    # Condition 2: The Anomaly completed the quest and made a choice at the Core
+    if matrix_state.core_choice is not None:
+        # Both "reset" and "fight" choices trigger a cycle reset
+        # (fight with "freedom" outcome still resets, but with awareness preserved)
+        return True
+
+    # Legacy fallback: Anomaly at center with max awareness (pre-quest path)
     if matrix_state.anomaly_id:
         anomaly = next((a for a in alive if a.id == matrix_state.anomaly_id), None)
-        if anomaly and anomaly.awareness >= 0.99:
-            # Check if near center of map
+        if anomaly and anomaly.awareness >= 0.99 and anomaly.anomaly_quest_complete:
             center_dist = math.sqrt((anomaly.x - 0.5) ** 2 + (anomaly.y - 0.5) ** 2)
             if center_dist < 0.1:
                 return True

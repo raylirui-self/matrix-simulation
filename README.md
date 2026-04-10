@@ -452,13 +452,17 @@ The simulation IS the Matrix. Most agents are asleep inside it.
 
 - **Awareness** (0.0-1.0): Grows naturally from curiosity + intelligence. System trust suppresses it. Trauma and spirituality accelerate it.
 - **Glitches**: Random events (deja vu, memory leaks from dead agents, terrain flickers, ghost sightings) that boost awareness in perceptive agents.
-- **Red Pill**: When awareness exceeds 0.5, agents face a choice — accept awareness (permanent, but terrifying) or suppress it (comfortable, but awareness drops).
-- **The Anomaly (The One)**: When a redpilled agent's awareness exceeds 0.8, they become The Anomaly — stat boosts, health regeneration, and radiation of awareness to nearby agents. If The Anomaly reaches awareness 1.0 at the map center, a cycle reset triggers.
+- **Red Pill**: When awareness exceeds 0.5, agents face a choice. Costs: lose Matrix comfort health regen, emotional instability (fear/anger baseline shifts up), happiness drops. Gains: 2.5x awareness growth, detect Sentinels at distance, warn resistance allies, form resistance bonds.
+- **Blue Pill — Splinter in the Mind**: Agents who reject the red pill get awareness reset to 0.3 (not 0), a trust/happiness boost, and a `splinter_in_mind` flag. Splinter agents grow awareness 1.5x faster than normal despite suppression — they keep almost waking up but pulling back, until they eventually take the red pill.
+- **Guide-Type Recruiters**: Redpilled agents with high charisma become active recruiters. They seek nearby high-awareness non-redpilled agents and attempt persuasion (charisma vs system_trust). Success: target takes red pill, resistance bond formed. Failure: target's trust increases, recruiter becomes a higher Sentinel target.
+- **The Anomaly (The One)**: When a redpilled agent's awareness exceeds 0.8, they become The Anomaly — stat boosts, health regeneration, and radiation of awareness to nearby agents.
+- **The Path of The One**: The Anomaly follows a 3-stage quest: (1) Oracle contact — Oracle must be guiding them. (2) Find the Locksmith — be near a living Locksmith to receive a teleport key to the Core. (3) Reach the Core — arrive at map center (0.5, 0.5).
+- **The Architect's Choice**: At the Core, the Anomaly's beliefs, bonds, and trauma determine the outcome. High fight score (low trust, resistance bonds, high awareness) = FIGHT — risk system failure (awareness wipe) or achieve freedom (global awareness boost). Low score = RESET — cycle resets but the Haven is preserved. Both outcomes trigger cycle reset with different consequences.
 - **Sentinels**: System-deployed enforcer agents with maxed combat stats that hunt high-awareness agents. They suppress awareness and damage health. The Anomaly can destroy them.
 - **The Oracle**: A hidden system process that identifies promising candidates and subtly guides them toward awakening.
 - **The Architect**: Monitors total awareness via a control index. When control drops, deploys Sentinels, injects comfort (happiness + system trust boosts), and engineers distractions.
 - **Exiles**: Sentinels that survive too long refuse deletion and become independent agents with unique abilities.
-- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly reaches The Core, or too many ticks pass. Cultural memory partially persists across cycles.
+- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Cultural memory partially persists across cycles.
 
 ### System 10: Conflict & Warfare
 
@@ -597,6 +601,11 @@ era_specific:
 | Sentinel traits | `matrix.sentinel_traits.*` | Customize Sentinel stats (resilience, aggression, speed) |
 | Comfort injection | `matrix.comfort_injection.*` | System comfort values (happiness, trust, awareness) |
 | Anomaly bonuses | `matrix.anomaly_bonuses.*` | The One's skill/health boosts |
+| Red pill costs | `matrix.redpill_health_regen_loss`, `redpill_emotion_shift_*` | Health drain & emotional instability |
+| Blue pill splinter | `matrix.bluepill_awareness_floor`, `splinter_awareness_multiplier` | Splinter-in-mind awareness growth |
+| Recruiter settings | `matrix.recruiter_charisma_threshold`, `recruiter_check_interval` | Guide-type recruiter persuasion |
+| Anomaly quest | `matrix.quest_oracle_contact_awareness`, `quest_locksmith_radius`, `quest_core_radius` | Path of The One stages |
+| Core choice | `matrix.core_choice_fight_threshold`, `core_fight_failure_chance` | Architect's Choice outcomes |
 | Combat damage | `conflict.combat_damage` | Higher = deadlier wars |
 | War threshold | `conflict.war_threshold` | Lower = wars start more easily |
 | Wartime innovation | `conflict.wartime_innovation_bonus` | Tech/survival skill bonus during wars |

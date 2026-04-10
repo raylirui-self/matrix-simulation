@@ -298,6 +298,32 @@ matrix:
   comfort_injection_interval: 40      # ticks between system comfort injections
   max_ticks_per_cycle: 5000           # forced reset after this many ticks
 
+  # ── Red Pill / Blue Pill deepened mechanics ──
+  redpill_health_regen_loss: 0.005      # health regen penalty per tick for redpilled agents (no comfort)
+  redpill_emotion_shift_fear: 0.05      # baseline fear shift for redpilled agents
+  redpill_emotion_shift_anger: 0.03     # baseline anger shift for redpilled agents
+  redpill_glitch_foresight_radius: 0.15 # redpilled agents detect glitches within this radius
+  redpill_sentinel_detect_radius: 0.2   # redpilled agents detect Sentinels within this radius
+  bluepill_awareness_floor: 0.3         # blue pill resets awareness to this (not 0)
+  bluepill_trust_boost: 0.3             # system_trust boost on blue pill
+  bluepill_happiness_boost: 0.15        # happiness boost on blue pill
+  splinter_awareness_multiplier: 1.5    # splinter-in-mind agents grow awareness 1.5x faster
+
+  # ── Guide-type recruiters ──
+  recruiter_charisma_threshold: 0.6     # min charisma to become recruiter
+  recruiter_check_interval: 15          # ticks between recruiter persuasion attempts
+  recruiter_search_radius: 0.12         # how far recruiters look for candidates
+  recruiter_target_min_awareness: 0.3   # min awareness for target to be approachable
+
+  # ── Anomaly quest & Core ──
+  quest_oracle_contact_awareness: 0.85  # min awareness for Oracle contact stage
+  quest_locksmith_radius: 0.1           # how close Anomaly must be to Locksmith
+  quest_core_radius: 0.1                # how close to map center (0.5, 0.5) for Core
+  core_choice_fight_threshold: 0.5      # belief/bond score above this = fight, below = reset
+  core_fight_failure_chance: 0.3        # chance total system failure on fight choice
+  core_fight_awareness_boost: 0.3       # global awareness boost on successful fight
+  core_reset_haven_preserved: true      # Haven survives cycle reset
+
 # ── The Haven — The Real World ──
 haven:
   enabled: true

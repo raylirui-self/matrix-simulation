@@ -170,6 +170,10 @@ class Agent:
     is_sentinel: bool = False      # System enforcer
     is_exile: bool = False         # Rogue program
     redpilled: bool = False        # Permanently awakened
+    splinter_in_mind: bool = False # Took blue pill but awareness keeps growing back
+    is_recruiter: bool = False     # Redpilled agent actively recruiting others
+    anomaly_quest_stage: int = 0   # 0=none, 1=Oracle contact, 2=Find Locksmith, 3=Reach Core
+    anomaly_quest_complete: bool = False  # True after making the choice at the Core
 
     # ── Programs (First-Class Entities) ──
     is_enforcer: bool = False      # The Enforcer — copies on kill
@@ -396,6 +400,10 @@ class Agent:
             "is_sentinel": self.is_sentinel,
             "is_exile": self.is_exile,
             "redpilled": self.redpilled,
+            "splinter_in_mind": self.splinter_in_mind,
+            "is_recruiter": self.is_recruiter,
+            "anomaly_quest_stage": self.anomaly_quest_stage,
+            "anomaly_quest_complete": self.anomaly_quest_complete,
             # Programs
             "is_enforcer": self.is_enforcer,
             "is_broker": self.is_broker,
@@ -447,6 +455,10 @@ class Agent:
             is_sentinel=d.get("is_sentinel", False),
             is_exile=d.get("is_exile", False),
             redpilled=d.get("redpilled", False),
+            splinter_in_mind=d.get("splinter_in_mind", False),
+            is_recruiter=d.get("is_recruiter", False),
+            anomaly_quest_stage=d.get("anomaly_quest_stage", 0),
+            anomaly_quest_complete=d.get("anomaly_quest_complete", False),
             # Programs
             is_enforcer=d.get("is_enforcer", False),
             is_broker=d.get("is_broker", False),
