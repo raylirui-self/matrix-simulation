@@ -32,6 +32,7 @@ class Faction:
     leader_id: Optional[int] = None
     territory_cells: list[tuple[int, int]] = field(default_factory=list)
     is_resistance: bool = False  # Hidden Matrix resistance faction
+    norms: dict = field(default_factory=dict)  # Cultural norms derived from beliefs
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +43,7 @@ class Faction:
             "leader_id": self.leader_id,
             "territory_cells": self.territory_cells,
             "is_resistance": self.is_resistance,
+            "norms": self.norms,
         }
 
     @classmethod
@@ -54,6 +56,7 @@ class Faction:
             leader_id=d.get("leader_id"),
             territory_cells=[tuple(c) for c in d.get("territory_cells", [])],
             is_resistance=d.get("is_resistance", False),
+            norms=d.get("norms", {}),
         )
         return f
 
@@ -301,6 +304,24 @@ def process_beliefs(agents: list[Agent], factions: list[Faction],
             scored.append((a.id, score))
         scored.sort(key=lambda x: -x[1])
         faction.leader_id = scored[0][0]
+
+    # ── Phase 5b: Compute faction cultural norms from core beliefs ──
+    for faction in factions:
+        members = [a for a in alive if a.faction_id == faction.id]
+        if not members:
+            continue
+        faction.norms = {}
+        ind = faction.core_beliefs.get("individualism", 0)
+        trad = faction.core_beliefs.get("tradition", 0)
+        avg_agg = sum(a.traits.aggression for a in members) / len(members)
+
+        if ind < -0.5:
+            faction.norms["trade_internal_only"] = True
+            faction.norms["tithe_rate"] = 0.05
+        if trad > 0.5 and avg_agg > 0.4:
+            faction.norms["warrior_bonus"] = 0.1
+        if trad < -0.3 and avg_agg < 0.3:
+            faction.norms["pacifist"] = True
 
     # ── Phase 6: Prophet emergence ──
     if tick % belief_cfg.prophet_check_interval == 0:

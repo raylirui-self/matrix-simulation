@@ -42,6 +42,47 @@ def cmd_new(args, cfg: SimConfig, db: SimulationDB):
             print(f"  Pre-unlocked tech: {', '.join(pre_tech)}")
 
 
+def parse_overrides(pairs: list[str]) -> dict:
+    """Parse key=value pairs into nested dict for config override."""
+    import yaml
+    result = {}
+    for pair in pairs:
+        if "=" not in pair:
+            print(f"Warning: ignoring invalid override '{pair}' (expected key=value)")
+            continue
+        path, value = pair.split("=", 1)
+        keys = path.split(".")
+        d = result
+        for k in keys[:-1]:
+            d = d.setdefault(k, {})
+        # Auto-type the value
+        d[keys[-1]] = yaml.safe_load(value)
+    return result
+
+
+def cmd_export(args, cfg: SimConfig, db: SimulationDB):
+    """Export simulation data to CSV or JSON."""
+    run_id = args.run_id
+    if not run_id:
+        runs = db.list_runs()
+        if not runs:
+            print(color("No runs found.", "red"))
+            return
+        run_id = runs[0]["run_id"]
+
+    fmt = args.format
+    output = args.output
+
+    if fmt == "csv":
+        output = output or f"output/export_{run_id}"
+        db.export_run_csv(run_id, output)
+        print(color(f"Exported CSV to {output}/", "green"))
+    else:
+        output = output or f"output/export_{run_id}.json"
+        db.export_run_json(run_id, output)
+        print(color(f"Exported JSON to {output}", "green"))
+
+
 def cmd_run(args, cfg: SimConfig, db: SimulationDB):
     # Find latest run or specific run
     run_id = args.run_id
@@ -51,6 +92,11 @@ def cmd_run(args, cfg: SimConfig, db: SimulationDB):
             print(color("No runs found. Create one with: python main.py new", "red"))
             return
         run_id = runs[0]["run_id"]
+
+    # Apply CLI overrides
+    if args.overrides:
+        override_dict = parse_overrides(args.overrides)
+        cfg = cfg.override(override_dict)
 
     engine = db.load_latest_snapshot(run_id, cfg)
     if not engine:
@@ -174,6 +220,12 @@ def cmd_eras(args, cfg: SimConfig, db: SimulationDB):
 
 
 def main():
+    # Fix Unicode output on Windows terminals using cp1252 encoding
+    import io
+    if sys.platform == 'win32' and hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
     parser = argparse.ArgumentParser(description="Cognitive Matrix v2")
     parser.add_argument("--scenario", "-s", default=None, help="Scenario name (without .yaml)")
     parser.add_argument("--era", "-e", default=None,
@@ -187,6 +239,8 @@ def main():
     p_run = sub.add_parser("run", help="Run batch of ticks")
     p_run.add_argument("--ticks", "-t", type=int, default=None)
     p_run.add_argument("--run-id", "-r", default=None)
+    p_run.add_argument("--set", nargs="*", default=[], dest="overrides",
+                        help="Override config: --set key=value ...")
 
     p_status = sub.add_parser("status", help="Show current state")
     p_status.add_argument("--run-id", "-r", default=None)
@@ -194,6 +248,13 @@ def main():
     sub.add_parser("list-runs", help="List all runs")
     sub.add_parser("scenarios", help="List available scenarios")
     sub.add_parser("eras", help="List available historical eras")
+
+    p_export = sub.add_parser("export", help="Export simulation data")
+    p_export.add_argument("--format", "-f", choices=["csv", "json"], default="csv",
+                          help="Export format")
+    p_export.add_argument("--run-id", "-r", default=None,
+                          help="Run ID (uses latest if omitted)")
+    p_export.add_argument("--output", "-o", default=None, help="Output path")
 
     args = parser.parse_args()
     if not args.command:
@@ -206,6 +267,7 @@ def main():
     commands = {
         "new": cmd_new, "run": cmd_run, "status": cmd_status,
         "list-runs": cmd_list, "scenarios": cmd_scenarios, "eras": cmd_eras,
+        "export": cmd_export,
     }
     commands[args.command](args, cfg, db)
     db.close()

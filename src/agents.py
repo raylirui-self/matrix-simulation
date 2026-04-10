@@ -40,6 +40,7 @@ class Traits:
     sociability: float = 0.5
     charisma: float = 0.5
     aggression: float = 0.3
+    boldness: float = 0.5
     max_age: int = 80
 
     def to_dict(self) -> dict:
@@ -50,6 +51,7 @@ class Traits:
             "sociability": round(self.sociability, 3),
             "charisma": round(self.charisma, 3),
             "aggression": round(self.aggression, 3),
+            "boldness": round(self.boldness, 3),
             "max_age": self.max_age,
         }
 
@@ -62,6 +64,7 @@ class Traits:
             sociability=d.get("sociability", 0.5),
             charisma=d.get("charisma", 0.5),
             aggression=d.get("aggression", 0.3),
+            boldness=d.get("boldness", 0.5),
             max_age=d.get("max_age", 80),
         )
 
@@ -74,6 +77,7 @@ class Traits:
             sociability=random.uniform(0.2, 0.9),
             charisma=random.uniform(0.1, 0.8),
             aggression=random.uniform(0.05, 0.6),
+            boldness=random.uniform(0.1, 0.9),
             max_age=base_max_age + random.randint(-variance, variance),
         )
 
@@ -94,6 +98,7 @@ class Traits:
             sociability=blend(parent_a.sociability, parent_b.sociability),
             charisma=blend(parent_a.charisma, parent_b.charisma),
             aggression=blend(parent_a.aggression, parent_b.aggression),
+            boldness=blend(parent_a.boldness, parent_b.boldness),
             max_age=max(30, int((parent_a.max_age + parent_b.max_age) / 2
                                 + random.gauss(0, 5))),
         )
@@ -165,6 +170,16 @@ class Agent:
     is_sentinel: bool = False      # System enforcer
     is_exile: bool = False         # Rogue program
     redpilled: bool = False        # Permanently awakened
+
+    # ── Goals (persistent across ticks) ──
+    current_goal: str = "NONE"           # FIND_MATE, REACH_RESOURCE, JOIN_FACTION, FLEE, HUNT_ENEMY, PROTECT, NONE
+    goal_target_pos: Optional[tuple] = None   # (x, y) target position
+    goal_target_id: Optional[int] = None      # target agent ID
+    goal_ticks: int = 0                       # ticks pursuing current goal
+
+    # ── Combat tracking ──
+    killed_by: Optional[int] = None
+    death_cause: str = ""
 
     # ── Protagonist tracking ──
     is_protagonist: bool = False
@@ -249,9 +264,13 @@ class Agent:
                 return b
         return None
 
-    def add_memory(self, tick: int, event: str, max_recent: int = 20):
+    def add_memory(self, tick: int, event: str, max_recent: int = 20, x: float = None, y: float = None):
         """Add a memory. When recent memories exceed max_recent, compress older ones into summary."""
-        self.memory.append({"tick": tick, "event": event})
+        entry = {"tick": tick, "event": event}
+        if x is not None:
+            entry["x"] = x
+            entry["y"] = y
+        self.memory.append(entry)
         # Compress when we accumulate too many recent memories
         if len(self.memory) > max_recent:
             # Move older memories into summary, keep recent ones
@@ -367,6 +386,14 @@ class Agent:
             "is_sentinel": self.is_sentinel,
             "is_exile": self.is_exile,
             "redpilled": self.redpilled,
+            # Goals
+            "current_goal": self.current_goal,
+            "goal_target_pos": self.goal_target_pos,
+            "goal_target_id": self.goal_target_id,
+            "goal_ticks": self.goal_ticks,
+            # Combat tracking
+            "killed_by": self.killed_by,
+            "death_cause": self.death_cause,
             # Protagonist
             "is_protagonist": self.is_protagonist,
             "protagonist_name": self.protagonist_name,
@@ -402,6 +429,14 @@ class Agent:
             is_sentinel=d.get("is_sentinel", False),
             is_exile=d.get("is_exile", False),
             redpilled=d.get("redpilled", False),
+            # Goals
+            current_goal=d.get("current_goal", "NONE"),
+            goal_target_pos=tuple(d["goal_target_pos"]) if d.get("goal_target_pos") else None,
+            goal_target_id=d.get("goal_target_id"),
+            goal_ticks=d.get("goal_ticks", 0),
+            # Combat tracking
+            killed_by=d.get("killed_by"),
+            death_cause=d.get("death_cause", ""),
             # Protagonist
             is_protagonist=d.get("is_protagonist", False),
             protagonist_name=d.get("protagonist_name"),

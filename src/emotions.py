@@ -31,8 +31,13 @@ def process_emotions(agents: list[Agent], tick: int, cfg, world=None) -> dict:
 
     # ── Phase 1: Natural emotional decay toward baseline ──
     decay_rate = emo_cfg.decay_rate  # how fast emotions return to baseline
+    baselines_cfg = getattr(emo_cfg, 'baselines', None)
     baseline = {
-        "happiness": 0.4, "fear": 0.05, "anger": 0.05, "grief": 0.0, "hope": 0.35,
+        "happiness": getattr(baselines_cfg, 'happiness', 0.4) if baselines_cfg else 0.4,
+        "fear": getattr(baselines_cfg, 'fear', 0.05) if baselines_cfg else 0.05,
+        "anger": getattr(baselines_cfg, 'anger', 0.05) if baselines_cfg else 0.05,
+        "grief": getattr(baselines_cfg, 'grief', 0.0) if baselines_cfg else 0.0,
+        "hope": getattr(baselines_cfg, 'hope', 0.35) if baselines_cfg else 0.35,
     }
 
     for a in alive:

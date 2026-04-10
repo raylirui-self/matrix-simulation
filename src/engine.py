@@ -70,6 +70,9 @@ class TickResult:
     matrix_stats: dict = field(default_factory=dict)
     conflict_stats: dict = field(default_factory=dict)
     communication_stats: dict = field(default_factory=dict)
+    death_causes: dict = field(default_factory=dict)
+    age_distribution: dict = field(default_factory=dict)
+    tech_progress: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -229,7 +232,7 @@ class SimulationEngine:
 
         # ── System 5: Agency — Move agents ──
         # Rebuild spatial index for O(1) neighbor lookups
-        build_spatial_index(alive)
+        build_spatial_index(alive, self.cfg)
         for a in alive:
             if a.is_sentinel:
                 continue  # Sentinels move via matrix_layer
@@ -348,6 +351,10 @@ class SimulationEngine:
             a.health -= decay
 
             if a.health <= 0 or a.age >= a.traits.max_age:
+                if a.age >= a.traits.max_age:
+                    a.death_cause = "old_age"
+                elif not a.death_cause:
+                    a.death_cause = "starvation"
                 a.alive = False
                 a.health = 0
                 deaths += 1
@@ -357,11 +364,40 @@ class SimulationEngine:
 
         self.state.total_died += deaths
 
+        # ── Population floor: spawn immigrants if below minimum ──
+        pop_floor = getattr(self.cfg.population, 'min_floor', 0)
+        if pop_floor > 0:
+            alive_after_deaths = [a for a in self.agents if a.alive]
+            immigrants_needed = pop_floor - len(alive_after_deaths)
+            if immigrants_needed > 0:
+                for _ in range(immigrants_needed):
+                    immigrant = create_agent(self.cfg, randomize_age=True)
+                    self.cultural_memory.apply_to_newborn(immigrant)
+                    immigrant.add_memory(tick, "Immigrated to the settlement")
+                    self.agents.append(immigrant)
+                    births += 1
+                self.state.total_born += immigrants_needed
+
         # System 6: Emotional response to deaths
         for dead in newly_dead:
             on_agent_death_emotions(dead, self.agents, tick, self.cfg)
             # System 8: Inheritance
             process_inheritance(dead, self.agents, tick, self.cfg)
+            # Revenge: mate seeks vengeance for killed partner
+            if dead.killed_by is not None:
+                for bond in dead.bonds:
+                    if bond.bond_type == "mate":
+                        mate = next(
+                            (a for a in self.agents if a.id == bond.target_id and a.alive),
+                            None,
+                        )
+                        if mate:
+                            mate.current_goal = "HUNT_ENEMY"
+                            mate.goal_target_id = dead.killed_by
+                            mate.goal_ticks = 0
+                            mate.emotions["anger"] = min(
+                                1.0, mate.emotions.get("anger", 0) + 0.4
+                            )
 
         # ── Apply queued world events ──
         for event in self.event_queue:
@@ -376,9 +412,10 @@ class SimulationEngine:
 
         # ── Tech breakthroughs ──
         alive_now = self.get_alive_agents()
+        bt_min_pop = getattr(self.cfg.environment, 'breakthrough_min_pop', 3)
         for row in self.world.cells:
             for cell in row:
-                if cell.agent_count < 3:
+                if cell.agent_count < bt_min_pop:
                     continue
                 cell_agents = [
                     a for a in alive_now
@@ -416,7 +453,7 @@ class SimulationEngine:
         self.cultural_memory.apply_faction_knowledge(alive_now)
 
         # ── System 8: Economy ──
-        economy_stats = process_economy(self.agents, tick, self.cfg, self.world)
+        economy_stats = process_economy(self.agents, tick, self.cfg, self.world, factions=self.factions)
 
         # ── System 9: Matrix Meta-Layer ──
         matrix_stats = process_matrix(self.agents, self.matrix_state, tick, self.cfg)
@@ -428,13 +465,27 @@ class SimulationEngine:
 
         # ── System 10: Conflict ──
         conflict_stats = process_conflict(
-            self.agents, self.factions, self.wars, tick, self.cfg, self.world
+            self.agents, self.factions, self.wars, tick, self.cfg, self.world,
+            propaganda_reach=getattr(self, '_prev_propaganda_reach', {})
         )
+
+        # Wartime innovation bonus: factions at war develop tech and survival faster
+        warring_faction_ids = set()
+        for w in self.wars:
+            warring_faction_ids.add(w.faction_a_id)
+            warring_faction_ids.add(w.faction_b_id)
+        if warring_faction_ids:
+            war_bonus = getattr(self.cfg.conflict, 'wartime_innovation_bonus', 0.002)
+            for a in alive_now:
+                if a.alive and a.faction_id in warring_faction_ids:
+                    a.skills["tech"] = min(1.0, a.skills["tech"] + war_bonus)
+                    a.skills["survival"] = min(1.0, a.skills["survival"] + war_bonus)
 
         # ── System 11: Communication ──
         communication_stats = process_communication(
             self.agents, self.info_objects, self.agent_info, tick, self.cfg
         )
+        self._prev_propaganda_reach = communication_stats.get("propaganda_reach", {})
 
         # ── Compile stats ──
         alive_final = self.get_alive_agents()
@@ -445,6 +496,50 @@ class SimulationEngine:
         avg_intel = (sum(a.intelligence for a in alive_final) / len(alive_final)) if alive_final else 0
         avg_health = (sum(a.health for a in alive_final) / len(alive_final)) if alive_final else 0
         avg_gen = (sum(a.generation for a in alive_final) / len(alive_final)) if alive_final else 0
+
+        # ── Death cause tracking (Item 14) ──
+        tick_death_causes = {}
+        for a in newly_dead:
+            tick_death_causes[a.death_cause] = tick_death_causes.get(a.death_cause, 0) + 1
+
+        # ── Age distribution (Item 15) ──
+        age_dist = {}
+        for a in alive_final:
+            bucket = f"{(a.age // 10) * 10}s"
+            key = f"{a.sex}_{bucket}"
+            age_dist[key] = age_dist.get(key, 0) + 1
+
+        # ── Tech progress indicators (Item 16) ──
+        tech_progress = {}
+        bt_cfg = self.cfg.environment.tech_breakthroughs
+        if bt_cfg.enabled:
+            for threshold in bt_cfg.thresholds:
+                name = threshold["name"]
+                if name in self.world.global_techs:
+                    tech_progress[name] = 1.0  # already unlocked
+                else:
+                    # Find max tech skill proximity across all cells with enough population
+                    max_prox = 0.0
+                    for row in self.world.cells:
+                        for cell in row:
+                            if cell.agent_count > 0:
+                                cell_agents = [a for a in alive_final if self.world.get_cell(a.x, a.y) == cell]
+                                if cell_agents:
+                                    avg_tech = sum(a.skills.get("tech", 0) for a in cell_agents) / len(cell_agents)
+                                    prox = avg_tech / threshold["tech_level"] if threshold["tech_level"] > 0 else 0
+                                    max_prox = max(max_prox, prox)
+                    tech_progress[name] = min(1.0, max_prox)
+
+        # ── Belief evolution data (Item 18) ──
+        faction_belief_means = {}
+        for f in self.factions:
+            members = [a for a in alive_final if a.faction_id == f.id]
+            if members:
+                means = {}
+                for axis in ["individualism", "tradition", "system_trust", "spirituality"]:
+                    means[axis] = round(sum(m.beliefs.get(axis, 0) for m in members) / len(members), 4)
+                faction_belief_means[f.id] = means
+        belief_stats["faction_belief_means"] = faction_belief_means
 
         return TickResult(
             tick=tick,
@@ -464,6 +559,9 @@ class SimulationEngine:
             matrix_stats=matrix_stats,
             conflict_stats=conflict_stats,
             communication_stats=communication_stats,
+            death_causes=tick_death_causes,
+            age_distribution=age_dist,
+            tech_progress=tech_progress,
         )
 
     def _apply_event(self, event: WorldEvent):

@@ -75,6 +75,12 @@ class SimulationDB:
             self.conn.execute("ALTER TABLE snapshots ADD COLUMN extra_json TEXT DEFAULT '{}'")
             self.conn.commit()
 
+        try:
+            self.conn.execute("SELECT death_causes_json FROM tick_stats LIMIT 1")
+        except sqlite3.OperationalError:
+            self.conn.execute("ALTER TABLE tick_stats ADD COLUMN death_causes_json TEXT DEFAULT '{}'")
+            self.conn.commit()
+
     def create_run(self, cfg: SimConfig) -> str:
         run_id = uuid.uuid4().hex[:12]
         self.conn.execute(
@@ -184,8 +190,8 @@ class SimulationDB:
                (run_id, tick, alive_count, births, deaths,
                 avg_intelligence, avg_health, avg_generation,
                 phase_counts_json, bonds_formed, bonds_decayed,
-                breakthroughs_json, world_summary_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                breakthroughs_json, world_summary_json, death_causes_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 run_id, result.tick, result.alive_count,
                 result.births, result.deaths,
@@ -194,6 +200,7 @@ class SimulationDB:
                 result.bonds_formed, result.bonds_decayed,
                 json.dumps(result.breakthroughs),
                 json.dumps(result.world_summary),
+                json.dumps(result.death_causes),
             ),
         )
 

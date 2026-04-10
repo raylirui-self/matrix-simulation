@@ -16,7 +16,7 @@ def spatial_distance(a: Agent, b: Agent) -> float:
     return math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
 
 
-def process_economy(agents: list[Agent], tick: int, cfg, world) -> dict:
+def process_economy(agents: list[Agent], tick: int, cfg, world, factions=None) -> dict:
     """Run one tick of economic activity. Returns stats."""
     alive = [a for a in agents if a.alive]
     econ_cfg = cfg.economy
@@ -97,6 +97,18 @@ def process_economy(agents: list[Agent], tick: int, cfg, world) -> dict:
             if dist > trade_radius:
                 continue
 
+            # Faction norm: trade_internal_only blocks cross-faction trade
+            if factions:
+                faction_lookup = {f.id: f for f in factions}
+                a_faction = faction_lookup.get(a.faction_id) if a.faction_id else None
+                b_faction = faction_lookup.get(b.faction_id) if b.faction_id else None
+                if a_faction and getattr(a_faction, "norms", {}).get("trade_internal_only"):
+                    if a.faction_id != b.faction_id:
+                        continue
+                if b_faction and getattr(b_faction, "norms", {}).get("trade_internal_only"):
+                    if a.faction_id != b.faction_id:
+                        continue
+
             # Trade: wealth flows from richer to poorer
             diff = a.wealth - b.wealth
             if abs(diff) < 0.1:
@@ -161,23 +173,42 @@ def process_economy(agents: list[Agent], tick: int, cfg, world) -> dict:
                 victim.add_bond(Bond(a.id, "enemy", 0.6, tick), 10)
                 a.add_bond(Bond(victim.id, "enemy", 0.3, tick), 10)
                 victim.emotions["anger"] = min(1.0, victim.emotions.get("anger", 0) + 0.3)
-                victim.add_memory(tick, f"Robbed by #{a.id}")
-                a.add_memory(tick, f"Stole from #{victim.id}")
+                # Revenge: victim sets goal to hunt the thief
+                victim.current_goal = "HUNT_ENEMY"
+                victim.goal_target_id = a.id
+                victim.goal_ticks = 0
+                victim.add_memory(tick, f"Robbed by #{a.id}", x=victim.x, y=victim.y)
+                a.add_memory(tick, f"Stole from #{victim.id}", x=a.x, y=a.y)
                 break  # One theft per tick per thief
 
     # ── Phase 5: Faction taxation & redistribution ──
     tax_rate = econ_cfg.faction_tax_rate
     if tax_rate > 0:
         faction_pools = {}  # faction_id → collected tax
+        # Build faction lookup for belief-based tax modifiers
+        faction_lookup = {f.id: f for f in factions} if factions else {}
+        # Track which factions skip redistribution (individualist)
+        skip_redistribution = set()
 
         for a in alive:
             if a.faction_id is not None and a.wealth > 0.5:
-                tax = a.wealth * tax_rate
+                effective_tax = tax_rate
+                faction = faction_lookup.get(a.faction_id)
+                if faction:
+                    individualism = faction.core_beliefs.get("individualism", 0.0)
+                    if individualism < -0.3:
+                        effective_tax = tax_rate * 1.5
+                    elif individualism > 0.3:
+                        effective_tax = tax_rate * 0.5
+                        skip_redistribution.add(a.faction_id)
+                tax = a.wealth * effective_tax
                 a.wealth -= tax
                 faction_pools[a.faction_id] = faction_pools.get(a.faction_id, 0) + tax
 
-        # Redistribute equally among faction members
+        # Redistribute equally among faction members (skip individualist factions)
         for faction_id, pool in faction_pools.items():
+            if faction_id in skip_redistribution:
+                continue
             members = [a for a in alive if a.faction_id == faction_id]
             if members:
                 share = pool / len(members)

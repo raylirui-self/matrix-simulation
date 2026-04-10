@@ -43,8 +43,18 @@ class FactionWar:
         return cls(**d)
 
 
+def _get_faction_norms(agent: Agent, faction_map: dict) -> dict:
+    """Get the norms dict for an agent's faction, or empty dict."""
+    if agent.faction_id is None:
+        return {}
+    faction = faction_map.get(agent.faction_id)
+    if faction is None:
+        return {}
+    return getattr(faction, "norms", {}) or {}
+
+
 def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar],
-                     tick: int, cfg, world) -> dict:
+                     tick: int, cfg, world, propaganda_reach=None) -> dict:
     """Run one tick of conflict dynamics. Returns stats."""
     alive = [a for a in agents if a.alive]
     conflict_cfg = cfg.conflict
@@ -85,12 +95,18 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
         fear = a.emotions.get("fear", 0)
         if fear > 0.3:
             effective_aggression *= max(0.5, 1.0 - (fear - 0.3) * 0.5)
+        # Faction norms: pacifist factions raise the threshold
+        a_norms = _get_faction_norms(a, faction_map)
+        agent_threshold = aggression_threshold
+        if a_norms.get("pacifist"):
+            agent_threshold += 0.2
+
         # Minimum combat chance: agents with rival/enemy bonds always have a chance
         has_enemies = rival_bond_count > 0
-        if effective_aggression < aggression_threshold and not has_enemies:
+        if effective_aggression < agent_threshold and not has_enemies:
             continue
         # Agents with enemies but below threshold get a random chance to fight
-        if effective_aggression < aggression_threshold and has_enemies:
+        if effective_aggression < agent_threshold and has_enemies:
             if random.random() > 0.3:  # 30% chance to fight anyway
                 continue
 
@@ -125,12 +141,26 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
             b_power = (b.traits.aggression * 0.30 + b.traits.resilience * 0.25 +
                        b.health * 0.25 + b.skills.get("survival", 0) * 0.20)
 
+            # Faction norms: warrior_bonus adds to combat power
+            a_warrior = _get_faction_norms(a, faction_map).get("warrior_bonus", 0)
+            b_warrior = _get_faction_norms(b, faction_map).get("warrior_bonus", 0)
+            a_power += a_warrior
+            b_power += b_warrior
+
             # Both take damage
             damage_to_b = a_power * conflict_cfg.combat_damage * random.uniform(0.5, 1.5)
             damage_to_a = b_power * conflict_cfg.combat_damage * random.uniform(0.5, 1.5)
 
             a.health = max(0.0, a.health - damage_to_a)
             b.health = max(0.0, b.health - damage_to_b)
+
+            # Track killed_by and death cause for revenge system
+            if a.health <= 0:
+                a.killed_by = b.id
+                a.death_cause = "combat"
+            if b.health <= 0:
+                b.killed_by = a.id
+                b.death_cause = "combat"
 
             # Emotional effects
             a.emotions["anger"] = min(1.0, a.emotions.get("anger", 0) + 0.1)
@@ -150,8 +180,19 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
                             stats["combat_casualties"] += 1
                         war.intensity = min(1.0, war.intensity + 0.01)
 
-            a.add_memory(tick, f"Fought #{b.id}")
-            b.add_memory(tick, f"Fought #{a.id}")
+            # Revenge: loser sets HUNT_ENEMY goal (only if both survive)
+            if a.health > 0 and b.health > 0:
+                if a.health < b.health:
+                    a.current_goal = "HUNT_ENEMY"
+                    a.goal_target_id = b.id
+                    a.goal_ticks = 0
+                else:
+                    b.current_goal = "HUNT_ENEMY"
+                    b.goal_target_id = a.id
+                    b.goal_ticks = 0
+
+            a.add_memory(tick, f"Fought #{b.id}", x=a.x, y=a.y)
+            b.add_memory(tick, f"Fought #{a.id}", x=b.x, y=b.y)
 
             # Create/strengthen enemy bonds
             if not is_enemy:
@@ -187,6 +228,12 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
                     rivalry_count * conflict_cfg.war_rivalry_weight +
                     territorial_overlap * conflict_cfg.war_territory_weight
                 )
+
+                if propaganda_reach:
+                    prop_a = propaganda_reach.get(fa.id, 0)
+                    prop_b = propaganda_reach.get(fb.id, 0)
+                    propaganda_factor = (prop_a + prop_b) * 0.005
+                    war_score += propaganda_factor
 
                 if war_score > conflict_cfg.war_threshold:
                     war = FactionWar(

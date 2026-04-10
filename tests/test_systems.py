@@ -422,3 +422,116 @@ def test_persistence_save_and_load_snapshot(cfg):
 
     db.close()
     os.remove(test_db)
+
+
+# ===================================================
+# TEST: Coverage Gaps
+# ===================================================
+
+def test_extinction_recovery(cfg):
+    """Population floor prevents total extinction."""
+    engine = SimulationEngine(cfg, state=RunState(run_id="extinction_test"))
+    engine.initialize()
+    # Kill all agents
+    for a in engine.agents:
+        if a.alive:
+            a.health = 0
+            a.alive = False
+    # Run a tick — population floor should spawn immigrants
+    result = engine.tick()
+    assert result.alive_count >= cfg.population.min_floor
+
+
+def test_bond_capacity_overflow(cfg):
+    """Bond capacity is enforced when adding bonds."""
+    from src.agents import create_agent, Bond
+    a = create_agent(cfg)
+    cap = cfg.social.bond_capacity  # default 8
+    # Add more bonds than capacity
+    for i in range(cap + 5):
+        a.add_bond(Bond(target_id=1000 + i, bond_type="friend", strength=0.5, formed_at=0), capacity=cap)
+    assert len(a.bonds) <= cap
+
+
+def test_extreme_parameters(cfg):
+    """Simulation survives extreme parameter values."""
+    extreme_cfg = cfg.override({
+        "environment": {"harshness": 10.0},
+        "population": {"initial_size": 10, "min_floor": 5},
+    })
+    engine = SimulationEngine(extreme_cfg, state=RunState(run_id="extreme_test"))
+    engine.initialize()
+    # Should survive 100 ticks without crashing
+    for _ in range(100):
+        result = engine.tick()
+    assert result.alive_count >= 0
+
+
+def test_war_triggering(cfg):
+    """Two factions with opposing beliefs eventually go to war."""
+    from src.beliefs import Faction
+    from src.agents import create_agent, Bond
+    # Very low threshold and check every tick to ensure war triggers reliably
+    war_cfg = cfg.override({
+        "conflict": {"war_check_interval": 1, "war_threshold": 0.1},
+    })
+    engine = SimulationEngine(war_cfg, state=RunState(run_id="war_test"))
+    engine.initialize()
+    # Create two factions with maximally different beliefs
+    f1 = Faction(id=901, name="Hawks", founder_id=1, formed_at=0,
+                 core_beliefs={"individualism": 1.0, "tradition": 1.0,
+                               "system_trust": 1.0, "spirituality": -1.0})
+    f2 = Faction(id=902, name="Doves", founder_id=2, formed_at=0,
+                 core_beliefs={"individualism": -1.0, "tradition": -1.0,
+                               "system_trust": -1.0, "spirituality": 1.0})
+    engine.factions = [f1, f2]
+    # Assign agents to factions in close proximity
+    alive = engine.get_alive_agents()
+    hawks = []
+    doves = []
+    for i, a in enumerate(alive):
+        if i % 2 == 0:
+            a.faction_id = f1.id
+            hawks.append(a)
+        else:
+            a.faction_id = f2.id
+            doves.append(a)
+        a.traits.aggression = 0.9
+        # Pack everyone into the exact same spot for maximum territorial overlap
+        a.x = 0.5
+        a.y = 0.5
+    # Update member counts so war check passes the >= 3 filter
+    f1.member_count = len(hawks)
+    f2.member_count = len(doves)
+    # Add cross-faction enemy bonds to boost rivalry count
+    for h in hawks[:8]:
+        for d in doves[:8]:
+            h.add_bond(Bond(target_id=d.id, bond_type="enemy", strength=0.9, formed_at=0))
+            d.add_bond(Bond(target_id=h.id, bond_type="enemy", strength=0.9, formed_at=0))
+    # Run enough ticks for war to trigger
+    war_started = False
+    for _ in range(200):
+        engine.tick()
+        if engine.wars:
+            war_started = True
+            break
+    # War should start given extreme belief distance, high aggression, and enemy bonds
+    assert war_started, "War did not start between maximally opposed factions"
+
+
+def test_cycle_reset(cfg):
+    """Matrix cycle resets when awareness is very high."""
+    engine = SimulationEngine(cfg, state=RunState(run_id="reset_test"))
+    engine.initialize()
+    # Set all agents to high awareness
+    for a in engine.get_alive_agents():
+        a.awareness = 0.95
+        a.redpilled = True
+    # Run ticks — should trigger cycle reset
+    reset_happened = False
+    for _ in range(50):
+        result = engine.tick()
+        if result.matrix_stats.get("cycle_reset"):
+            reset_happened = True
+            break
+    assert reset_happened, "Cycle reset did not trigger with high awareness"

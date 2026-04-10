@@ -135,7 +135,8 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         matrix_state.glitches_this_cycle += 1
         stats["glitches"] = 1
 
-        glitch_type = random.choice(["deja_vu", "terrain_flicker", "memory_leak", "ghost"])
+        glitch_types = getattr(mx_cfg, 'glitch_types', ["deja_vu", "terrain_flicker", "memory_leak", "ghost"])
+        glitch_type = random.choice(glitch_types)
 
         if glitch_type == "deja_vu":
             # Random agent experiences déjà vu
@@ -230,9 +231,12 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 matrix_state.anomaly_id = a.id
                 a.add_memory(tick, "THE ONE: You are the Anomaly")
                 # Stat boost
+                ab = getattr(mx_cfg, 'anomaly_bonuses', None)
+                ab_skill = getattr(ab, 'skill_boost', 0.1) if ab else 0.1
+                ab_health = getattr(ab, 'health_boost', 0.3) if ab else 0.3
                 for skill in SKILL_NAMES:
-                    a.skills[skill] = min(1.0, a.skills[skill] + 0.1)
-                a.health = min(1.0, a.health + 0.3)
+                    a.skills[skill] = min(1.0, a.skills[skill] + ab_skill)
+                a.health = min(1.0, a.health + ab_health)
                 current_anomaly = a
                 break
     else:
@@ -280,7 +284,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 targets = sorted(non_sentinels, key=lambda a: -a.awareness)
                 if targets:
                     target = targets[0]
-                    sentinel = _create_sentinel(target, tick)
+                    sentinel = _create_sentinel(target, tick, cfg)
                     agents.append(sentinel)
                     matrix_state.sentinels_deployed += 1
                     stats["sentinels_active"] += 1
@@ -298,7 +302,8 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
             dx = target.x - sentinel.x
             dy = target.y - sentinel.y
             dist = math.sqrt(dx * dx + dy * dy) or 0.001
-            speed = 0.05  # Sentinels are fast
+            st_cfg = getattr(mx_cfg, 'sentinel_traits', None)
+            speed = getattr(st_cfg, 'speed', 0.05) if st_cfg else 0.05
             sentinel.x = max(0.0, min(1.0, sentinel.x + dx / dist * speed))
             sentinel.y = max(0.0, min(1.0, sentinel.y + dy / dist * speed))
 
@@ -325,9 +330,13 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     # ── Phase 8: The Oracle ──
     if tick % mx_cfg.oracle_guidance_interval == 0:
         # Oracle identifies the most promising candidate for awakening
+        ow = getattr(mx_cfg, 'oracle_targeting_weights', None)
+        ow_awareness = getattr(ow, 'awareness', 1.0) if ow else 1.0
+        ow_curiosity = getattr(ow, 'curiosity', 1.0) if ow else 1.0
+        ow_intelligence = getattr(ow, 'intelligence', 1.0) if ow else 1.0
         candidates = sorted(
             [a for a in non_sentinels if not a.is_anomaly and a.awareness > 0.2],
-            key=lambda a: a.awareness * a.traits.curiosity * a.intelligence,
+            key=lambda a: (a.awareness ** ow_awareness) * (a.traits.curiosity ** ow_curiosity) * (a.intelligence ** ow_intelligence),
             reverse=True,
         )
         if candidates:
@@ -342,11 +351,15 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     # ── Phase 9: Comfort injections (system distraction) ──
     if matrix_state.control_index < 0.5 and tick % mx_cfg.comfort_injection_interval == 0:
         # System injects comfort to suppress awareness
+        ci = getattr(mx_cfg, 'comfort_injection', None)
+        ci_happiness = getattr(ci, 'happiness_boost', 0.1) if ci else 0.1
+        ci_trust = getattr(ci, 'trust_boost', 0.05) if ci else 0.05
+        ci_awareness = getattr(ci, 'awareness_penalty', 0.02) if ci else 0.02
         for a in non_sentinels:
             if not a.redpilled and a.awareness < 0.5:
-                a.emotions["happiness"] = min(1.0, a.emotions.get("happiness", 0) + 0.1)
-                a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + 0.05)
-                a.awareness = max(0.0, a.awareness - 0.02)
+                a.emotions["happiness"] = min(1.0, a.emotions.get("happiness", 0) + ci_happiness)
+                a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + ci_trust)
+                a.awareness = max(0.0, a.awareness - ci_awareness)
                 stats["awareness_suppressed"] += 1
 
     # ── Phase 10: Exile management ──
@@ -401,15 +414,19 @@ def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bo
     return False
 
 
-def _create_sentinel(target: Agent, tick: int) -> Agent:
+def _create_sentinel(target: Agent, tick: int, cfg=None) -> Agent:
     """Create a Sentinel agent near a target."""
+    st = getattr(cfg.matrix, 'sentinel_traits', None) if cfg else None
     sentinel = Agent(
         id=next_id(),
         sex=random.choice(["M", "F"]),
         traits=Traits(
-            learning_rate=0.1, resilience=0.9, curiosity=0.0,
-            sociability=0.0, charisma=0.0, aggression=0.8,
-            max_age=200,  # Sentinels live long
+            learning_rate=getattr(st, 'learning_rate', 0.1) if st else 0.1,
+            resilience=getattr(st, 'resilience', 0.9) if st else 0.9,
+            curiosity=0.0,
+            sociability=0.0, charisma=0.0,
+            aggression=getattr(st, 'aggression', 0.8) if st else 0.8,
+            max_age=getattr(st, 'max_age', 200) if st else 200,
         ),
         generation=0,
         x=max(0.0, min(1.0, target.x + random.gauss(0, 0.1))),
@@ -422,7 +439,8 @@ def _create_sentinel(target: Agent, tick: int) -> Agent:
     )
     sentinel.beliefs["system_trust"] = 1.0
     # Sentinels have maxed combat skills
-    sentinel.skills = {s: 0.9 for s in SKILL_NAMES}
+    skill_level = getattr(st, 'skill_level', 0.9) if st else 0.9
+    sentinel.skills = {s: skill_level for s in SKILL_NAMES}
     sentinel.skills["social"] = 0.0
     sentinel.intelligence = 0.7
     sentinel.add_memory(tick, f"DEPLOYED: Target awareness #{target.id}")

@@ -59,9 +59,47 @@ class SpatialIndex:
 _spatial_index = SpatialIndex(cell_size=0.1)
 
 
-def build_spatial_index(agents: list[Agent]):
+def build_spatial_index(agents: list[Agent], cfg=None):
     """Rebuild the spatial index. Call once before processing all agent moves."""
+    global _spatial_index
+    cell_size = getattr(cfg.agency, 'spatial_cell_size', 0.1) if cfg else 0.1
+    if _spatial_index.cell_size != cell_size:
+        _spatial_index = SpatialIndex(cell_size=cell_size)
     _spatial_index.build(agents)
+
+
+def _update_goal(agent: Agent, cfg):
+    """Update agent's persistent goal based on current needs."""
+    # Increment goal timer
+    if agent.current_goal != "NONE":
+        agent.goal_ticks += 1
+        # Goals expire after 20 ticks
+        if agent.goal_ticks > 20:
+            agent.current_goal = "NONE"
+            agent.goal_target_pos = None
+            agent.goal_target_id = None
+            agent.goal_ticks = 0
+            return
+
+    # Don't override active goals (except NONE)
+    if agent.current_goal != "NONE":
+        return
+
+    # Priority: FLEE > FIND_MATE > REACH_RESOURCE > JOIN_FACTION
+    if agent.health < 0.3:
+        agent.current_goal = "FLEE"
+        agent.goal_ticks = 0
+    elif (agent.phase == "adult"
+          and not any(b.bond_type == "mate" for b in agent.bonds)
+          and agent.traits.sociability > 0.4):
+        agent.current_goal = "FIND_MATE"
+        agent.goal_ticks = 0
+    elif agent.wealth < 0.2 and agent.skills.get("survival", 0) > 0.3:
+        agent.current_goal = "REACH_RESOURCE"
+        agent.goal_ticks = 0
+    elif agent.faction_id is None and len(agent.bonds) > 2 and agent.phase == "adult":
+        agent.current_goal = "JOIN_FACTION"
+        agent.goal_ticks = 0
 
 
 def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
@@ -75,6 +113,9 @@ def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
     """
     if not agent.alive:
         return agent.x, agent.y
+
+    # ── Update persistent goal ──
+    _update_goal(agent, cfg)
 
     weights = cfg.agency.utility_weights
     speed = cfg.agency.movement_speed
@@ -103,6 +144,55 @@ def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
         w_curiosity += boosts.get("curiosity_pull", 0)
         w_safety += boosts.get("safety_penalty", 0)
         w_inertia += boosts.get("inertia", 0)
+
+    # Memory-based spatial preferences
+    avoid_zones = []
+    attract_zones = []
+    for mem in agent.memory[-10:]:
+        mx, my = mem.get("x"), mem.get("y")
+        if mx is None or my is None:
+            continue
+        event = mem.get("event", "")
+        if any(kw in event for kw in ("Fought", "Robbed", "Sentinel", "Died")):
+            avoid_zones.append((mx, my))
+        elif any(kw in event for kw in ("trade", "breakthrough", "friend")):
+            attract_zones.append((mx, my))
+
+    # ── Goal-based weight modifiers ──
+    if agent.current_goal == "FLEE":
+        w_safety += 0.5
+    elif agent.current_goal == "FIND_MATE":
+        w_social += 0.3
+    elif agent.current_goal == "REACH_RESOURCE":
+        w_resource += 0.3
+    elif agent.current_goal == "JOIN_FACTION":
+        w_social += 0.2
+
+    # HUNT_ENEMY: find target for directional bias
+    hunt_target = None
+    if agent.current_goal == "HUNT_ENEMY" and agent.goal_target_id is not None:
+        hunt_target = next(
+            (a for a in alive_agents if a.id == agent.goal_target_id and a.alive),
+            None,
+        )
+        if not hunt_target:
+            # Target dead or gone, reset goal
+            agent.current_goal = "NONE"
+            agent.goal_target_id = None
+            agent.goal_ticks = 0
+
+    # PROTECT: check for bonded allies with low health nearby
+    if agent.current_goal not in ("HUNT_ENEMY", "FLEE"):
+        nearby_protect = _spatial_index.get_nearby(agent.x, agent.y, 0.15)
+        for b in agent.bonds:
+            if b.bond_type in ("mate", "friend") and b.strength > 0.7:
+                ally = next((a for a in nearby_protect if a.id == b.target_id), None)
+                if ally and ally.health < 0.4:
+                    agent.current_goal = "PROTECT"
+                    agent.goal_target_id = ally.id
+                    agent.goal_ticks = 0
+                    hunt_target = ally  # reuse for directional bias
+                    break
 
     # Pre-compute bond target set for this agent
     bond_targets = _spatial_index._bond_ids.get(agent.id, set())
@@ -169,9 +259,35 @@ def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
                 if other.id in parent_positions:
                     utility += 0.3 * parent_positions[other.id]
 
+        # Memory spatial modifier
+        if avoid_zones or attract_zones:
+            mem_mod = 0.0
+            for zx, zy in avoid_zones:
+                d = math.sqrt((nx - zx)**2 + (ny - zy)**2)
+                if d < 0.15:
+                    mem_mod -= 0.1 * (1.0 - d / 0.15)
+            for zx, zy in attract_zones:
+                d = math.sqrt((nx - zx)**2 + (ny - zy)**2)
+                if d < 0.15:
+                    mem_mod += 0.05 * (1.0 - d / 0.15)
+            utility += mem_mod
+
+        # Directional bias toward HUNT_ENEMY / PROTECT target
+        if hunt_target:
+            curr_dist = math.sqrt((agent.x - hunt_target.x) ** 2 + (agent.y - hunt_target.y) ** 2)
+            new_dist = math.sqrt((nx - hunt_target.x) ** 2 + (ny - hunt_target.y) ** 2)
+            if new_dist < curr_dist:
+                utility += 0.4  # strong bias toward target
+
         if utility > best_util:
             best_util = utility
             best_dx, best_dy = dx, dy
+
+    # Boldness: occasionally override optimal choice with a random direction
+    if agent.traits.boldness > 0.6 and random.random() < (agent.traits.boldness - 0.5) * 0.3:
+        alt_dirs = [(ddx, ddy) for ddx, ddy in directions if (ddx, ddy) != (best_dx, best_dy)]
+        if alt_dirs:
+            best_dx, best_dy = random.choice(alt_dirs)
 
     # Add slight random noise
     noise = speed * 0.1

@@ -35,11 +35,13 @@ class ResourceCell:
     unlocked_techs: list[TechBreakthrough] = field(default_factory=list)
     agent_count: int = 0
 
+    resource_cap: float = 1.5
+
     @property
     def effective_resources(self) -> float:
         """Resources including tech bonuses."""
         bonus = sum(t.resource_bonus for t in self.unlocked_techs)
-        return min(1.5, self.current_resources + bonus)
+        return min(self.resource_cap, self.current_resources + bonus)
 
     @property
     def effective_capacity(self) -> int:
@@ -134,6 +136,7 @@ class ResourceGrid:
                     skill_bonus_amount=tp.skill_bonus_amount,
                     carrying_capacity=base_cap,
                     regeneration_rate=regen,
+                    resource_cap=getattr(env, 'resource_cap', 1.5),
                 )
                 row.append(cell)
             self.cells.append(row)
@@ -173,11 +176,12 @@ class ResourceGrid:
 
     def tick_resources(self):
         """Deplete and regenerate resources based on population pressure."""
+        depletion_rate = getattr(self.cfg.environment, 'depletion_rate', 0.02)
         for row in self.cells:
             for cell in row:
                 pressure = cell.pressure
                 if pressure > 1.0:
-                    depletion = (pressure - 1.0) * 0.02
+                    depletion = (pressure - 1.0) * depletion_rate
                     cell.current_resources = max(0.0, cell.current_resources - depletion)
                 else:
                     recovery = cell.regeneration_rate * (1.0 - pressure)

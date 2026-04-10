@@ -86,6 +86,7 @@ def process_communication(agents: list[Agent], info_objects: list[InfoObject],
         "info_created": 0, "info_transmitted": 0,
         "info_mutated": 0, "info_expired": 0,
         "propaganda_spread": 0, "rumors_active": 0,
+        "propaganda_reach": {},
     }
 
     if not alive:
@@ -177,10 +178,11 @@ def process_communication(agents: list[Agent], info_objects: list[InfoObject],
                 if info.is_secret and bond.bond_type not in ("resistance", "family"):
                     continue
 
-                # Faction propaganda only spreads to same faction or unaffiliated
+                # Faction propaganda: cross-faction at reduced potency (0.3x)
+                is_enemy_propaganda = False
                 if info.info_type == "propaganda" and info.faction_id:
                     if b.faction_id is not None and b.faction_id != info.faction_id:
-                        continue
+                        is_enemy_propaganda = True
 
                 # Transmission chance depends on bond strength, social skill, charisma
                 chance = (
@@ -189,12 +191,20 @@ def process_communication(agents: list[Agent], info_objects: list[InfoObject],
                     a.skills.get("social", 0) * 0.3
                 ) * comm_cfg.transmission_rate
 
+                # Reduce chance for enemy propaganda
+                if is_enemy_propaganda:
+                    chance *= 0.3
+
                 if random.random() > chance:
                     continue
 
                 # Transmit — recipient learns about this info
                 b_known.add(info_id)
                 stats["info_transmitted"] += 1
+
+                # Track enemy propaganda reach
+                if is_enemy_propaganda:
+                    stats["propaganda_reach"][b.faction_id] = stats["propaganda_reach"].get(b.faction_id, 0) + 1
 
                 # Truth degrades with each hop (telephone game)
                 # We increment hops on the original — this means later recipients
