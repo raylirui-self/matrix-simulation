@@ -47,9 +47,10 @@ matrix-simulation/
 │   ├── communication.py              <- Info objects, propagation, mutation, propaganda
 │   ├── engine.py                     <- Core tick orchestrator (all 11 systems)
 │   ├── config_loader.py              <- YAML loading with deep-merge and attribute access
+│   ├── mythology.py                  <- Procedural mythology (era chronicles, myths, faction revisionism, legends)
 │   ├── narrator.py                   <- Multi-provider LLM (Ollama + HuggingFace + fallback + obituary generation)
-│   ├── persistence.py                <- SQLite snapshots, tick stats, events, narratives
-│   └── prompts/                      <- LLM prompt templates (narrator, event_generator, obituary)
+│   ├── persistence.py                <- SQLite snapshots, tick stats, events, narratives, mythology
+│   └── prompts/                      <- LLM prompt templates (narrator, event_generator, obituary, mythology)
 ├── gui/                              <- All GUI/frontend code
 │   ├── backend/                      <- FastAPI backend (The Nexus API)
 │   │   └── api/
@@ -198,7 +199,9 @@ cd gui/frontend && npm run dev
 - **Backtick (`)** — Open Architect's Terminal (command console)
 - **B** — Toggle bond constellation mode
 - **0** — Toggle emotional contagion overlay (aura halos + contagion links)
-- **1-9** — Toggle data overlays (emotions, awareness, wealth, etc.)
+- **1-5, 7-9** — Toggle data overlays (emotions, awareness, wealth, beliefs, factions, combat, resources, bond_density)
+- **6** — Toggle belief particle overlay (knowledge=blue, rumor=yellow, propaganda=red, secret=purple)
+- **P** (at Grid view) — Toggle propaganda wave visualization (expanding faction-colored rings with interference)
 - **ESC** — Zoom out one level
 - **Hover screen edges** — Reveal data panels (Society, Matrix, Knowledge, Feed)
 - **Gear icon (⚙)** — Open Architect Controls drawer (parameter tuning, god mode, whisper)
@@ -859,7 +862,7 @@ Sources used to calibrate historically-researched era presets:
 | **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
 | **0.1** | Quick-start scenario cards and preset gameplay scenarios (complete) |
 | **1** | Deepen lore — The Haven (complete), Programs: Enforcer/Broker/Guardian/Locksmith (complete), deeper red pill mechanics, The Core |
-| **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), data sonification, memetic warfare visualization, procedural mythology |
+| **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), procedural mythology (done: chronicle, myths, faction revisionism, legends), data sonification, memetic warfare visualization |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
 | **5** | Consciousness frontier — dream cycles, Gnostic mythology layer, nested simulations, emergent agent language, free will gradient |
@@ -872,6 +875,7 @@ Sources used to calibrate historically-researched era presets:
 - Streamlit dashboard (legacy, 15 tabs)
 - 8 historically-researched era presets (hunter-gatherer to near-future)
 - LLM narrator integration (Ollama + HuggingFace + deterministic fallback)
+- Procedural mythology: era chronicles, mythological narratives, faction-specific revisionism, legendary figures
 - God Mode, Architect Controls (with confirmation dialogs), Architect's Terminal, Analytics panel
 - Parameter sweep tooling, CSV/JSON export, CLI parameter overrides (`--set key=value`)
 - Performance optimization (spatial indexing, O(1) neighbor lookups)
@@ -885,3 +889,5 @@ Sources used to calibrate historically-researched era presets:
 - The Haven: second world layer with jack-in missions and council politics
 - Programs as First-Class Entities: The Enforcer (copy-on-kill swarm), The Broker (black market trades), The Guardian (Oracle bodyguard), The Locksmith (teleport keys)
 - Phase 2: Cinematic event system (full-screen overlays for Anomaly emergence, cycle reset, Enforcer swarm), Agent chronicles (structured life events across all systems), Obituary generation (LLM + fallback template)
+- Phase 2: Ambient soundscape (Web Audio API data sonification: drone=health, percussion=conflict, dissonance=Gini, overtones=awareness, harmonics=factions)
+- Phase 2: Belief particle overlay (colored particles flowing between agents on Grid view) + Propaganda wave visualization (expanding faction rings with interference patterns)

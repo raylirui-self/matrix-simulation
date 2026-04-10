@@ -24,6 +24,7 @@ def _load_prompt(filename: str) -> str:
 NARRATOR_SYSTEM = _load_prompt("narrator.txt")
 EVENT_SYSTEM = _load_prompt("event_generator.txt")
 OBITUARY_SYSTEM = _load_prompt("obituary.txt")
+MYTHOLOGY_SYSTEM = _load_prompt("mythology.txt")
 
 
 def _build_narrator_prompt(summary: dict) -> str:

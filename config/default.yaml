@@ -409,3 +409,12 @@ programs:
     key_creation_interval: 20           # ticks between key creation
     max_keys_per_agent: 3               # max teleport keys an agent can hold
     key_range: 0.4                      # max teleport distance for generated keys
+
+# ── Procedural Mythology ──
+mythology:
+  era_summary_interval: 100            # ticks between era summary generation
+  myth_check_interval: 50              # ticks between myth trigger checks
+  legend_check_interval: 100           # ticks between legendary figure checks
+  legend_discovery_chance: 0.005       # per-agent per-tick chance of discovering a legend
+  max_myths_per_trigger: 5             # cap on myths generated per trigger event
+  max_legends: 20                      # cap on total legendary figures

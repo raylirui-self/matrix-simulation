@@ -31,6 +31,11 @@ from src.conflict import FactionWar, process_conflict
 from src.communication import InfoObject, process_communication
 from src.haven import HavenState, init_haven, process_haven
 from src.programs import process_programs
+from src.mythology import (
+    MythologyState, generate_era_summary, classify_events_for_myths,
+    generate_faction_myths, identify_legendary_candidates,
+    create_legendary_figure, process_legend_discoveries,
+)
 
 
 @dataclass
@@ -78,6 +83,7 @@ class TickResult:
     age_distribution: dict = field(default_factory=dict)
     tech_progress: dict = field(default_factory=dict)
     cinematic_events: list = field(default_factory=list)
+    mythology_stats: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -115,6 +121,9 @@ class SimulationEngine:
         self.haven_state: Optional[HavenState] = None
         if getattr(cfg, 'haven', None) and getattr(cfg.haven, 'enabled', False):
             self.haven_state = init_haven(cfg)
+
+        # ── Mythology (procedural narrative) ──
+        self.mythology_state: MythologyState = MythologyState()
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
@@ -355,6 +364,10 @@ class SimulationEngine:
                     deaths += 1
                 continue
 
+            # Haven agents have their own health decay in process_haven
+            if a.location == "haven":
+                continue
+
             cell = self.world.get_cell(a.x, a.y)
             decay = base_decay * harshness * cell.harshness_modifier
 
@@ -466,10 +479,10 @@ class SimulationEngine:
         # ══════════════════════════════════
 
         # ── System 6: Emotions ──
-        emotion_stats = process_emotions(self.agents, tick, self.cfg, world=self.world)
+        emotion_stats = process_emotions(sim_alive, tick, self.cfg, world=self.world)
 
         # ── System 7: Beliefs & Factions ──
-        belief_stats = process_beliefs(self.agents, self.factions, tick, self.cfg)
+        belief_stats = process_beliefs(sim_alive, self.factions, tick, self.cfg)
         # Ensure faction memory pools exist for all factions
         for faction in self.factions:
             self.cultural_memory.ensure_faction_memory(faction.id)
@@ -477,10 +490,10 @@ class SimulationEngine:
         self.cultural_memory.apply_faction_knowledge(alive_now)
 
         # ── System 8: Economy ──
-        economy_stats = process_economy(self.agents, tick, self.cfg, self.world, factions=self.factions)
+        economy_stats = process_economy(sim_alive, tick, self.cfg, self.world, factions=self.factions)
 
         # ── System 9: Matrix Meta-Layer ──
-        matrix_stats = process_matrix(self.agents, self.matrix_state, tick, self.cfg)
+        matrix_stats = process_matrix(sim_alive, self.matrix_state, tick, self.cfg)
 
         # Check for Matrix cycle reset
         if check_cycle_reset(self.matrix_state, self.agents, self.cfg):
@@ -495,7 +508,7 @@ class SimulationEngine:
 
         # ── System 10: Conflict ──
         conflict_stats = process_conflict(
-            self.agents, self.factions, self.wars, tick, self.cfg, self.world,
+            sim_alive, self.factions, self.wars, tick, self.cfg, self.world,
             propaganda_reach=getattr(self, '_prev_propaganda_reach', {})
         )
 
@@ -513,7 +526,7 @@ class SimulationEngine:
 
         # ── System 11: Communication ──
         communication_stats = process_communication(
-            self.agents, self.info_objects, self.agent_info, tick, self.cfg
+            sim_alive, self.info_objects, self.agent_info, tick, self.cfg
         )
         self._prev_propaganda_reach = communication_stats.get("propaganda_reach", {})
 
@@ -560,6 +573,75 @@ class SimulationEngine:
                 "tick": tick,
             })
         self._prev_enforcer_count = current_enforcer_count
+
+        # ── Mythology: Era Summaries, Myths, Legends ──
+        mythology_stats = {}
+        myth_cfg = getattr(self.cfg, 'mythology', None)
+        era_interval = getattr(myth_cfg, 'era_summary_interval', 100) if myth_cfg else 100
+        myth_interval = getattr(myth_cfg, 'myth_check_interval', 50) if myth_cfg else 50
+        legend_interval = getattr(myth_cfg, 'legend_check_interval', 100) if myth_cfg else 100
+        discovery_chance = getattr(myth_cfg, 'legend_discovery_chance', 0.005) if myth_cfg else 0.005
+
+        # Era summary generation
+        if tick - self.mythology_state.last_era_summary_tick >= era_interval:
+            summary = self.get_population_summary()
+            era = generate_era_summary(
+                self.mythology_state.last_era_summary_tick + 1, tick,
+                summary, self.recent_events,
+                narrator=getattr(self, '_narrator', None),
+            )
+            self.mythology_state.era_summaries.append(era)
+            self.mythology_state.last_era_summary_tick = tick
+            mythology_stats["era_summary_generated"] = True
+
+        # Myth generation on cycle reset or at intervals
+        cycle_reset_this_tick = self.matrix_state.cycle_number != _prev_cycle
+        if cycle_reset_this_tick or (tick - self.mythology_state.last_myth_check_tick >= myth_interval):
+            summary = self.get_population_summary()
+            triggers = classify_events_for_myths(
+                self.recent_events, summary, cycle_reset=cycle_reset_this_tick,
+            )
+            max_myths = getattr(myth_cfg, 'max_myths_per_trigger', 5) if myth_cfg else 5
+            new_myths = []
+            for trigger in triggers[:2]:  # max 2 trigger types per check
+                myths = generate_faction_myths(
+                    trigger["archetype"], trigger["source_event"],
+                    trigger["trigger_type"], tick,
+                    factions=self.factions, wars=self.wars,
+                    narrator=getattr(self, '_narrator', None),
+                    stats_snapshot=summary,
+                )
+                new_myths.extend(myths[:max_myths])
+            self.mythology_state.myths.extend(new_myths)
+            self.mythology_state.last_myth_check_tick = tick
+            mythology_stats["myths_generated"] = len(new_myths)
+
+        # Legendary figure identification
+        if tick % legend_interval == 0 and tick > 0:
+            max_legends = getattr(myth_cfg, 'max_legends', 20) if myth_cfg else 20
+            if len(self.mythology_state.legends) < max_legends:
+                candidates = identify_legendary_candidates(
+                    self.agents, self.mythology_state.known_legend_agent_ids,
+                )
+                for agent, legend_type in candidates[:3]:  # max 3 new legends per check
+                    if len(self.mythology_state.legends) >= max_legends:
+                        break
+                    legend = create_legendary_figure(
+                        agent, legend_type, tick,
+                        cycle_number=self.matrix_state.cycle_number,
+                        narrator=getattr(self, '_narrator', None),
+                    )
+                    self.mythology_state.legends.append(legend)
+                    self.mythology_state.known_legend_agent_ids.add(agent.id)
+                mythology_stats["legends_created"] = len(candidates[:3])
+
+        # Legend discoveries
+        discoveries = process_legend_discoveries(
+            self.agents, self.mythology_state.legends, tick,
+            discovery_chance=discovery_chance,
+        )
+        if discoveries:
+            mythology_stats["legend_discoveries"] = len(discoveries)
 
         # ── Compile stats ──
         alive_final = self.get_alive_agents()
@@ -639,6 +721,7 @@ class SimulationEngine:
             age_distribution=age_dist,
             tech_progress=tech_progress,
             cinematic_events=cinematic_events,
+            mythology_stats=mythology_stats,
         )
 
     def _apply_event(self, event: WorldEvent):

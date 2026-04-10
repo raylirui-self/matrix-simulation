@@ -17,6 +17,11 @@ from src.beliefs import Faction, set_faction_id_counter, get_faction_id_counter
 from src.conflict import FactionWar
 from src.matrix_layer import MatrixState
 from src.communication import InfoObject, set_info_id_counter, get_info_id_counter
+from src.mythology import (
+    MythologyState, EraSummary, Myth, LegendaryFigure,
+    get_myth_id_counter, get_legend_id_counter,
+    set_myth_id_counter, set_legend_id_counter,
+)
 
 
 class SimulationDB:
@@ -63,6 +68,31 @@ class SimulationDB:
             );
             CREATE INDEX IF NOT EXISTS idx_tick_stats_run ON tick_stats(run_id);
             CREATE INDEX IF NOT EXISTS idx_snapshots_run ON snapshots(run_id);
+
+            CREATE TABLE IF NOT EXISTS era_summaries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT, tick_start INTEGER, tick_end INTEGER,
+                summary_text TEXT, stats_snapshot_json TEXT DEFAULT '{}'
+            );
+            CREATE TABLE IF NOT EXISTS myths (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT, myth_id INTEGER, name TEXT,
+                narrative TEXT, source_event TEXT,
+                tick_created INTEGER, trigger_type TEXT,
+                faction_id INTEGER, faction_perspective TEXT DEFAULT ''
+            );
+            CREATE TABLE IF NOT EXISTS legends (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT, legend_id INTEGER, agent_id INTEGER,
+                name TEXT, title TEXT, description TEXT,
+                tick_created INTEGER, legend_type TEXT,
+                original_stats_json TEXT DEFAULT '{}',
+                embellished_stats_json TEXT DEFAULT '{}',
+                discovery_effects_json TEXT DEFAULT '{}'
+            );
+            CREATE INDEX IF NOT EXISTS idx_era_summaries_run ON era_summaries(run_id);
+            CREATE INDEX IF NOT EXISTS idx_myths_run ON myths(run_id);
+            CREATE INDEX IF NOT EXISTS idx_legends_run ON legends(run_id);
         """)
         self.conn.commit()
         self._migrate()
@@ -103,6 +133,7 @@ class SimulationDB:
             "recent_events": engine.recent_events[-20:],
             "faction_id_counter": get_faction_id_counter(),
             "info_id_counter": get_info_id_counter(),
+            "mythology_state": engine.mythology_state.to_dict() if engine.mythology_state else {},
         }
         self.conn.execute(
             """INSERT INTO snapshots (run_id, tick, agents_json, state_json,
@@ -176,6 +207,10 @@ class SimulationDB:
             if "info_id_counter" in extra:
                 set_info_id_counter(extra["info_id_counter"])
 
+            # Restore mythology state
+            if "mythology_state" in extra and extra["mythology_state"]:
+                engine.mythology_state = MythologyState.from_dict(extra["mythology_state"])
+
             # Mark protagonists
             prot_set = set(engine.protagonist_ids)
             for a in engine.agents:
@@ -229,6 +264,71 @@ class SimulationDB:
         ).fetchall()
         return [{"tick": r["tick"], "name": r["name"], "description": r["description"],
                  "effects": json.loads(r["effects_json"])} for r in rows]
+
+    def save_era_summary(self, run_id: str, summary: EraSummary):
+        self.conn.execute(
+            """INSERT INTO era_summaries (run_id, tick_start, tick_end, summary_text, stats_snapshot_json)
+               VALUES (?, ?, ?, ?, ?)""",
+            (run_id, summary.tick_start, summary.tick_end,
+             summary.summary_text, json.dumps(summary.stats_snapshot)),
+        )
+
+    def save_myth(self, run_id: str, myth: Myth):
+        self.conn.execute(
+            """INSERT INTO myths (run_id, myth_id, name, narrative, source_event,
+               tick_created, trigger_type, faction_id, faction_perspective)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, myth.id, myth.name, myth.narrative, myth.source_event,
+             myth.tick_created, myth.trigger_type, myth.faction_id, myth.faction_perspective),
+        )
+
+    def save_legend(self, run_id: str, legend: LegendaryFigure):
+        self.conn.execute(
+            """INSERT INTO legends (run_id, legend_id, agent_id, name, title, description,
+               tick_created, legend_type, original_stats_json, embellished_stats_json,
+               discovery_effects_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, legend.id, legend.agent_id, legend.name, legend.title,
+             legend.description, legend.tick_created, legend.legend_type,
+             json.dumps(legend.original_stats), json.dumps(legend.embellished_stats),
+             json.dumps(legend.discovery_effects)),
+        )
+
+    def get_era_summaries(self, run_id: str) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT tick_start, tick_end, summary_text, stats_snapshot_json "
+            "FROM era_summaries WHERE run_id = ? ORDER BY tick_start",
+            (run_id,),
+        ).fetchall()
+        return [{"tick_start": r["tick_start"], "tick_end": r["tick_end"],
+                 "summary_text": r["summary_text"],
+                 "stats_snapshot": json.loads(r["stats_snapshot_json"])} for r in rows]
+
+    def get_myths(self, run_id: str) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT myth_id, name, narrative, source_event, tick_created, "
+            "trigger_type, faction_id, faction_perspective "
+            "FROM myths WHERE run_id = ? ORDER BY tick_created",
+            (run_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_legends(self, run_id: str) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT legend_id, agent_id, name, title, description, tick_created, "
+            "legend_type, original_stats_json, embellished_stats_json, discovery_effects_json "
+            "FROM legends WHERE run_id = ? ORDER BY tick_created",
+            (run_id,),
+        ).fetchall()
+        return [{
+            "legend_id": r["legend_id"], "agent_id": r["agent_id"],
+            "name": r["name"], "title": r["title"],
+            "description": r["description"], "tick_created": r["tick_created"],
+            "legend_type": r["legend_type"],
+            "original_stats": json.loads(r["original_stats_json"]),
+            "embellished_stats": json.loads(r["embellished_stats_json"]),
+            "discovery_effects": json.loads(r["discovery_effects_json"]),
+        } for r in rows]
 
     def get_narratives(self, run_id: str) -> list[dict]:
         rows = self.conn.execute(
