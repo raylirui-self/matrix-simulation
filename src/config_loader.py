@@ -82,6 +82,7 @@ class SimConfig:
     _META_KEYS = {
         "name", "description", "time_period", "region", "historical_context",
         "pre_unlocked_tech", "starting_beliefs", "narrator_hints",
+        "preview", "highlights",
     }
 
     @classmethod
@@ -128,8 +129,9 @@ class SimConfig:
                 )
             with open(scenario_path, "r", encoding="utf-8") as f:
                 overrides = yaml.safe_load(f) or {}
-            # Remove non-config keys like 'description'
-            overrides.pop("description", None)
+            # Remove non-config metadata keys before merging
+            for mk in cls._META_KEYS:
+                overrides.pop(mk, None)
             deep_merge(data, overrides)
 
         cfg = cls(data)
@@ -137,7 +139,7 @@ class SimConfig:
         return cfg
 
     def list_scenarios(self, config_dir: Optional[Path] = None) -> list[dict]:
-        """List available scenario files with descriptions."""
+        """List available scenario files with descriptions and preview metadata."""
         config_dir = config_dir or find_config_dir()
         scenarios = []
         scenario_dir = config_dir / "scenarios"
@@ -148,6 +150,8 @@ class SimConfig:
                 scenarios.append({
                     "name": p.stem,
                     "description": content.get("description", "No description"),
+                    "preview": content.get("preview", ""),
+                    "highlights": content.get("highlights", []),
                 })
         return scenarios
 

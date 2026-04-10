@@ -38,6 +38,60 @@ def test_config_new_system_configs_exist(cfg):
 
 
 # ===================================================
+# TEST: Scenario YAML Loading & Engine Runs
+# ===================================================
+
+import pytest
+from src.config_loader import SimConfig
+
+_PRESET_SCENARIOS = ["awakening", "warworld", "dark_ages", "prophet_era"]
+
+
+@pytest.mark.parametrize("scenario_name", _PRESET_SCENARIOS)
+def test_scenario_yaml_loads(scenario_name):
+    """Each preset scenario YAML loads without error and merges with defaults."""
+    cfg = SimConfig.load(scenario=scenario_name)
+    # Must still have core config sections after merge
+    assert hasattr(cfg, "population")
+    assert hasattr(cfg, "environment")
+    assert hasattr(cfg, "matrix")
+    assert cfg.population.initial_size > 0
+
+
+@pytest.mark.parametrize("scenario_name", _PRESET_SCENARIOS)
+def test_scenario_10_tick_run(scenario_name):
+    """Each preset scenario survives a 10-tick engine run without crashing."""
+    cfg = SimConfig.load(scenario=scenario_name)
+    eng = SimulationEngine(cfg, state=RunState(run_id=f"test_{scenario_name}"))
+    eng.initialize()
+    for _ in range(10):
+        eng.tick()
+    alive = eng.get_alive_agents()
+    assert len(alive) > 0, f"Scenario '{scenario_name}' caused extinction in 10 ticks"
+
+
+def test_scenario_list_includes_presets():
+    """list_scenarios() returns all 4 preset scenarios with preview metadata."""
+    cfg = SimConfig.load()
+    scenarios = cfg.list_scenarios()
+    names = {s["name"] for s in scenarios}
+    for preset in _PRESET_SCENARIOS:
+        assert preset in names, f"Preset scenario '{preset}' missing from list_scenarios()"
+    # Check preview metadata is present for preset scenarios
+    for s in scenarios:
+        if s["name"] in _PRESET_SCENARIOS:
+            assert s["preview"], f"Scenario '{s['name']}' missing preview text"
+            assert len(s["highlights"]) > 0, f"Scenario '{s['name']}' missing highlights"
+
+
+def test_scenario_metadata_not_in_config():
+    """Preview/highlights metadata should not leak into simulation config."""
+    cfg = SimConfig.load(scenario="awakening")
+    assert not hasattr(cfg, "preview"), "preview leaked into config"
+    assert not hasattr(cfg, "highlights"), "highlights leaked into config"
+
+
+# ===================================================
 # TEST: Agent Data Model
 # ===================================================
 

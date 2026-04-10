@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════════
+# Scenario: The Awakening
+# ═══════════════════════════════════════════════════════════════
+# The simulation glitches constantly. Agents question reality at
+# an accelerated pace. Sentinels struggle to maintain control.
+
+description: "The simulation destabilizes — glitches everywhere, awareness surges, Sentinels overwhelmed"
+preview: "Expect mass red-pilling by tick 150 and cycle reset pressure by tick 300"
+highlights:
+  - "3x awareness growth"
+  - "4x glitch frequency"
+  - "Low system trust baseline"
+  - "Frequent Oracle guidance"
+
+matrix:
+  awareness_growth_rate: 0.009        # 3x default — rapid awakening
+  glitch_probability: 0.08            # 4x default — constant reality cracks
+  glitch_awareness_boost: 0.08        # bigger awareness spikes from glitches
+  redpill_check_interval: 15          # more frequent red pill opportunities
+  redpill_threshold: 0.35             # lower bar to question reality
+  sentinel_deploy_threshold: 0.7      # Architect panics earlier
+  oracle_guidance_interval: 15        # Oracle works overtime
+  comfort_injection_interval: 20      # Architect desperately injects comfort
+  comfort_injection:
+    happiness_boost: 0.15             # stronger comfort to counter awareness
+    trust_boost: 0.08
+    awareness_penalty: 0.03
+
+emotions:
+  baselines:
+    happiness: 0.3                    # underlying unease
+    fear: 0.15                        # ambient dread
+    hope: 0.45                        # but also more hope
+
+beliefs:
+  experience_drift_rate: 0.01         # beliefs shift faster under pressure
+  prophet_check_interval: 30          # prophets emerge more often
+  prophet_charisma_threshold: 0.5     # lower bar — desperate times produce leaders

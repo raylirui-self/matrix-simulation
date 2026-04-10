@@ -480,11 +480,26 @@ Information objects (knowledge, rumors, warnings, propaganda, system narratives)
 4. CLI flags — `--era`, `--scenario`, `--ticks`, `--set key=value`
 5. Dashboard sliders — Runtime only
 
+### Preset Scenarios
+
+One-click scenario cards on the landing screen let you jump into curated experiences. Each scenario YAML includes `preview` text and `highlights` tags displayed on the card.
+
+| Scenario | Theme | Key Tuning |
+|----------|-------|------------|
+| `awakening` | Mass red-pilling | 3x awareness growth, 4x glitch frequency, low redpill threshold |
+| `warworld` | Endless conflict | Low combat threshold, scarce resources, fast faction formation |
+| `dark_ages` | Knowledge collapse | 0.4x learning, 8x cultural memory decay, harsh environment |
+| `prophet_era` | Ideological chaos | Frequent prophets, extreme beliefs, rapid faction churn |
+
 ### Creating a Custom Scenario
 
 ```yaml
 # config/scenarios/my_experiment.yaml
 description: "High awareness, fast factions"
+preview: "Factions form by tick 100, wars by tick 200"
+highlights:
+  - "Fast factions"
+  - "High awareness"
 environment:
   harshness: 0.5
 matrix:
@@ -822,7 +837,7 @@ Sources used to calibrate historically-researched era presets:
 | Phase | Focus |
 |-------|-------|
 | **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
-| **0.1** | Quick-start scenario cards and preset gameplay scenarios |
+| **0.1** | Quick-start scenario cards and preset gameplay scenarios (complete) |
 | **1** | Deepen lore — The Haven, Programs (The Enforcer, The Broker, The Locksmith), deeper red pill mechanics, The Core |
 | **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
@@ -846,3 +861,4 @@ Sources used to calibrate historically-researched era presets:
 - Analytics: cause-of-death chart, age pyramid, tech progress bars, belief evolution timeline, war detail panel, emotional contagion overlay
 - LLM budget slider (Narrative Richness), feed virtual scrolling, mobile-responsive layout
 - Expanded CONTRIBUTING.md, test coverage improvements, CI with pytest-cov
+- One-click scenario cards on landing screen (4 presets: Awakening, War World, Dark Ages, Prophet Era) with preview metadata

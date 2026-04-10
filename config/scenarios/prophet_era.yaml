@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════
+# Scenario: Prophet Era
+# ═══════════════════════════════════════════════════════════════
+# Charismatic leaders constantly emerge. Extreme beliefs spread
+# fast. Factions form, splinter, and clash ideologically.
+
+description: "Charismatic prophets rise constantly, extreme beliefs fracture society into warring ideologies"
+preview: "First prophet by tick 50, 4+ factions by tick 150, expect schisms and ideological wars"
+highlights:
+  - "Frequent prophet emergence"
+  - "Extreme belief distributions"
+  - "Rapid faction formation"
+  - "High charisma variance"
+
+population:
+  initial_size: 80                    # larger starting population for faction dynamics
+  max_size: 400
+
+genetics:
+  mutation_rate: 0.25                 # high trait variance — more extreme individuals
+  trait_blend_noise: 0.1              # children diverge from parents
+
+beliefs:
+  experience_drift_rate: 0.012        # beliefs shift rapidly
+  transmission_rate: 0.05             # memetic spread is fast
+  transmission_noise: 0.04            # high mutation during transmission — heresies emerge
+  faction_formation_similarity: 0.55  # factions form from looser coalitions
+  faction_formation_radius: 0.3       # wider recruitment range
+  min_faction_size: 3                 # small cults can form
+  faction_check_interval: 10          # constant faction churn
+  faction_leave_threshold: 1.2        # easier to leave — splinters frequent
+  prophet_check_interval: 25          # prophets emerge often
+  prophet_extremism_threshold: 0.5    # lower bar for extremism
+  prophet_charisma_threshold: 0.45    # charismatic leaders everywhere
+  schism_check_interval: 50           # schisms happen faster
+  schism_min_size: 3                  # small splinter groups viable
+  schism_variance_threshold: 0.35     # internal disagreements cause splits easily
+
+communication:
+  info_creation_interval: 5           # constant propaganda and preaching
+  transmission_rate: 0.45             # ideas spread like wildfire
+  mutation_rate: 0.2                  # messages mutate as they spread
+
+social:
+  bond_capacity: 10                   # strong social networks
+  friend_formation_distance: 0.15     # wider social circles
+  friend_min_sociability: 0.3         # more social agents
+
+emotions:
+  contagion_rate: 0.04                # emotions spread faster — mob psychology
+  baselines:
+    happiness: 0.35
+    hope: 0.45                        # fervent hope
+    anger: 0.1                        # simmering tensions

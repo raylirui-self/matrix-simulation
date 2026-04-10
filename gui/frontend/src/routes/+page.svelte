@@ -33,6 +33,7 @@
 	import ControlDrawer from '$lib/panels/ControlDrawer.svelte';
 	import ChartsPanel from '$lib/panels/ChartsPanel.svelte';
 	import EraBanner from '$lib/panels/EraBanner.svelte';
+	import ScenarioCards from '$lib/panels/ScenarioCards.svelte';
 
 	let ws: SimWebSocket | null = null;
 	let showLanding = $state(true);
@@ -260,18 +261,19 @@
 							{/each}
 						</select>
 					</div>
-					<div class="form-group">
-						<label for="scenario-select">SCENARIO</label>
-						<select id="scenario-select" bind:value={selectedScenario}>
-							<option value="">Default</option>
-							{#each scenarios as s}
-								<option value={s.name}>{s.name}</option>
-							{/each}
-						</select>
-					</div>
-					<button class="btn-primary" onclick={createSim} disabled={creating}>
-						{creating ? 'INITIALIZING...' : 'ENTER THE MATRIX'}
-					</button>
+					<h3 class="scenario-heading">SCENARIO</h3>
+					<ScenarioCards
+						{scenarios}
+						bind:selected={selectedScenario}
+						oncreate={createSim}
+					/>
+					{#if !selectedScenario}
+						<button class="btn-primary" onclick={createSim} disabled={creating}>
+							{creating ? 'INITIALIZING...' : 'ENTER THE MATRIX'}
+						</button>
+					{:else if creating}
+						<p class="creating-msg">INITIALIZING...</p>
+					{/if}
 				</div>
 
 				<!-- Load Existing -->
@@ -375,7 +377,7 @@
 	}
 	.landing-content {
 		text-align: center;
-		max-width: 800px;
+		max-width: 960px;
 		padding: 40px;
 		position: relative;
 		z-index: 1;
@@ -437,6 +439,21 @@
 		border-color: var(--green-primary);
 	}
 	option { background: var(--bg-secondary); }
+
+	.scenario-heading {
+		font-size: 10px;
+		letter-spacing: 2px;
+		color: var(--text-dim);
+		margin-bottom: 8px;
+		font-weight: 400;
+	}
+	.creating-msg {
+		text-align: center;
+		font-size: 12px;
+		color: var(--text-dim);
+		letter-spacing: 2px;
+		padding: 12px 0;
+	}
 
 	.btn-primary {
 		width: 100%;

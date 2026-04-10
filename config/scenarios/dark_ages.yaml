@@ -1,0 +1,60 @@
+# ═══════════════════════════════════════════════════════════════
+# Scenario: Dark Ages
+# ═══════════════════════════════════════════════════════════════
+# Knowledge dies. Culture erodes. Harsh conditions and isolation
+# prevent progress — survival is the only goal.
+
+description: "Knowledge collapses, culture erodes — a brutal dark age where survival is everything"
+preview: "Tech stagnates for hundreds of ticks. Cultural memory decays to near-zero by tick 250"
+highlights:
+  - "Minimal knowledge transfer"
+  - "High environmental harshness"
+  - "Cultural memory collapse"
+  - "Slow skill learning"
+
+environment:
+  harshness: 2.5                      # brutal conditions
+  regeneration_rate: 0.008            # barren landscape
+  base_carrying_capacity: 12
+
+lifecycle:
+  base_health_decay: 0.004            # shorter lives
+  elder_decay_multiplier: 3.5         # elders rarely survive
+
+skills:
+  learning_multiplier: 0.4            # learning nearly impossible
+  phase_growth_multipliers:
+    infant: 0.1
+    child: 0.8
+    adolescent: 0.6
+    adult: 0.3
+    elder: 0.05
+
+knowledge:
+  parent_teaching:
+    transfer_rate: 0.03               # knowledge barely passes between generations
+  cultural_memory:
+    floor_cap: 0.15                   # cultural baseline collapses
+    decay_rate: 0.008                 # 8x default decay — knowledge actively lost
+    contribution_on_death: 0.02       # dying elders contribute less
+    pool_absorption_rate: 0.0003      # agents barely absorb cultural knowledge
+  social_amplifier:
+    social_skill_bonus: 0.2           # reduced social learning
+    network_bonus_per_friend: 0.02
+    network_bonus_cap: 0.1
+
+communication:
+  info_creation_interval: 25          # less information generated
+  transmission_rate: 0.15             # information spreads slowly
+  mutation_rate: 0.3                  # high information corruption
+
+economy:
+  gather_rate: 0.08                   # subsistence living
+  wealth_decay: 0.03
+
+emotions:
+  baselines:
+    happiness: 0.2
+    fear: 0.2
+    grief: 0.1
+    hope: 0.15

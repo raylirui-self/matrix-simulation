@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════
+# Scenario: War World
+# ═══════════════════════════════════════════════════════════════
+# An aggressive, resource-scarce world where factions clash
+# constantly. War is the default state, peace is the anomaly.
+
+description: "Aggressive factions fight over scarce resources — war is the natural state"
+preview: "Wars typically erupt by tick 80, expect multiple simultaneous conflicts by tick 200"
+highlights:
+  - "Low combat threshold"
+  - "Frequent famine events"
+  - "Fast faction formation"
+  - "High aggression baseline"
+
+population:
+  max_size: 200                       # wars keep population in check
+
+environment:
+  harshness: 2.0                      # scarce, hostile world
+  regeneration_rate: 0.01             # slow resource recovery
+  base_carrying_capacity: 15          # cramped — territorial pressure
+
+conflict:
+  aggression_combat_threshold: 0.20   # hair-trigger violence
+  combat_radius: 0.12                 # fights break out at greater range
+  combat_damage: 0.12                 # deadlier combat
+  war_check_interval: 15              # frequent war condition checks
+  war_threshold: 0.25                 # wars start easily
+  war_ideology_weight: 0.5            # ideological wars dominate
+  wartime_innovation_bonus: 0.005     # necessity drives invention
+
+economy:
+  gather_rate: 0.10                   # scarce resources fuel conflict
+  wealth_decay: 0.025                 # high cost of living
+  theft_aggression_threshold: 0.30    # theft rampant
+
+beliefs:
+  faction_formation_similarity: 0.5   # factions form from smaller groups
+  faction_check_interval: 10          # rapid faction coalescence
+  min_faction_size: 3                 # even small groups organize
+
+social:
+  bond_capacity: 5                    # trust is rare
+  decay_rates:
+    friend: 0.04                      # friendships dissolve under pressure
+    rival: 0.004                      # but grudges last forever
+    enemy: 0.003
+
+emotions:
+  baselines:
+    happiness: 0.25
+    fear: 0.15
+    anger: 0.15
+    hope: 0.2
