@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { runId, agents } from '$lib/stores/simulation';
+	import { runId, agents, economyStats, emotionStats } from '$lib/stores/simulation';
 	import { api } from '$lib/api/rest';
+	import { soundscape } from '$lib/audio/soundscape';
 
 	let { open = $bindable(false) } = $props();
 	let activeTab = $state<'params' | 'god' | 'agents' | 'whisper'>('params');
@@ -68,6 +69,26 @@
 		} catch (e: any) {
 			showFeedback(e.message, 'err');
 		}
+	}
+
+	// ── Soundscape ──
+	let soundscapeActive = $state(false);
+	let soundscapeVolume = $state(0.3);
+
+	function toggleSoundscape() {
+		if (soundscapeActive) {
+			soundscape.stop();
+			soundscapeActive = false;
+		} else {
+			soundscape.start();
+			soundscape.setVolume(soundscapeVolume);
+			soundscapeActive = true;
+		}
+	}
+
+	function setSoundscapeVolume(v: number) {
+		soundscapeVolume = v;
+		soundscape.setVolume(v);
 	}
 
 	// ── God Mode ──
@@ -256,6 +277,36 @@
 								>{opt.toUpperCase()}</button>
 							{/each}
 						</div>
+					</div>
+
+					<!-- Soundscape toggle -->
+					<div class="param-row">
+						<div class="param-header">
+							<span class="param-label">AMBIENT SOUNDSCAPE</span>
+							<span class="param-value">{soundscapeActive ? 'ON' : 'OFF'}</span>
+						</div>
+						<div class="param-desc">Data sonification: drone=health, percussion=conflict, dissonance=inequality</div>
+						<div class="richness-options">
+							<button
+								class="richness-btn"
+								class:active={soundscapeActive}
+								onclick={toggleSoundscape}
+							>{soundscapeActive ? 'DISABLE' : 'ENABLE'}</button>
+						</div>
+						{#if soundscapeActive}
+							<div class="param-controls" style="margin-top: 4px;">
+								<input
+									type="range"
+									min={0}
+									max={1}
+									step={0.05}
+									value={soundscapeVolume}
+									oninput={(e) => setSoundscapeVolume(Number((e.target as HTMLInputElement).value))}
+									class="param-slider"
+								/>
+								<span class="param-value" style="min-width: 36px; text-align: right;">{Math.round(soundscapeVolume * 100)}%</span>
+							</div>
+						{/if}
 					</div>
 
 					{#each PARAMS as p}

@@ -105,7 +105,7 @@ def _process_enforcers(agents: list[Agent], tick: int, cfg) -> dict:
     if not ecfg.enabled:
         return {"enforcers_active": 0, "enforcer_spawned": False}
 
-    alive = [a for a in agents if a.alive]
+    alive = [a for a in agents if a.alive and getattr(a, 'location', 'simulation') != 'haven']
     enforcers = [a for a in alive if a.is_enforcer]
     stats = {"enforcers_active": len(enforcers), "enforcer_spawned": False}
 
@@ -242,7 +242,7 @@ def _process_broker(agents: list[Agent], tick: int, cfg) -> dict:
     if not bcfg.enabled:
         return {"broker_active": False, "trades": 0}
 
-    alive = [a for a in agents if a.alive]
+    alive = [a for a in agents if a.alive and getattr(a, 'location', 'simulation') != 'haven']
     broker = next((a for a in alive if a.is_broker), None)
     stats = {"broker_active": False, "trades": 0}
 
@@ -369,7 +369,7 @@ def _process_guardian(agents: list[Agent], oracle_target_id: Optional[int],
     if not gcfg.enabled:
         return {"guardian_active": False, "interceptions": 0}
 
-    alive = [a for a in agents if a.alive]
+    alive = [a for a in agents if a.alive and getattr(a, 'location', 'simulation') != 'haven']
     guardian = next((a for a in alive if a.is_guardian), None)
     stats = {"guardian_active": False, "interceptions": 0}
 
@@ -492,7 +492,7 @@ def _process_locksmith(agents: list[Agent], tick: int, cfg) -> dict:
     if not lcfg.enabled:
         return {"locksmith_active": False, "keys_created": 0}
 
-    alive = [a for a in agents if a.alive]
+    alive = [a for a in agents if a.alive and getattr(a, 'location', 'simulation') != 'haven']
     locksmith = next((a for a in alive if a.is_locksmith), None)
     stats = {"locksmith_active": False, "keys_created": 0}
 

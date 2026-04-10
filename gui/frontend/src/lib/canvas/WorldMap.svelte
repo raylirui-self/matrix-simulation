@@ -10,6 +10,214 @@
 	import { api } from '$lib/api/rest';
 	import { runId } from '$lib/stores/simulation';
 
+	// ── Belief Particle System ──
+	type BeliefParticle = {
+		x: number; y: number;
+		vx: number; vy: number;
+		color: string;
+		life: number;     // 0-1, decays per frame
+		size: number;
+	};
+
+	const INFO_COLORS: Record<string, string> = {
+		knowledge: '#4488ff',
+		rumor: '#ffcc00',
+		propaganda: '#ff3333',
+		secret: '#aa44ff',
+	};
+
+	let beliefParticles: BeliefParticle[] = [];
+	const MAX_PARTICLES = 300;
+
+	function spawnBeliefParticles(agentList: Agent[]) {
+		// Spawn particles from agents based on their state
+		// High-awareness agents emit secret particles; faction members emit propaganda
+		// All agents with faction_id emit belief-colored particles
+		for (const agent of agentList) {
+			if (agent.is_sentinel || beliefParticles.length >= MAX_PARTICLES) break;
+			if (Math.random() > 0.15) continue; // throttle spawning
+
+			const ax = gridLeft + agent.x * gridSize * cellSize;
+			const ay = gridTop + agent.y * gridSize * cellSize;
+
+			let infoType: string;
+			if (agent.awareness > 0.6) {
+				infoType = 'secret';
+			} else if (agent.faction_id !== null && Math.random() < 0.5) {
+				infoType = 'propaganda';
+			} else if (Math.random() < 0.3) {
+				infoType = 'rumor';
+			} else {
+				infoType = 'knowledge';
+			}
+
+			// Direction: toward a random nearby agent or random drift
+			const angle = Math.random() * Math.PI * 2;
+			const speed = 0.3 + Math.random() * 0.8;
+
+			beliefParticles.push({
+				x: ax, y: ay,
+				vx: Math.cos(angle) * speed,
+				vy: Math.sin(angle) * speed,
+				color: INFO_COLORS[infoType],
+				life: 0.8 + Math.random() * 0.2,
+				size: 1.5 + Math.random() * 1.5,
+			});
+		}
+	}
+
+	function updateBeliefParticles() {
+		for (let i = beliefParticles.length - 1; i >= 0; i--) {
+			const p = beliefParticles[i];
+			p.x += p.vx;
+			p.y += p.vy;
+			p.life -= 0.008;
+			p.vx *= 0.99; // gentle drag
+			p.vy *= 0.99;
+			if (p.life <= 0) {
+				beliefParticles.splice(i, 1);
+			}
+		}
+	}
+
+	function drawBeliefParticles(ctx: CanvasRenderingContext2D) {
+		for (const p of beliefParticles) {
+			ctx.globalAlpha = p.life * 0.7;
+			ctx.fillStyle = p.color;
+			ctx.beginPath();
+			ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+			ctx.fill();
+		}
+		ctx.globalAlpha = 1;
+	}
+
+	// ── Propaganda Wave System ──
+	type PropagandaWave = {
+		cx: number; cy: number;   // center (canvas coords)
+		radius: number;           // current radius
+		maxRadius: number;
+		color: string;
+		life: number;             // 0-1
+		factionId: number;
+	};
+
+	let propagandaWaves: PropagandaWave[] = [];
+	const MAX_WAVES = 20;
+
+	// Faction color palette for waves
+	const FACTION_WAVE_COLORS = [
+		'rgba(255, 50, 50,',    // red
+		'rgba(50, 150, 255,',   // blue
+		'rgba(255, 200, 50,',   // gold
+		'rgba(50, 255, 150,',   // green
+		'rgba(200, 100, 255,',  // purple
+		'rgba(255, 150, 50,',   // orange
+	];
+
+	function spawnPropagandaWaves(agentList: Agent[]) {
+		if (propagandaWaves.length >= MAX_WAVES) return;
+
+		// Faction leaders / high-charisma agents in factions emit propaganda waves
+		for (const agent of agentList) {
+			if (agent.faction_id === null || agent.is_sentinel) continue;
+			if (propagandaWaves.length >= MAX_WAVES) break;
+			// Low spawn chance — only notable agents
+			if (Math.random() > 0.02) continue;
+
+			const ax = gridLeft + agent.x * gridSize * cellSize;
+			const ay = gridTop + agent.y * gridSize * cellSize;
+
+			const colorIdx = (agent.faction_id ?? 0) % FACTION_WAVE_COLORS.length;
+			propagandaWaves.push({
+				cx: ax, cy: ay,
+				radius: 2,
+				maxRadius: cellSize * 1.5 + Math.random() * cellSize,
+				color: FACTION_WAVE_COLORS[colorIdx],
+				life: 1.0,
+				factionId: agent.faction_id,
+			});
+		}
+	}
+
+	function updatePropagandaWaves() {
+		for (let i = propagandaWaves.length - 1; i >= 0; i--) {
+			const w = propagandaWaves[i];
+			w.radius += 1.2;
+			w.life -= 0.012;
+			if (w.life <= 0 || w.radius > w.maxRadius) {
+				propagandaWaves.splice(i, 1);
+			}
+		}
+	}
+
+	function drawPropagandaWaves(ctx: CanvasRenderingContext2D) {
+		for (const w of propagandaWaves) {
+			const alpha = w.life * 0.25;
+			ctx.strokeStyle = w.color + alpha + ')';
+			ctx.lineWidth = 2;
+			ctx.beginPath();
+			ctx.arc(w.cx, w.cy, w.radius, 0, Math.PI * 2);
+			ctx.stroke();
+
+			// Inner glow ring
+			if (w.life > 0.5) {
+				ctx.strokeStyle = w.color + (alpha * 0.5) + ')';
+				ctx.lineWidth = 4;
+				ctx.beginPath();
+				ctx.arc(w.cx, w.cy, w.radius * 0.7, 0, Math.PI * 2);
+				ctx.stroke();
+			}
+		}
+
+		// ── Interference patterns where waves from different factions overlap ──
+		for (let i = 0; i < propagandaWaves.length; i++) {
+			for (let j = i + 1; j < propagandaWaves.length; j++) {
+				const a = propagandaWaves[i];
+				const b = propagandaWaves[j];
+				if (a.factionId === b.factionId) continue;
+				const dist = Math.sqrt((a.cx - b.cx) ** 2 + (a.cy - b.cy) ** 2);
+				// Check if wave rings intersect
+				if (dist < a.radius + b.radius && dist > Math.abs(a.radius - b.radius)) {
+					// Draw interference points at the two intersection locations
+					const interAlpha = Math.min(a.life, b.life) * 0.4;
+					const midX = (a.cx + b.cx) / 2;
+					const midY = (a.cy + b.cy) / 2;
+
+					ctx.fillStyle = `rgba(255, 255, 255, ${interAlpha})`;
+					ctx.beginPath();
+					ctx.arc(midX, midY, 3, 0, Math.PI * 2);
+					ctx.fill();
+
+					// Perpendicular interference lines
+					const dx = b.cx - a.cx;
+					const dy = b.cy - a.cy;
+					const nx = -dy / (dist || 1) * 8;
+					const ny = dx / (dist || 1) * 8;
+					ctx.strokeStyle = `rgba(255, 255, 255, ${interAlpha * 0.5})`;
+					ctx.lineWidth = 1;
+					ctx.beginPath();
+					ctx.moveTo(midX - nx, midY - ny);
+					ctx.lineTo(midX + nx, midY + ny);
+					ctx.stroke();
+				}
+			}
+		}
+	}
+
+	// Spawn particles/waves on tick change
+	$effect(() => {
+		const t = $tick;
+		if (t > 0) {
+			const agentList = Array.from($agents.values());
+			if ($overlays.has('particles')) {
+				spawnBeliefParticles(agentList);
+			}
+			if ($overlays.has('propaganda')) {
+				spawnPropagandaWaves(agentList);
+			}
+		}
+	});
+
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 	let animFrame: number;
@@ -251,6 +459,18 @@
 					}
 				}
 			}
+		}
+
+		// ── Propaganda wave overlay ──
+		if ($overlays.has('propaganda')) {
+			updatePropagandaWaves();
+			drawPropagandaWaves(ctx);
+		}
+
+		// ── Belief particle overlay ──
+		if ($overlays.has('particles')) {
+			updateBeliefParticles();
+			drawBeliefParticles(ctx);
 		}
 
 		// Draw agents as particles

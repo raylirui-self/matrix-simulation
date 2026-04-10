@@ -1,6 +1,7 @@
 /** Core simulation state store. */
 import { writable, derived } from 'svelte/store';
 import type { AgentDelta, TickMessage, WSMessage } from '$lib/api/websocket';
+import { soundscape } from '$lib/audio/soundscape';
 
 // ── Agent type ──
 export type Agent = {
@@ -301,5 +302,22 @@ export function applyTickMessage(msg: TickMessage) {
 	// Cinematic events
 	if ((msg as any).cinematic_events?.length) {
 		cinematicEventQueue.update(($q) => [...$q, ...(msg as any).cinematic_events]);
+	}
+
+	// Soundscape update — map tick stats to audio parameters
+	if (soundscape.active) {
+		const conflict = msg.conflict || {};
+		const economy = msg.economy || {};
+		const warsActive = (conflict.wars_active ?? 0);
+		const combatEvents = (conflict.combats ?? 0);
+		const conflictIntensity = Math.min(1, (warsActive * 0.2 + combatEvents * 0.05));
+		soundscape.update({
+			avgHealth: msg.stats.avg_health ?? 0.5,
+			conflictIntensity,
+			gini: economy.gini ?? 0,
+			avgAwareness: (msg.matrix?.total_awareness ?? 0) / Math.max(1, msg.stats.alive_count),
+			factionCount: (msg as any).belief_stats?.faction_count ?? 0,
+			population: msg.stats.alive_count,
+		});
 	}
 }

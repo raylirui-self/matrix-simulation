@@ -216,10 +216,11 @@
 			'3': 'wealth',
 			'4': 'beliefs',
 			'5': 'factions',
-			'6': 'info_flow',
+			'6': 'particles',
 			'7': 'combat',
 			'8': 'resources',
-			'9': 'bond_density'
+			'9': 'bond_density',
+			'p': 'propaganda'
 		};
 		if (e.key in overlayKeys) {
 			toggleOverlay(overlayKeys[e.key]);

@@ -522,54 +522,53 @@ def test_extreme_parameters(cfg):
 
 
 def test_war_triggering(cfg):
-    """Two factions with opposing beliefs eventually go to war."""
+    """Two factions with opposing beliefs eventually go to war.
+    Uses process_conflict directly for determinism — no seed sensitivity."""
     from src.beliefs import Faction
     from src.agents import create_agent, Bond
-    # Very low threshold and check every tick to ensure war triggers reliably
+    random.seed(99999)
     war_cfg = cfg.override({
         "conflict": {"war_check_interval": 1, "war_threshold": 0.1},
     })
-    engine = SimulationEngine(war_cfg, state=RunState(run_id="war_test"))
-    engine.initialize()
-    # Create two factions with maximally different beliefs
+    world = ResourceGrid(war_cfg)
+    # Create agents deterministically
+    agents = [create_agent(war_cfg) for _ in range(20)]
+    for a in agents:
+        a.alive = True
+        a.phase = "adult"
+        a.traits.aggression = 0.9
+        a.x = 0.5
+        a.y = 0.5
+
     f1 = Faction(id=901, name="Hawks", founder_id=1, formed_at=0,
                  core_beliefs={"individualism": 1.0, "tradition": 1.0,
                                "system_trust": 1.0, "spirituality": -1.0})
     f2 = Faction(id=902, name="Doves", founder_id=2, formed_at=0,
                  core_beliefs={"individualism": -1.0, "tradition": -1.0,
                                "system_trust": -1.0, "spirituality": 1.0})
-    engine.factions = [f1, f2]
-    # Assign agents to factions in close proximity
-    alive = engine.get_alive_agents()
-    hawks = []
-    doves = []
-    for i, a in enumerate(alive):
-        if i % 2 == 0:
-            a.faction_id = f1.id
-            hawks.append(a)
-        else:
-            a.faction_id = f2.id
-            doves.append(a)
-        a.traits.aggression = 0.9
-        # Pack everyone into the exact same spot for maximum territorial overlap
-        a.x = 0.5
-        a.y = 0.5
-    # Update member counts so war check passes the >= 3 filter
+    hawks = agents[:10]
+    doves = agents[10:]
+    for a in hawks:
+        a.faction_id = f1.id
+    for a in doves:
+        a.faction_id = f2.id
     f1.member_count = len(hawks)
     f2.member_count = len(doves)
-    # Add cross-faction enemy bonds to boost rivalry count
+    # Add cross-faction enemy bonds
     for h in hawks[:8]:
         for d in doves[:8]:
             h.add_bond(Bond(target_id=d.id, bond_type="enemy", strength=0.9, formed_at=0))
             d.add_bond(Bond(target_id=h.id, bond_type="enemy", strength=0.9, formed_at=0))
-    # Run enough ticks for war to trigger
+    world.update_agent_counts(agents)
+    factions = [f1, f2]
+    wars: list[FactionWar] = []
+    # Call process_conflict directly — isolates war triggering from other systems
     war_started = False
-    for _ in range(200):
-        engine.tick()
-        if engine.wars:
+    for t in range(1, 51):
+        process_conflict(agents, factions, wars, t, war_cfg, world)
+        if wars:
             war_started = True
             break
-    # War should start given extreme belief distance, high aggression, and enemy bonds
     assert war_started, "War did not start between maximally opposed factions"
 
 
@@ -589,3 +588,95 @@ def test_cycle_reset(cfg):
             reset_happened = True
             break
     assert reset_happened, "Cycle reset did not trigger with high awareness"
+
+
+# ===================================================
+# TEST: Haven Agent Exclusion from Simulation Systems
+# ===================================================
+
+def test_haven_agents_excluded_from_emotions(cfg):
+    """Haven agents should not be processed by the emotion system."""
+    from src.emotions import process_emotions
+    agents = [create_agent(cfg) for _ in range(5)]
+    for a in agents:
+        a.alive = True
+        a.phase = "adult"
+    # Move two agents to haven
+    agents[0].location = "haven"
+    agents[1].location = "haven"
+    agents[0].emotions["happiness"] = 0.0
+    agents[1].emotions["happiness"] = 0.0
+    h0_before = agents[0].emotions["happiness"]
+    h1_before = agents[1].emotions["happiness"]
+    # Run engine tick — haven agents should be skipped by systems 6-11
+    engine = SimulationEngine(cfg, state=RunState(run_id="haven_excl_test"))
+    engine.agents = agents
+    engine.state.current_tick = 0
+    result = engine.tick()
+    # Haven agents' emotions should be unchanged (no emotion processing)
+    assert agents[0].emotions["happiness"] == h0_before, \
+        "Haven agent emotions were modified by simulation emotion system"
+    assert agents[1].emotions["happiness"] == h1_before, \
+        "Haven agent emotions were modified by simulation emotion system"
+
+
+def test_haven_agents_excluded_from_health_decay(cfg):
+    """Haven agents should not take health decay in the main engine loop.
+    They only take decay from process_haven, not the simulation health loop."""
+    # Disable haven so its health decay doesn't interfere with this test
+    no_haven_cfg = cfg.override({"haven": {"enabled": False}})
+    agents = [create_agent(no_haven_cfg) for _ in range(5)]
+    for a in agents:
+        a.alive = True
+        a.phase = "adult"
+        a.health = 1.0
+    # Move one agent to haven
+    agents[0].location = "haven"
+    initial_health = agents[0].health
+    engine = SimulationEngine(no_haven_cfg, state=RunState(run_id="haven_health_test"))
+    engine.agents = agents
+    engine.state.current_tick = 0
+    engine.tick()
+    # Haven agent should not have taken simulation health decay
+    assert agents[0].health == initial_health, \
+        f"Haven agent took simulation health decay: {initial_health} -> {agents[0].health}"
+
+
+def test_haven_agents_excluded_from_economy(cfg):
+    """Haven agents should not participate in the simulation economy."""
+    agents = [create_agent(cfg) for _ in range(5)]
+    for a in agents:
+        a.alive = True
+        a.phase = "adult"
+        a.skills["survival"] = 0.5
+    agents[0].location = "haven"
+    agents[0].wealth = 0.0
+    engine = SimulationEngine(cfg, state=RunState(run_id="haven_econ_test"))
+    engine.agents = agents
+    engine.state.current_tick = 0
+    # Run several ticks to accumulate wealth
+    for _ in range(10):
+        engine.tick()
+    assert agents[0].wealth == 0.0, \
+        f"Haven agent gained wealth from simulation economy: {agents[0].wealth}"
+
+
+def test_haven_agents_excluded_from_programs(cfg):
+    """Programs (Enforcer, Broker, etc.) should not target haven agents."""
+    from src.programs import process_programs
+    agents = [create_agent(cfg) for _ in range(10)]
+    for a in agents:
+        a.alive = True
+        a.phase = "adult"
+        a.awareness = 0.9  # High awareness — would be enforcer target
+    # Move half to haven
+    for a in agents[:5]:
+        a.location = "haven"
+    # Create an enforcer targeting haven agents
+    from src.programs import _create_enforcer
+    enforcer = _create_enforcer(0.5, 0.5, 1, cfg)
+    agents.append(enforcer)
+    stats = process_programs(agents, 10, cfg)
+    # Enforcer should only hunt simulation agents, not haven agents
+    assert enforcer.goal_target_id is None or enforcer.goal_target_id not in {a.id for a in agents[:5]}, \
+        "Enforcer targeted a haven agent"

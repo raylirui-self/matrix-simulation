@@ -139,6 +139,7 @@ async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
         "tech_progress": result.tech_progress,
         "belief_stats": result.belief_stats,
         "cinematic_events": result.cinematic_events,
+        "communication": result.communication_stats,
     }
 
     await websocket.send_json(msg)
