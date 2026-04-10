@@ -6,10 +6,38 @@
 	import { edgePanelVisibility, zoomLevel } from '$lib/stores/ui';
 
 	// Derived values
-	let recentEvents = $derived($events.slice(-8).reverse());
 	let historySparkline = $derived(
 		$tickHistory.slice(-50).map((h) => h.alive)
 	);
+
+	// ── Virtual scrolling for feed ──
+	const ITEM_HEIGHT = 24;
+	const BUFFER = 4;
+	let feedContainer = $state<HTMLDivElement | null>(null);
+	let feedScrollTop = $state(0);
+
+	// Events in reverse chronological order
+	let allEvents = $derived($events.slice().reverse());
+
+	let feedViewport = $derived.by(() => {
+		const containerH = feedContainer?.clientHeight ?? 120;
+		const total = allEvents.length;
+		const visibleCount = Math.ceil(containerH / ITEM_HEIGHT) + BUFFER * 2;
+		const startIdx = Math.max(0, Math.floor(feedScrollTop / ITEM_HEIGHT) - BUFFER);
+		const endIdx = Math.min(total, startIdx + visibleCount);
+		return {
+			total,
+			startIdx,
+			endIdx,
+			spacerTop: startIdx * ITEM_HEIGHT,
+			spacerBottom: Math.max(0, (total - endIdx) * ITEM_HEIGHT),
+			items: allEvents.slice(startIdx, endIdx)
+		};
+	});
+
+	function onFeedScroll(e: Event) {
+		feedScrollTop = (e.target as HTMLDivElement).scrollTop;
+	}
 </script>
 
 {#if $zoomLevel === 1}
@@ -129,17 +157,20 @@
 		</div>
 	</div>
 
-	<!-- BOTTOM: Feed Panel -->
+	<!-- BOTTOM: Feed Panel (virtual scrolled) -->
 	<div class="edge-panel bottom" class:visible={$edgePanelVisibility.bottom}>
-		<div class="feed-scroll">
-			{#each recentEvents as evt}
-				<div class="feed-item" class:birth={evt.type === 'birth'} class:death={evt.type === 'death'} class:tech={evt.type === 'tech'} class:matrix={evt.type === 'matrix'}>
-					<span class="feed-tick">t={evt.tick}</span>
-					<span>{evt.text}</span>
-				</div>
-			{/each}
-			{#if recentEvents.length === 0}
+		<div class="feed-scroll" bind:this={feedContainer} onscroll={onFeedScroll}>
+			{#if allEvents.length === 0}
 				<span class="dim" style="padding: 8px;">Awaiting events...</span>
+			{:else}
+				<div style="height: {feedViewport.spacerTop}px;"></div>
+				{#each feedViewport.items as evt}
+					<div class="feed-item" style="height: {ITEM_HEIGHT}px;" class:birth={evt.type === 'birth'} class:death={evt.type === 'death'} class:tech={evt.type === 'tech'} class:matrix={evt.type === 'matrix'}>
+						<span class="feed-tick">t={evt.tick}</span>
+						<span>{evt.text}</span>
+					</div>
+				{/each}
+				<div style="height: {feedViewport.spacerBottom}px;"></div>
 			{/if}
 		</div>
 	</div>
@@ -303,4 +334,46 @@
 	.feed-item.death { color: var(--red-warning); }
 	.feed-item.tech { color: var(--gold); }
 	.feed-item.matrix { color: var(--system-color); }
+
+	/* ── Mobile: panels become overlays ── */
+	@media (max-width: 768px) {
+		.edge-panel.left,
+		.edge-panel.right {
+			width: 100%;
+			height: 50vh;
+			top: auto;
+			bottom: 0;
+		}
+		.edge-panel.left {
+			border-right: none;
+			border-top: 1px solid rgba(0, 255, 136, 0.15);
+			transform: translateY(100%);
+		}
+		.edge-panel.left.visible { transform: translateY(0); }
+
+		.edge-panel.right {
+			border-left: none;
+			border-top: 1px solid rgba(0, 170, 204, 0.15);
+			transform: translateY(100%);
+		}
+		.edge-panel.right.visible { transform: translateY(0); }
+
+		.edge-panel.top {
+			left: 0;
+			right: 0;
+			height: auto;
+			min-height: 60px;
+		}
+		.panel-section.horizontal {
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+		.metric-col .value.large { font-size: 13px; }
+
+		.edge-panel.bottom {
+			left: 0;
+			right: 0;
+			height: 100px;
+		}
+	}
 </style>

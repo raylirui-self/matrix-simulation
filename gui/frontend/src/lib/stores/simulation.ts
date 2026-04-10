@@ -69,6 +69,18 @@ export const emotionStats = writable<Record<string, any>>({});
 // Breakthroughs
 export const breakthroughs = writable<string[]>([]);
 
+// Death causes (from tick stats)
+export const deathCauses = writable<Record<string, number>>({});
+
+// Age distribution (from tick stats, keyed like M_20s, F_10s)
+export const ageDistribution = writable<Record<string, number>>({});
+
+// Tech progress (tech_name -> 0.0-1.0 proximity)
+export const techProgress = writable<Record<string, number>>({});
+
+// Faction belief means (faction_id -> { individualism, tradition, system_trust, spirituality })
+export const factionBeliefMeans = writable<Record<string, Record<string, number>>>({});
+
 // Tick history for sparkline
 export const tickHistory = writable<
 	Array<{ tick: number; alive: number; intelligence: number; health: number }>
@@ -183,6 +195,32 @@ export function applyTickMessage(msg: TickMessage) {
 		breakthroughs.update(($b) => [...$b, ...msg.breakthroughs]);
 	}
 
+	// Death causes
+	if ((msg.stats as any).death_causes) {
+		deathCauses.update(($dc) => {
+			const incoming = (msg.stats as any).death_causes as Record<string, number>;
+			for (const [cause, count] of Object.entries(incoming)) {
+				$dc[cause] = ($dc[cause] || 0) + count;
+			}
+			return { ...$dc };
+		});
+	}
+
+	// Age distribution (snapshot from current tick)
+	if ((msg as any).age_distribution) {
+		ageDistribution.set((msg as any).age_distribution);
+	}
+
+	// Tech progress (snapshot from current tick)
+	if ((msg as any).tech_progress) {
+		techProgress.set((msg as any).tech_progress);
+	}
+
+	// Faction belief means
+	if ((msg as any).belief_stats?.faction_belief_means) {
+		factionBeliefMeans.set((msg as any).belief_stats.faction_belief_means);
+	}
+
 	// Add to history
 	tickHistory.update(($h) => {
 		$h.push({
@@ -224,7 +262,7 @@ export function applyTickMessage(msg: TickMessage) {
 	if (newEvents.length) {
 		events.update(($e) => {
 			$e.push(...newEvents);
-			if ($e.length > 200) $e = $e.slice(-200);
+			if ($e.length > 10000) $e = $e.slice(-10000);
 			return $e;
 		});
 	}

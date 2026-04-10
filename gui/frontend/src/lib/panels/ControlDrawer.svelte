@@ -56,15 +56,50 @@
 		}
 	}
 
+	// ── Narrative Richness ──
+	let narrativeRichness = $state<'off' | 'low' | 'medium' | 'high'>('medium');
+
+	async function applyNarrativeRichness(value: string) {
+		const rid = $runId;
+		if (!rid) return;
+		try {
+			await api.updateConfig(rid, { narrator: { richness: value } });
+			showFeedback(`Narrative richness = ${value}`);
+		} catch (e: any) {
+			showFeedback(e.message, 'err');
+		}
+	}
+
 	// ── God Mode ──
 	const GOD_ACTIONS = [
-		{ id: 'plague', label: 'PLAGUE', icon: '☣', desc: 'Disease sweep', color: '#ff4466' },
-		{ id: 'famine', label: 'FAMINE', icon: '🌾', desc: 'Resources to 30%', color: '#ff8844' },
-		{ id: 'meteor', label: 'METEOR', icon: '☄', desc: 'Destroy random cell', color: '#ff2200' },
-		{ id: 'blessing', label: 'BLESSING', icon: '✦', desc: '+HP, +skills', color: '#00ff88' },
-		{ id: 'bounty', label: 'BOUNTY', icon: '◆', desc: 'Resources to 150%', color: '#ffd700' },
-		{ id: 'spawn10', label: 'SPAWN 10', icon: '✚', desc: '10 new agents', color: '#00ddff' },
+		{ id: 'plague', label: 'PLAGUE', icon: '☣', desc: 'Disease sweep', color: '#ff4466', destructive: true },
+		{ id: 'famine', label: 'FAMINE', icon: '🌾', desc: 'Resources to 30%', color: '#ff8844', destructive: true },
+		{ id: 'meteor', label: 'METEOR', icon: '☄', desc: 'Destroy random cell', color: '#ff2200', destructive: true },
+		{ id: 'blessing', label: 'BLESSING', icon: '✦', desc: '+HP, +skills', color: '#00ff88', destructive: false },
+		{ id: 'bounty', label: 'BOUNTY', icon: '◆', desc: 'Resources to 150%', color: '#ffd700', destructive: false },
+		{ id: 'spawn10', label: 'SPAWN 10', icon: '✚', desc: '10 new agents', color: '#00ddff', destructive: false },
 	];
+
+	// Confirmation state for destructive actions
+	let confirmAction = $state<{ id: string; label: string; desc: string; type: 'god' | 'agent' } | null>(null);
+
+	function requestGodAction(action: typeof GOD_ACTIONS[0]) {
+		if (action.destructive) {
+			confirmAction = { id: action.id, label: action.label, desc: action.desc, type: 'god' };
+		} else {
+			executeGodAction(action.id);
+		}
+	}
+
+	function doConfirmedAction() {
+		if (!confirmAction) return;
+		if (confirmAction.type === 'god') {
+			executeGodAction(confirmAction.id);
+		} else if (confirmAction.type === 'agent') {
+			executeAgentAction(confirmAction.id);
+		}
+		confirmAction = null;
+	}
 
 	async function executeGodAction(actionId: string) {
 		const rid = $runId;
@@ -97,14 +132,22 @@
 	// ── Agent Actions ──
 	let targetAgentId = $state('');
 	const AGENT_ACTIONS = [
-		{ id: 'heal', label: 'HEAL', desc: 'Full HP restore', color: '#00ff88' },
-		{ id: 'smite', label: 'SMITE', desc: 'HP to 0.1, max fear', color: '#ff4466' },
-		{ id: 'redpill', label: 'RED PILL', desc: '+0.4 awareness', color: '#ff0000' },
-		{ id: 'gift', label: 'GIFT WEALTH', desc: '+10 wealth', color: '#ffd700' },
-		{ id: 'prophet', label: 'MAKE PROPHET', desc: 'Max charisma + beliefs', color: '#aa66ff' },
-		{ id: 'protagonist', label: 'PROTAGONIST', desc: 'Track this agent', color: '#ffd700' },
-		{ id: 'kill', label: 'KILL', desc: 'Terminate agent', color: '#ff0000' },
+		{ id: 'heal', label: 'HEAL', desc: 'Full HP restore', color: '#00ff88', destructive: false },
+		{ id: 'smite', label: 'SMITE', desc: 'HP to 0.1, max fear', color: '#ff4466', destructive: false },
+		{ id: 'redpill', label: 'RED PILL', desc: '+0.4 awareness', color: '#ff0000', destructive: false },
+		{ id: 'gift', label: 'GIFT WEALTH', desc: '+10 wealth', color: '#ffd700', destructive: false },
+		{ id: 'prophet', label: 'MAKE PROPHET', desc: 'Max charisma + beliefs', color: '#aa66ff', destructive: false },
+		{ id: 'protagonist', label: 'PROTAGONIST', desc: 'Track this agent', color: '#ffd700', destructive: false },
+		{ id: 'kill', label: 'KILL', desc: 'Terminate agent', color: '#ff0000', destructive: true },
 	];
+
+	function requestAgentAction(action: typeof AGENT_ACTIONS[0]) {
+		if (action.destructive) {
+			confirmAction = { id: action.id, label: action.label, desc: `${action.desc} (Agent #${targetAgentId})`, type: 'agent' };
+		} else {
+			executeAgentAction(action.id);
+		}
+	}
 
 	async function executeAgentAction(actionId: string) {
 		const rid = $runId;
@@ -197,6 +240,24 @@
 			<!-- PARAMS TAB -->
 			{#if activeTab === 'params'}
 				<div class="params-list">
+					<!-- Narrative Richness selector -->
+					<div class="param-row">
+						<div class="param-header">
+							<span class="param-label">NARRATIVE RICHNESS</span>
+							<span class="param-value" style="text-transform: uppercase;">{narrativeRichness}</span>
+						</div>
+						<div class="param-desc">LLM narrative budget: Off=none, Low=narrator only, Med=+thoughts, High=all</div>
+						<div class="richness-options">
+							{#each ['off', 'low', 'medium', 'high'] as opt}
+								<button
+									class="richness-btn"
+									class:active={narrativeRichness === opt}
+									onclick={() => { narrativeRichness = opt as any; applyNarrativeRichness(opt); }}
+								>{opt.toUpperCase()}</button>
+							{/each}
+						</div>
+					</div>
+
 					{#each PARAMS as p}
 						<div class="param-row">
 							<div class="param-header">
@@ -226,8 +287,9 @@
 					{#each GOD_ACTIONS as action}
 						<button
 							class="god-btn"
+							class:destructive={action.destructive}
 							style="--btn-color: {action.color}"
-							onclick={() => executeGodAction(action.id)}
+							onclick={() => requestGodAction(action)}
 						>
 							<span class="god-icon">{action.icon}</span>
 							<span class="god-label">{action.label}</span>
@@ -288,8 +350,9 @@
 					{#each AGENT_ACTIONS as action}
 						<button
 							class="agent-action-btn"
+							class:destructive={action.destructive}
 							style="--btn-color: {action.color}"
-							onclick={() => executeAgentAction(action.id)}
+							onclick={() => requestAgentAction(action)}
 						>
 							<span class="action-label">{action.label}</span>
 							<span class="action-desc">{action.desc}</span>
@@ -360,6 +423,20 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Confirmation overlay for destructive actions -->
+		{#if confirmAction}
+			<div class="confirm-overlay">
+				<div class="confirm-box">
+					<p class="confirm-title">Execute {confirmAction.label}?</p>
+					<p class="confirm-desc">{confirmAction.desc}</p>
+					<div class="confirm-buttons">
+						<button class="confirm-btn yes" onclick={doConfirmedAction}>CONFIRM</button>
+						<button class="confirm-btn no" onclick={() => confirmAction = null}>CANCEL</button>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
 {/if}
 
@@ -682,5 +759,116 @@
 	.whisper-send:disabled {
 		opacity: 0.4;
 		cursor: default;
+	}
+
+	/* Narrative Richness */
+	.richness-options {
+		display: flex;
+		gap: 4px;
+		margin-top: 4px;
+	}
+	.richness-btn {
+		flex: 1;
+		padding: 5px 4px;
+		background: var(--bg-primary);
+		border: 1px solid var(--green-dim);
+		color: var(--text-dim);
+		font-family: var(--font-mono);
+		font-size: 9px;
+		letter-spacing: 1px;
+		cursor: pointer;
+		border-radius: 2px;
+	}
+	.richness-btn:hover {
+		border-color: var(--green-primary);
+		color: var(--green-primary);
+	}
+	.richness-btn.active {
+		background: var(--green-dim);
+		border-color: var(--green-primary);
+		color: var(--green-primary);
+		font-weight: bold;
+	}
+
+	/* Confirmation overlay */
+	.confirm-overlay {
+		position: absolute;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 40;
+	}
+	.confirm-box {
+		background: var(--bg-secondary);
+		border: 1px solid var(--red-warning);
+		border-radius: 4px;
+		padding: 20px;
+		text-align: center;
+		max-width: 280px;
+	}
+	.confirm-title {
+		font-size: 13px;
+		color: var(--red-warning);
+		font-weight: bold;
+		letter-spacing: 1px;
+		margin-bottom: 6px;
+	}
+	.confirm-desc {
+		font-size: 10px;
+		color: var(--text-dim);
+		margin-bottom: 16px;
+	}
+	.confirm-buttons {
+		display: flex;
+		gap: 8px;
+	}
+	.confirm-btn {
+		flex: 1;
+		padding: 8px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 1px;
+		cursor: pointer;
+		border-radius: 3px;
+	}
+	.confirm-btn.yes {
+		background: rgba(255, 68, 102, 0.15);
+		border: 1px solid var(--red-warning);
+		color: var(--red-warning);
+	}
+	.confirm-btn.yes:hover {
+		background: var(--red-warning);
+		color: var(--bg-primary);
+	}
+	.confirm-btn.no {
+		background: var(--bg-primary);
+		border: 1px solid var(--green-dim);
+		color: var(--text-dim);
+	}
+	.confirm-btn.no:hover {
+		border-color: var(--green-primary);
+		color: var(--green-primary);
+	}
+
+	/* Destructive button styling */
+	.god-btn.destructive,
+	.agent-action-btn.destructive {
+		border-style: dashed;
+	}
+
+	/* ── Mobile: drawer becomes bottom sheet ── */
+	@media (max-width: 768px) {
+		.drawer {
+			width: 100%;
+			top: auto;
+			bottom: 0;
+			max-height: 75vh;
+			border-right: none;
+			border-top: 1px solid var(--green-dim);
+			border-radius: 12px 12px 0 0;
+		}
+		.tab-bar button { font-size: 9px; padding: 6px; }
 	}
 </style>

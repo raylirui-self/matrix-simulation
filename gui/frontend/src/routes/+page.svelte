@@ -566,4 +566,42 @@
 	.zoom-indicator button:hover { color: var(--green-primary); }
 	.zoom-indicator button.disabled { opacity: 0.4; }
 	.zoom-indicator button.disabled:hover { opacity: 0.7; }
+
+	/* ── Mobile-Responsive Layout (< 768px) ── */
+	@media (max-width: 768px) {
+		/* Landing page */
+		.landing-content { padding: 20px 12px; }
+		.title { font-size: 28px; letter-spacing: 6px; }
+		.subtitle { font-size: 11px; letter-spacing: 2px; margin-bottom: 24px; }
+		.landing-sections { flex-direction: column; gap: 20px; align-items: center; }
+		.landing-section { min-width: unset; width: 100%; }
+		.landing-hint { font-size: 9px; }
+
+		/* Floating controls — collapse to bottom bar */
+		.controls {
+			left: 0;
+			right: 0;
+			bottom: 0;
+			border-radius: 0;
+			padding: 6px 8px;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 4px;
+		}
+		.ctrl-btn { font-size: 10px; padding: 4px 6px; }
+		.ctrl-sep { display: none; }
+		.speed-slider { width: 60px; }
+		.tick-display { min-width: 40px; font-size: 10px; }
+
+		/* Zoom indicator — compact icon-only style */
+		.zoom-indicator {
+			top: 8px;
+			right: 8px;
+		}
+		.zoom-indicator button {
+			font-size: 9px;
+			padding: 4px 6px;
+			letter-spacing: 0;
+		}
+	}
 </style>

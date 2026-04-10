@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats } from '$lib/stores/simulation';
+	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats, deathCauses, ageDistribution, techProgress, factionBeliefMeans } from '$lib/stores/simulation';
 
 	let { open = $bindable(false) } = $props();
 
@@ -97,6 +97,67 @@
 
 	// ── Economy stats ──
 	let econ = $derived($economyStats || {});
+
+	// ── Death causes ──
+	const DEATH_COLORS: Record<string, string> = {
+		old_age: '#666688',
+		starvation: '#ff8844',
+		combat: '#ff2200',
+		disease: '#aa44ff',
+		meteor: '#ff6600',
+		plague: '#ff4466',
+	};
+
+	let deathCauseBars = $derived.by(() => {
+		const dc = $deathCauses;
+		const entries = Object.entries(dc).filter(([_, v]) => v > 0);
+		if (entries.length === 0) return [];
+		const maxVal = Math.max(1, ...entries.map(([_, v]) => v));
+		return entries
+			.sort((a, b) => b[1] - a[1])
+			.map(([cause, count]) => ({
+				cause,
+				count,
+				pct: count / maxVal,
+				color: DEATH_COLORS[cause] || '#888888'
+			}));
+	});
+
+	// ── Age distribution pyramid ──
+	const DECADES = ['0s', '10s', '20s', '30s', '40s', '50s', '60s', '70s', '80s'];
+
+	let agePyramid = $derived.by(() => {
+		const ad = $ageDistribution;
+		const rows: Array<{ decade: string; male: number; female: number }> = [];
+		let maxCount = 1;
+		for (const dec of DECADES) {
+			const m = ad[`M_${dec}`] || 0;
+			const f = ad[`F_${dec}`] || 0;
+			if (m + f > maxCount) maxCount = m + f;
+			rows.push({ decade: dec, male: m, female: f });
+		}
+		return { rows, maxCount };
+	});
+
+	// ── Tech progress ──
+	let techBars = $derived.by(() => {
+		const tp = $techProgress;
+		return Object.entries(tp)
+			.sort((a, b) => b[1] - a[1])
+			.map(([name, value]) => ({
+				name: name.replace(/_/g, ' '),
+				value,
+				unlocked: value >= 1.0
+			}));
+	});
+
+	// ── Faction belief means ──
+	const BELIEF_AXES = [
+		{ key: 'individualism', label: 'IND', color: '#00ddff' },
+		{ key: 'tradition', label: 'TRD', color: '#ff8844' },
+		{ key: 'system_trust', label: 'SYS', color: '#00ff88' },
+		{ key: 'spirituality', label: 'SPR', color: '#aa66ff' },
+	];
 
 	// Max population
 	let popStats = $derived.by(() => {
@@ -270,6 +331,91 @@
 									<span>Members: {f.member_count || '?'}</span>
 									<span>Leader: #{f.leader_id || '?'}</span>
 								</div>
+								<!-- Belief axes mini-bars (Item 18) -->
+								{#if $factionBeliefMeans[f.id]}
+									<div class="belief-axes">
+										{#each BELIEF_AXES as axis}
+											{@const val = $factionBeliefMeans[f.id]?.[axis.key] ?? 0}
+											<div class="belief-axis-row">
+												<span class="belief-axis-label" style="color: {axis.color};">{axis.label}</span>
+												<div class="belief-axis-track">
+													<div class="belief-axis-fill" style="width: {Math.abs(val) * 50 + 50}%; background: {axis.color}; margin-left: {val < 0 ? (50 + val * 50) + '%' : '50%'}; width: {Math.abs(val) * 50}%;"></div>
+													<div class="belief-axis-center"></div>
+												</div>
+												<span class="belief-axis-val" style="color: {axis.color};">{val.toFixed(2)}</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Cause of Death (Item 14) -->
+			<div class="chart-card">
+				<div class="chart-title" style="color: var(--red-warning);">CAUSE OF DEATH</div>
+				{#if deathCauseBars.length > 0}
+					<div class="death-bars">
+						{#each deathCauseBars as d}
+							<div class="death-row">
+								<span class="death-label">{d.cause.replace(/_/g, ' ').toUpperCase()}</span>
+								<div class="death-track">
+									<div class="death-fill" style="width: {d.pct * 100}%; background: {d.color};"></div>
+								</div>
+								<span class="death-val" style="color: {d.color};">{d.count}</span>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="chart-empty">No deaths recorded yet</div>
+				{/if}
+			</div>
+
+			<!-- Age Distribution Pyramid (Item 15) -->
+			<div class="chart-card">
+				<div class="chart-title">AGE DISTRIBUTION</div>
+				{#if agePyramid.rows.some(r => r.male + r.female > 0)}
+					<svg viewBox="0 0 {W} {DECADES.length * 16 + 20}" class="chart-svg">
+						<!-- Labels -->
+						<text x={W / 2} y={10} fill="var(--text-dim)" font-size="8" font-family="var(--font-mono)" text-anchor="middle">M / F</text>
+						{#each agePyramid.rows as row, i}
+							{@const barMax = W / 2 - 30}
+							{@const y = 18 + i * 16}
+							{@const mW = agePyramid.maxCount > 0 ? (row.male / agePyramid.maxCount) * barMax : 0}
+							{@const fW = agePyramid.maxCount > 0 ? (row.female / agePyramid.maxCount) * barMax : 0}
+							<!-- Decade label -->
+							<text x={W / 2} y={y + 9} fill="var(--text-dim)" font-size="8" font-family="var(--font-mono)" text-anchor="middle">{row.decade}</text>
+							<!-- Male bar (extends left) -->
+							<rect x={W / 2 - 18 - mW} y={y} width={mW} height={12} fill="#00aaff" opacity="0.7" rx="1" />
+							{#if row.male > 0}
+								<text x={W / 2 - 20 - mW} y={y + 9} fill="#00aaff" font-size="7" font-family="var(--font-mono)" text-anchor="end">{row.male}</text>
+							{/if}
+							<!-- Female bar (extends right) -->
+							<rect x={W / 2 + 18} y={y} width={fW} height={12} fill="#ff66aa" opacity="0.7" rx="1" />
+							{#if row.female > 0}
+								<text x={W / 2 + 20 + fW} y={y + 9} fill="#ff66aa" font-size="7" font-family="var(--font-mono)" text-anchor="start">{row.female}</text>
+							{/if}
+						{/each}
+					</svg>
+				{:else}
+					<div class="chart-empty">Awaiting population data...</div>
+				{/if}
+			</div>
+
+			<!-- Tech Progress (Item 16) -->
+			{#if techBars.length > 0}
+				<div class="chart-card">
+					<div class="chart-title" style="color: var(--gold);">TECH PROGRESS</div>
+					<div class="tech-bars">
+						{#each techBars as t}
+							<div class="tech-row">
+								<span class="tech-label">{t.name}</span>
+								<div class="tech-track">
+									<div class="tech-fill" style="width: {t.value * 100}%; background: {t.unlocked ? 'var(--green-primary)' : 'var(--gold)'};" class:unlocked={t.unlocked}></div>
+								</div>
+								<span class="tech-val" style="color: {t.unlocked ? 'var(--green-primary)' : 'var(--gold)'};">{(t.value * 100).toFixed(0)}%</span>
 							</div>
 						{/each}
 					</div>
@@ -544,5 +690,121 @@
 		font-size: 9px;
 		color: var(--text-dim);
 		margin-top: 3px;
+	}
+
+	/* Belief axes mini-bars (Item 18) */
+	.belief-axes {
+		margin-top: 6px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.belief-axis-row {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 8px;
+	}
+	.belief-axis-label { width: 24px; text-align: right; font-weight: bold; }
+	.belief-axis-track {
+		flex: 1;
+		height: 5px;
+		background: var(--bg-primary);
+		border-radius: 2px;
+		overflow: hidden;
+		position: relative;
+	}
+	.belief-axis-fill {
+		position: absolute;
+		height: 100%;
+		border-radius: 2px;
+		transition: width 0.3s ease;
+	}
+	.belief-axis-center {
+		position: absolute;
+		left: 50%;
+		top: 0;
+		bottom: 0;
+		width: 1px;
+		background: rgba(255, 255, 255, 0.15);
+	}
+	.belief-axis-val { width: 32px; text-align: right; }
+
+	/* Death cause bars (Item 14) */
+	.death-bars {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.death-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 9px;
+	}
+	.death-label { width: 70px; color: var(--text-dim); text-align: right; }
+	.death-track {
+		flex: 1;
+		height: 8px;
+		background: var(--bg-secondary);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+	.death-fill {
+		height: 100%;
+		border-radius: 4px;
+		transition: width 0.3s ease;
+	}
+	.death-val { width: 28px; text-align: right; font-weight: bold; }
+
+	/* Tech progress bars (Item 16) */
+	.tech-bars {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+	.tech-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 9px;
+	}
+	.tech-label {
+		width: 80px;
+		color: var(--text-dim);
+		text-align: right;
+		text-transform: capitalize;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.tech-track {
+		flex: 1;
+		height: 8px;
+		background: var(--bg-secondary);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+	.tech-fill {
+		height: 100%;
+		border-radius: 4px;
+		transition: width 0.3s ease;
+	}
+	.tech-fill.unlocked {
+		box-shadow: 0 0 4px rgba(0, 255, 136, 0.4);
+	}
+	.tech-val { width: 30px; text-align: right; font-weight: bold; }
+
+	/* ── Mobile: charts panel becomes bottom sheet ── */
+	@media (max-width: 768px) {
+		.charts-panel {
+			width: 100%;
+			top: auto;
+			bottom: 0;
+			max-height: 75vh;
+			border-left: none;
+			border-top: 1px solid var(--green-dim);
+			border-radius: 12px 12px 0 0;
+		}
 	}
 </style>
