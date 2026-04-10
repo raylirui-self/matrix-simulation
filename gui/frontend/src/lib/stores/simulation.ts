@@ -81,6 +81,17 @@ export const techProgress = writable<Record<string, number>>({});
 // Faction belief means (faction_id -> { individualism, tradition, system_trust, spirituality })
 export const factionBeliefMeans = writable<Record<string, Record<string, number>>>({});
 
+// Active wars
+export type War = {
+	faction_a_id: number;
+	faction_b_id: number;
+	started_at: number;
+	casualties_a: number;
+	casualties_b: number;
+	intensity: number;
+};
+export const wars = writable<War[]>([]);
+
 // Tick history for sparkline
 export const tickHistory = writable<
 	Array<{ tick: number; alive: number; intelligence: number; health: number }>
@@ -119,6 +130,9 @@ export function loadFullState(state: any) {
 	}
 	if (state.factions) {
 		factions.set(state.factions);
+	}
+	if (state.wars) {
+		wars.set(state.wars);
 	}
 }
 
@@ -196,10 +210,10 @@ export function applyTickMessage(msg: TickMessage) {
 	}
 
 	// Death causes
-	if ((msg.stats as any).death_causes) {
+	const incomingDeathCauses = (msg as any).death_causes || (msg.stats as any).death_causes;
+	if (incomingDeathCauses) {
 		deathCauses.update(($dc) => {
-			const incoming = (msg.stats as any).death_causes as Record<string, number>;
-			for (const [cause, count] of Object.entries(incoming)) {
+			for (const [cause, count] of Object.entries(incomingDeathCauses as Record<string, number>)) {
 				$dc[cause] = ($dc[cause] || 0) + count;
 			}
 			return { ...$dc };
@@ -219,6 +233,11 @@ export function applyTickMessage(msg: TickMessage) {
 	// Faction belief means
 	if ((msg as any).belief_stats?.faction_belief_means) {
 		factionBeliefMeans.set((msg as any).belief_stats.faction_belief_means);
+	}
+
+	// Wars
+	if ((msg as any).wars) {
+		wars.set((msg as any).wars);
 	}
 
 	// Add to history

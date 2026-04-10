@@ -49,6 +49,7 @@ export type StateSyncMessage = {
 	agents: any[];
 	matrix: Record<string, any>;
 	factions: any[];
+	wars?: any[];
 	world_summary: Record<string, any>;
 	protagonist_ids: number[];
 };

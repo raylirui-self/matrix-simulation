@@ -198,6 +198,61 @@
 			ctx.globalAlpha = 1;
 		}
 
+		// ── Emotional contagion overlay ──
+		if ($overlays.has('contagion')) {
+			// Draw translucent aura circles colored by dominant emotion.
+			// Overlapping auras create a visual heatmap of emotional contagion.
+			const contagionRadius = cellSize * 0.6;
+			for (const agent of agentList) {
+				if (agent.is_sentinel) continue;
+				const ax = gridLeft + agent.x * gridSize * cellSize;
+				const ay = gridTop + agent.y * gridSize * cellSize;
+				const color = EMOTION_COLORS[agent.emotion] || '#00ff88';
+				const r = parseInt(color.slice(1, 3), 16);
+				const g = parseInt(color.slice(3, 5), 16);
+				const b = parseInt(color.slice(5, 7), 16);
+
+				// Inner aura — stronger
+				const grad = ctx.createRadialGradient(ax, ay, 0, ax, ay, contagionRadius);
+				grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.18)`);
+				grad.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.06)`);
+				grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+				ctx.fillStyle = grad;
+				ctx.beginPath();
+				ctx.arc(ax, ay, contagionRadius, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			// Draw contagion links between nearby agents sharing dominant emotion
+			const maxLinks = Math.min(agentList.length, 200);
+			for (let i = 0; i < maxLinks; i++) {
+				const a = agentList[i];
+				if (a.is_sentinel) continue;
+				const ax = gridLeft + a.x * gridSize * cellSize;
+				const ay = gridTop + a.y * gridSize * cellSize;
+				for (let j = i + 1; j < agentList.length; j++) {
+					const b = agentList[j];
+					if (b.is_sentinel || a.emotion !== b.emotion) continue;
+					const bx = gridLeft + b.x * gridSize * cellSize;
+					const by = gridTop + b.y * gridSize * cellSize;
+					const dist = Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+					if (dist < contagionRadius * 2.5) {
+						const color = EMOTION_COLORS[a.emotion] || '#00ff88';
+						const alpha = Math.max(0.02, 0.12 * (1 - dist / (contagionRadius * 2.5)));
+						const cr = parseInt(color.slice(1, 3), 16);
+						const cg = parseInt(color.slice(3, 5), 16);
+						const cb = parseInt(color.slice(5, 7), 16);
+						ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
+						ctx.lineWidth = 1;
+						ctx.beginPath();
+						ctx.moveTo(ax, ay);
+						ctx.lineTo(bx, by);
+						ctx.stroke();
+					}
+				}
+			}
+		}
+
 		// Draw agents as particles
 		for (const agent of agentList) {
 			const ax = gridLeft + agent.x * gridSize * cellSize;
@@ -218,7 +273,7 @@
 
 			// Color based on phase (or emotion if overlay active)
 			let color = PHASE_COLORS[agent.phase] || '#00ff88';
-			if ($overlays.has('emotions')) {
+			if ($overlays.has('emotions') || $overlays.has('contagion')) {
 				color = EMOTION_COLORS[agent.emotion] || '#00ff88';
 			}
 

@@ -8,6 +8,7 @@
 		agents,
 		matrixState,
 		factions as factionsStore,
+		wars as warsStore,
 		loadFullState,
 		applyTickMessage,
 		isRunning
@@ -112,6 +113,9 @@
 			if (msg.factions) {
 				factionsStore.set(msg.factions);
 			}
+			if (msg.wars) {
+				warsStore.set(msg.wars);
+			}
 		} else if (msg.type === 'stopped') {
 			isRunning.set(false);
 		} else if (msg.type === 'auto_started') {
@@ -204,6 +208,7 @@
 
 		// Number keys for overlays
 		const overlayKeys: Record<string, string> = {
+			'0': 'contagion',
 			'1': 'emotions',
 			'2': 'awareness',
 			'3': 'wealth',

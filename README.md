@@ -197,6 +197,7 @@ cd gui/frontend && npm run dev
 - **P** — Play/pause auto-run
 - **Backtick (`)** — Open Architect's Terminal (command console)
 - **B** — Toggle bond constellation mode
+- **0** — Toggle emotional contagion overlay (aura halos + contagion links)
 - **1-9** — Toggle data overlays (emotions, awareness, wealth, etc.)
 - **ESC** — Zoom out one level
 - **Hover screen edges** — Reveal data panels (Society, Matrix, Knowledge, Feed)
@@ -272,7 +273,11 @@ A slide-out panel with real-time data:
 - **Emotions** — Average population emotion bars (happiness, fear, anger, grief, hope)
 - **Matrix Status** — Control index gauge, cycle, sentinels, glitches, anomaly tracking
 - **Economy** — Total wealth, average wealth, Gini index, trade count
-- **Factions** — Faction cards with member counts, leader IDs, war/resistance badges
+- **Factions** — Faction cards with member counts, leader IDs, war/resistance badges, per-faction belief axes (IND/TRD/SYS/SPR)
+- **War Detail** — Active wars with faction matchup, intensity bar, casualty breakdown per side, duration, and start tick
+- **Cause of Death** — Horizontal bar chart color-coded by cause (old age, starvation, combat, etc.)
+- **Age Distribution** — Population pyramid (male/female by decade)
+- **Tech Progress** — Labeled progress bars for each technology, unlocked techs shown as full green bars
 
 **Architect's Terminal (press backtick):**
 A command console themed as the Architect's interface with up/down arrow command history. Supports commands like:
@@ -421,7 +426,7 @@ An 8x8 grid with terrain types (plains, forest, mountains, coast), each with dif
 
 ### System 5: Agency
 
-Each agent evaluates 9 directions per tick using a utility function weighted by resource pull (35%), social pull (20%), curiosity (20%), safety (15%), and inertia (10%). Children stay near parents. Emotional states modify these weights. Up to 3 protagonist agents get LLM-generated inner monologue.
+Each agent evaluates 9 directions per tick using a utility function weighted by resource pull (35%), social pull (20%), curiosity (20%), safety (15%), and inertia (10%). Children stay near parents. Emotional states modify these weights. Agents pursue persistent multi-tick goals (FIND_MATE, REACH_RESOURCE, JOIN_FACTION, FLEE, HUNT_ENEMY, PROTECT) that override utility weights until completed or abandoned. Boldness trait adds stochastic risk-taking. Spatial memory avoids danger zones and gravitates toward positive locations. Up to 3 protagonist agents get LLM-generated inner monologue.
 
 ### System 6: Emotions & Psychology
 
@@ -596,6 +601,8 @@ Phenomena that arise from system interactions without being explicitly coded:
 - **Wartime Innovation**: Factions at war develop technology and survival skills faster than peacetime
 - **Propaganda Wars**: Cross-faction propaganda erodes loyalty and raises war likelihood
 - **Spatial Memory**: Agents avoid places where they were attacked, congregate near positive experiences
+- **Bold Gambits**: High-boldness agents override utility-optimal choices — exploring unknown areas, fighting stronger enemies, approaching rivals
+- **Cultural Protectionism**: Collectivist factions tax higher and redistribute; individualist factions free-trade with lower taxes
 
 ---
 
@@ -814,7 +821,7 @@ Sources used to calibrate historically-researched era presets:
 
 | Phase | Focus |
 |-------|-------|
-| **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience |
+| **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
 | **0.1** | Quick-start scenario cards and preset gameplay scenarios |
 | **1** | Deepen lore — The Haven, Programs (The Enforcer, The Broker, The Locksmith), deeper red pill mechanics, The Core |
 | **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
@@ -826,11 +833,16 @@ Sources used to calibrate historically-researched era presets:
 ### What's Done
 
 - 11-system simulation engine with full tick orchestration and SQLite persistence
-- SvelteKit "The Nexus" frontend (4-level zoom) + FastAPI backend (REST + WebSocket)
+- SvelteKit "The Nexus" frontend (4-level zoom) + FastAPI backend (REST + WebSocket delta protocol)
 - Streamlit dashboard (legacy, 15 tabs)
 - 8 historically-researched era presets (hunter-gatherer to near-future)
 - LLM narrator integration (Ollama + HuggingFace + deterministic fallback)
-- God Mode, Architect Controls, Architect's Terminal, Analytics panel
-- Parameter sweep tooling, CSV/JSON export
+- God Mode, Architect Controls (with confirmation dialogs), Architect's Terminal, Analytics panel
+- Parameter sweep tooling, CSV/JSON export, CLI parameter overrides (`--set key=value`)
 - Performance optimization (spatial indexing, O(1) neighbor lookups)
 - All critical balance fixes (combat, awareness, economy, factions, bonds, wars)
+- Feedback loops: beliefs↔economy, conflict↔knowledge, communication↔conflict, memory↔decisions
+- Agent behavior depth: persistent multi-tick goals, revenge/loyalty, faction cultural norms, boldness trait
+- Analytics: cause-of-death chart, age pyramid, tech progress bars, belief evolution timeline, war detail panel, emotional contagion overlay
+- LLM budget slider (Narrative Richness), feed virtual scrolling, mobile-responsive layout
+- Expanded CONTRIBUTING.md, test coverage improvements, CI with pytest-cov

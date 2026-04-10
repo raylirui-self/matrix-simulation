@@ -133,6 +133,11 @@ async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
         "emotions": result.emotion_stats,
         "economy": result.economy_stats,
         "conflict": result.conflict_stats,
+        "wars": [w.to_dict() for w in engine.wars],
+        "death_causes": result.death_causes,
+        "age_distribution": result.age_distribution,
+        "tech_progress": result.tech_progress,
+        "belief_stats": result.belief_stats,
     }
 
     await websocket.send_json(msg)
@@ -170,6 +175,7 @@ async def _send_full_state(websocket: WebSocket, engine):
         "agents": agents,
         "matrix": engine.matrix_state.to_dict(),
         "factions": [f.to_dict() for f in engine.factions],
+        "wars": [w.to_dict() for w in engine.wars],
         "world_summary": engine.world.summary(),
         "protagonist_ids": engine.protagonist_ids,
     }

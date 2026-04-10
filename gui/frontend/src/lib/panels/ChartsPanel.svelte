@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats, deathCauses, ageDistribution, techProgress, factionBeliefMeans } from '$lib/stores/simulation';
+	import { tick as tickStore, stats, tickHistory, factions, matrixState, emotionStats, economyStats, deathCauses, ageDistribution, techProgress, factionBeliefMeans, wars } from '$lib/stores/simulation';
 
 	let { open = $bindable(false) } = $props();
 
@@ -158,6 +158,33 @@
 		{ key: 'system_trust', label: 'SYS', color: '#00ff88' },
 		{ key: 'spirituality', label: 'SPR', color: '#aa66ff' },
 	];
+
+	// ── War detail data ──
+	let warDetails = $derived.by(() => {
+		const warList = $wars;
+		const factionList = $factions;
+		const currentTick = $tickStore;
+		const factionMap = new Map<number, any>();
+		for (const f of factionList) factionMap.set(f.id, f);
+
+		return warList.map(w => {
+			const fA = factionMap.get(w.faction_a_id);
+			const fB = factionMap.get(w.faction_b_id);
+			const duration = currentTick - w.started_at;
+			const totalCasualties = w.casualties_a + w.casualties_b;
+			const maxCasualties = Math.max(1, w.casualties_a, w.casualties_b);
+			return {
+				...w,
+				name_a: fA?.name || `Faction #${w.faction_a_id}`,
+				name_b: fB?.name || `Faction #${w.faction_b_id}`,
+				duration,
+				totalCasualties,
+				maxCasualties,
+				pct_a: w.casualties_a / maxCasualties,
+				pct_b: w.casualties_b / maxCasualties,
+			};
+		});
+	});
 
 	// Max population
 	let popStats = $derived.by(() => {
@@ -347,6 +374,57 @@
 										{/each}
 									</div>
 								{/if}
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- War Detail Panel -->
+			{#if warDetails.length > 0}
+				<div class="chart-card war-card">
+					<div class="chart-title" style="color: var(--red-warning);">ACTIVE WARS ({warDetails.length})</div>
+					<div class="war-list">
+						{#each warDetails as w}
+							<div class="war-item">
+								<div class="war-header">
+									<span class="war-faction" style="color: var(--cyan);">{w.name_a}</span>
+									<span class="war-vs">VS</span>
+									<span class="war-faction" style="color: var(--cyan);">{w.name_b}</span>
+								</div>
+								<!-- Intensity bar -->
+								<div class="war-row">
+									<span class="war-label">INTENSITY</span>
+									<div class="war-intensity-track">
+										<div class="war-intensity-fill" style="width: {w.intensity * 100}%; background: {
+											w.intensity > 0.7 ? '#ff2200' : w.intensity > 0.4 ? '#ff8844' : '#ffaa00'
+										};"></div>
+									</div>
+									<span class="war-val" style="color: {w.intensity > 0.7 ? '#ff2200' : '#ff8844'};">{(w.intensity * 100).toFixed(0)}%</span>
+								</div>
+								<!-- Casualty comparison -->
+								<div class="war-casualties">
+									<div class="war-cas-side">
+										<span class="war-cas-label">{w.name_a}</span>
+										<div class="war-cas-track">
+											<div class="war-cas-fill cas-a" style="width: {w.pct_a * 100}%;"></div>
+										</div>
+										<span class="war-cas-count">{w.casualties_a}</span>
+									</div>
+									<div class="war-cas-side">
+										<span class="war-cas-label">{w.name_b}</span>
+										<div class="war-cas-track">
+											<div class="war-cas-fill cas-b" style="width: {w.pct_b * 100}%;"></div>
+										</div>
+										<span class="war-cas-count">{w.casualties_b}</span>
+									</div>
+								</div>
+								<!-- Duration & totals -->
+								<div class="war-footer">
+									<span>DURATION: {w.duration} ticks</span>
+									<span>TOTAL DEAD: {w.totalCasualties}</span>
+									<span>SINCE: T{w.started_at}</span>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -794,6 +872,111 @@
 		box-shadow: 0 0 4px rgba(0, 255, 136, 0.4);
 	}
 	.tech-val { width: 30px; text-align: right; font-weight: bold; }
+
+	/* War detail panel */
+	.war-card {
+		border-color: rgba(255, 68, 102, 0.15);
+	}
+	.war-list {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.war-item {
+		padding: 8px;
+		background: var(--bg-secondary);
+		border: 1px solid rgba(255, 68, 102, 0.1);
+		border-radius: 3px;
+	}
+	.war-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		margin-bottom: 8px;
+	}
+	.war-faction {
+		font-size: 11px;
+		font-weight: bold;
+		max-width: 120px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.war-vs {
+		font-size: 9px;
+		color: var(--red-warning);
+		font-weight: bold;
+		letter-spacing: 2px;
+	}
+	.war-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 9px;
+		margin-bottom: 6px;
+	}
+	.war-label { width: 60px; color: var(--text-dim); text-align: right; }
+	.war-intensity-track {
+		flex: 1;
+		height: 6px;
+		background: var(--bg-primary);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.war-intensity-fill {
+		height: 100%;
+		border-radius: 3px;
+		transition: width 0.3s ease;
+	}
+	.war-val { width: 30px; text-align: right; font-weight: bold; }
+	.war-casualties {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		margin-bottom: 6px;
+	}
+	.war-cas-side {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 9px;
+	}
+	.war-cas-label {
+		width: 80px;
+		color: var(--text-dim);
+		text-align: right;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.war-cas-track {
+		flex: 1;
+		height: 6px;
+		background: var(--bg-primary);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.war-cas-fill {
+		height: 100%;
+		border-radius: 3px;
+		transition: width 0.3s ease;
+	}
+	.war-cas-fill.cas-a { background: #ff4466; }
+	.war-cas-fill.cas-b { background: #ff8844; }
+	.war-cas-count {
+		width: 24px;
+		text-align: right;
+		color: var(--red-warning);
+		font-weight: bold;
+	}
+	.war-footer {
+		display: flex;
+		gap: 10px;
+		font-size: 8px;
+		color: var(--text-muted);
+		letter-spacing: 1px;
+	}
 
 	/* ── Mobile: charts panel becomes bottom sheet ── */
 	@media (max-width: 768px) {
