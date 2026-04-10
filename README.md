@@ -468,6 +468,17 @@ Individual combat: agents with high effective aggression (trait + anger + rival 
 
 Information objects (knowledge, rumors, warnings, propaganda, system narratives) propagate hop-by-hop through bond networks. Each transmission has a mutation chance — truth degrades like a telephone game. Knowledge boosts skills. Propaganda shifts beliefs. System narratives (injected by the Matrix) suppress awareness. Secrets only travel through resistance bonds. Information expires after a configurable lifetime.
 
+### The Haven — The Real World
+
+A second world layer running in parallel with the Matrix simulation. The Haven is smaller (4x4 grid vs 8x8), harsher (2x harshness), and resource-scarce — but it is *real*. Managed by `src/haven.py`.
+
+- **Jack-out**: Redpilled agents with awareness above threshold (default 0.6) can leave the simulation and enter the Haven. The transition costs health and causes emotional upheaval.
+- **Jack-in missions**: Haven agents can jack back into the simulation for timed missions: `rescue` (find and awaken candidates), `fight_sentinels` (combat system enforcers), `contact_oracle` (seek guidance). Missions have a goal duration, a risk-per-tick failure chance, and a hard deadline. Jacked-in agents get a temporary skill boost but must complete or fail before the time limit.
+- **Haven council**: Hawks (high aggression) vs doves (low aggression) vote periodically on resource allocation (concentrate vs distribute) and mission approval (offensive vs defensive missions). Council votes shape Haven resource distribution and which mission types are prioritized.
+- **Engine integration**: The tick loop runs: Simulation systems (1-11) → Haven tick → cross-world events. Agents in the Haven are excluded from simulation agency, economy, conflict, and other Matrix-specific systems.
+
+Config: `haven.*` in `config/default.yaml`.
+
 ---
 
 ## Configuration

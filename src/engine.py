@@ -29,6 +29,7 @@ from src.economy import process_economy, process_inheritance
 from src.matrix_layer import MatrixState, process_matrix, check_cycle_reset
 from src.conflict import FactionWar, process_conflict
 from src.communication import InfoObject, process_communication
+from src.haven import HavenState, init_haven, process_haven
 
 
 @dataclass
@@ -70,6 +71,7 @@ class TickResult:
     matrix_stats: dict = field(default_factory=dict)
     conflict_stats: dict = field(default_factory=dict)
     communication_stats: dict = field(default_factory=dict)
+    haven_stats: dict = field(default_factory=dict)
     death_causes: dict = field(default_factory=dict)
     age_distribution: dict = field(default_factory=dict)
     tech_progress: dict = field(default_factory=dict)
@@ -105,6 +107,11 @@ class SimulationEngine:
         self.matrix_state: MatrixState = MatrixState()
         self.info_objects: list[InfoObject] = []
         self.agent_info: dict[int, set] = {}  # agent_id -> set of info_ids
+
+        # ── Haven (The Real World) ──
+        self.haven_state: Optional[HavenState] = None
+        if getattr(cfg, 'haven', None) and getattr(cfg.haven, 'enabled', False):
+            self.haven_state = init_haven(cfg)
 
     def initialize(self):
         """Create initial population, apply era starting beliefs and pre-unlocked tech."""
@@ -224,6 +231,8 @@ class SimulationEngine:
         self.state.current_tick += 1
         tick = self.state.current_tick
         alive = self.get_alive_agents()
+        # Simulation systems only process agents inside the simulation
+        sim_alive = [a for a in alive if a.location == "simulation"]
         agents_by_id = self._agents_by_id()
 
         deaths = 0
@@ -232,11 +241,11 @@ class SimulationEngine:
 
         # ── System 5: Agency — Move agents ──
         # Rebuild spatial index for O(1) neighbor lookups
-        build_spatial_index(alive, self.cfg)
-        for a in alive:
+        build_spatial_index(sim_alive, self.cfg)
+        for a in sim_alive:
             if a.is_sentinel:
                 continue  # Sentinels move via matrix_layer
-            new_x, new_y = compute_move(a, self.world, alive, self.cfg)
+            new_x, new_y = compute_move(a, self.world, sim_alive, self.cfg)
             a.x, a.y = new_x, new_y
 
         # ── Update spatial grid ──
@@ -247,7 +256,7 @@ class SimulationEngine:
 
         # ── System 2: Mate Selection — Reproduction ──
         # Suppress reproduction when at or above population cap
-        current_pop = len(alive)
+        current_pop = len(sim_alive)
         max_pop = self.cfg.population.max_size
         if current_pop >= max_pop:
             new_children = []
@@ -284,7 +293,7 @@ class SimulationEngine:
         dim_factor = self.cfg.skills.diminishing_returns_factor
         learning_mult = self.cfg.skills.learning_multiplier
 
-        for a in alive:
+        for a in sim_alive:
             if a.is_sentinel:
                 continue
             phase_mult = getattr(growth_mults, a.phase, 0.5)
@@ -487,6 +496,11 @@ class SimulationEngine:
         )
         self._prev_propaganda_reach = communication_stats.get("propaganda_reach", {})
 
+        # ── Haven tick (The Real World) ──
+        haven_stats = {}
+        if self.haven_state is not None:
+            haven_stats = process_haven(self.agents, self.haven_state, tick, self.cfg)
+
         # ── Compile stats ──
         alive_final = self.get_alive_agents()
         phase_counts = {p: 0 for p in PHASES}
@@ -559,6 +573,7 @@ class SimulationEngine:
             matrix_stats=matrix_stats,
             conflict_stats=conflict_stats,
             communication_stats=communication_stats,
+            haven_stats=haven_stats,
             death_causes=tick_death_causes,
             age_distribution=age_dist,
             tech_progress=tech_progress,

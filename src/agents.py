@@ -171,6 +171,9 @@ class Agent:
     is_exile: bool = False         # Rogue program
     redpilled: bool = False        # Permanently awakened
 
+    # ── Location (simulation vs haven) ──
+    location: str = "simulation"         # "simulation" or "haven"
+
     # ── Goals (persistent across ticks) ──
     current_goal: str = "NONE"           # FIND_MATE, REACH_RESOURCE, JOIN_FACTION, FLEE, HUNT_ENEMY, PROTECT, NONE
     goal_target_pos: Optional[tuple] = None   # (x, y) target position
@@ -386,6 +389,8 @@ class Agent:
             "is_sentinel": self.is_sentinel,
             "is_exile": self.is_exile,
             "redpilled": self.redpilled,
+            # Location
+            "location": self.location,
             # Goals
             "current_goal": self.current_goal,
             "goal_target_pos": self.goal_target_pos,
@@ -429,6 +434,8 @@ class Agent:
             is_sentinel=d.get("is_sentinel", False),
             is_exile=d.get("is_exile", False),
             redpilled=d.get("redpilled", False),
+            # Location
+            location=d.get("location", "simulation"),
             # Goals
             current_goal=d.get("current_goal", "NONE"),
             goal_target_pos=tuple(d["goal_target_pos"]) if d.get("goal_target_pos") else None,

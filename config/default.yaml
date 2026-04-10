@@ -298,6 +298,31 @@ matrix:
   comfort_injection_interval: 40      # ticks between system comfort injections
   max_ticks_per_cycle: 5000           # forced reset after this many ticks
 
+# ── The Haven — The Real World ──
+haven:
+  enabled: true
+  grid_size: 4                          # smaller than simulation grid
+  harshness: 2.0                        # harsher than the simulation
+  base_resources: 0.4                   # scarce resources
+  regeneration_rate: 0.01               # slow regen
+  base_carrying_capacity: 15            # lower capacity
+  jackout_awareness_threshold: 0.6      # min awareness to jack out
+  jackout_redpill_required: true        # must be redpilled to jack out
+  jackin_mission_types:                 # available mission types
+    - rescue
+    - fight_sentinels
+    - contact_oracle
+  mission_duration_range: [5, 20]       # min/max ticks for missions
+  mission_risk_base: 0.05               # base failure chance per tick
+  mission_stat_boost: 0.15              # skill boost while jacked in
+  mission_time_limit: 25                # max ticks before forced jack-out
+  council:
+    vote_interval: 30                   # ticks between council votes
+    hawk_threshold: 0.5                 # aggression above this = hawk
+    dove_threshold: 0.3                 # aggression below this = dove
+    resource_share_rate: 0.1            # fraction of haven resources shared per vote
+    mission_approval_majority: 0.5      # fraction of votes needed to approve mission
+
 # ── System 10: Conflict & Warfare ──
 conflict:
   wartime_innovation_bonus: 0.002     # tech/survival skill bonus per tick for factions at war
