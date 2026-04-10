@@ -112,6 +112,33 @@ def get_agent(run_id: str, agent_id: int):
     }
 
 
+@router.get("/{agent_id}/obituary")
+def get_obituary(run_id: str, agent_id: int):
+    """Generate an obituary for a dead agent using their chronicle + memories."""
+    engine = manager.get_engine(run_id)
+    if not engine:
+        engine = manager.load_sim(run_id)
+    if not engine:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    agent = next((a for a in engine.agents if a.id == agent_id), None)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    if agent.alive:
+        raise HTTPException(status_code=400, detail="Agent is still alive")
+
+    from src.narrator import Narrator, _fallback_obituary
+    narrator = getattr(engine, '_narrator', None)
+    if narrator is None:
+        narrator = Narrator.from_config(engine.cfg)
+    obituary = narrator.generate_obituary(agent)
+    return {
+        "agent_id": agent_id,
+        "obituary": obituary,
+        "chronicle": [c.to_dict() for c in agent.chronicle],
+    }
+
+
 def _agent_brief(a) -> dict:
     """Compact agent representation for list endpoints."""
     return {

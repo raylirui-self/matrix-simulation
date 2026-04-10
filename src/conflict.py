@@ -223,6 +223,12 @@ def process_conflict(agents: list[Agent], factions: list, wars: list[FactionWar]
             a.add_memory(tick, f"Fought #{b.id}", x=a.x, y=a.y)
             b.add_memory(tick, f"Fought #{a.id}", x=b.x, y=b.y)
 
+            # Chronicle: first combat
+            if not any(c.event_type == "first_combat" for c in a.chronicle):
+                a.add_chronicle(tick, "first_combat", f"First combat against #{b.id}", target_id=b.id)
+            if not any(c.event_type == "first_combat" for c in b.chronicle):
+                b.add_chronicle(tick, "first_combat", f"First combat against #{a.id}", target_id=a.id)
+
             # Create/strengthen enemy bonds
             if not is_enemy:
                 a.add_bond(Bond(b.id, "enemy", 0.5, tick), 10)

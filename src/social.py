@@ -64,9 +64,14 @@ def process_bonds(agents: list[Agent], tick: int, cfg) -> dict:
                     strength = min(1.0, (a.traits.sociability + b.traits.sociability) / 2)
                     if a.add_bond(Bond(b.id, "friend", strength, tick), social_cfg.bond_capacity):
                         bonds_formed += 1
+                        # Chronicle: first friend
+                        if not any(c.event_type == "first_friend" for c in a.chronicle):
+                            a.add_chronicle(tick, "first_friend", f"Made first friend: #{b.id}", target_id=b.id)
                 if not existing_b or existing_b.bond_type != "friend":
                     strength = min(1.0, (a.traits.sociability + b.traits.sociability) / 2)
-                    b.add_bond(Bond(a.id, "friend", strength, tick), social_cfg.bond_capacity)
+                    if b.add_bond(Bond(a.id, "friend", strength, tick), social_cfg.bond_capacity):
+                        if not any(c.event_type == "first_friend" for c in b.chronicle):
+                            b.add_chronicle(tick, "first_friend", f"Made first friend: #{a.id}", target_id=a.id)
 
     # Rival formation — aggressive agents in close proximity with no friendly bond
     rival_distance = social_cfg.friend_formation_distance  # same range as friend formation

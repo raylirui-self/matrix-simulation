@@ -223,6 +223,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 # Cost: loses happiness baseline (no more blissful ignorance)
                 a.emotions["happiness"] = max(0.0, a.emotions.get("happiness", 0) - 0.2)
                 a.add_memory(tick, "REDPILLED: The world is not what it seems")
+                a.add_chronicle(tick, "red_pill", "Took the red pill — awakened to the truth")
 
                 # Gain: form resistance bonds with other redpilled agents
                 for other in non_sentinels:
@@ -241,6 +242,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                     a.emotions["happiness"] = min(1.0, a.emotions.get("happiness", 0) + bp_happy)
                     a.splinter_in_mind = True  # "Something is wrong but I can't remember what"
                     a.add_memory(tick, "Chose ignorance... but a splinter remains in the mind")
+                    a.add_chronicle(tick, "blue_pill", "Chose the blue pill — but a splinter remains")
 
     # ── Phase 4b: Redpilled agent perks (glitch foresight, Sentinel detection) ──
     glitch_foresight_radius = getattr(mx_cfg, 'redpill_glitch_foresight_radius', 0.15)
@@ -273,6 +275,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         for a in non_sentinels:
             if a.redpilled and a.traits.charisma >= recruiter_charisma and not a.is_recruiter:
                 a.is_recruiter = True
+                a.add_chronicle(tick, "became_recruiter", "Became a recruiter for the resistance")
 
         # Recruiters attempt persuasion
         for recruiter in [a for a in non_sentinels if a.is_recruiter and a.alive]:
@@ -298,6 +301,8 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 target.emotions["fear"] = min(1.0, target.emotions.get("fear", 0) + 0.2)
                 target.emotions["hope"] = min(1.0, target.emotions.get("hope", 0) + 0.15)
                 target.add_memory(tick, f"RECRUITED by #{recruiter.id}: Took the red pill")
+                target.add_chronicle(tick, "recruited", f"Recruited by #{recruiter.id}", recruiter_id=recruiter.id)
+                target.add_chronicle(tick, "red_pill", "Took the red pill — recruited into the resistance")
                 recruiter.add_memory(tick, f"Recruited #{target.id} into the resistance")
                 # Form resistance bond
                 target.add_bond(Bond(recruiter.id, "resistance", 0.8, tick), 12)
@@ -329,6 +334,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 a.anomaly_quest_stage = 0  # quest begins
                 matrix_state.anomaly_id = a.id
                 a.add_memory(tick, "THE ONE: You are the Anomaly")
+                a.add_chronicle(tick, "became_anomaly", "Became The One — the Anomaly")
                 # Stat boost
                 ab = getattr(mx_cfg, 'anomaly_bonuses', None)
                 ab_skill = getattr(ab, 'skill_boost', 0.1) if ab else 0.1

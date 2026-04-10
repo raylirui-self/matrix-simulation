@@ -13,6 +13,14 @@ PHASES = ["infant", "child", "adolescent", "adult", "elder"]
 EMOTION_NAMES = ["happiness", "fear", "anger", "grief", "hope"]
 BELIEF_AXES = ["individualism", "tradition", "system_trust", "spirituality"]
 
+# Chronicle event types — structured life events for narrative generation
+CHRONICLE_TYPES = [
+    "born", "first_friend", "first_combat", "faction_join", "faction_leave",
+    "mate_found", "child_born", "witnessed_death", "red_pill", "blue_pill",
+    "became_anomaly", "quest_stage", "cycle_reset", "jack_out", "jack_in",
+    "recruited", "became_recruiter", "breakthrough", "death",
+]
+
 _agent_id_counter = 0
 
 
@@ -126,6 +134,32 @@ class Bond:
 
 
 @dataclass
+class ChronicleEntry:
+    """A structured life event for narrative generation."""
+    tick: int
+    event_type: str      # one of CHRONICLE_TYPES
+    description: str
+    details: dict = field(default_factory=dict)  # extra context (target_id, faction_name, etc.)
+
+    def to_dict(self) -> dict:
+        return {
+            "tick": self.tick,
+            "event_type": self.event_type,
+            "description": self.description,
+            "details": self.details,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> ChronicleEntry:
+        return cls(
+            tick=d["tick"],
+            event_type=d["event_type"],
+            description=d["description"],
+            details=d.get("details", {}),
+        )
+
+
+@dataclass
 class Agent:
     """A cognitive agent in the simulation."""
     id: int
@@ -199,6 +233,9 @@ class Agent:
     is_protagonist: bool = False
     protagonist_name: Optional[str] = None
     inner_monologue: list[dict] = field(default_factory=list)
+
+    # ── Chronicle (structured life events) ──
+    chronicle: list[ChronicleEntry] = field(default_factory=list)
 
     # ── Memory summarization ──
     memory_summary: str = ""           # Compressed summary of older memories
@@ -291,6 +328,14 @@ class Agent:
             to_compress = self.memory[:-max_recent]
             self.memory = self.memory[-max_recent:]
             self._compress_memories(to_compress, tick)
+
+    def add_chronicle(self, tick: int, event_type: str, description: str,
+                      **details) -> None:
+        """Add a structured chronicle entry for this agent's life story."""
+        self.chronicle.append(ChronicleEntry(
+            tick=tick, event_type=event_type,
+            description=description, details=details,
+        ))
 
     def _compress_memories(self, old_memories: list[dict], current_tick: int):
         """Compress a batch of old memories into the running summary."""
@@ -424,6 +469,7 @@ class Agent:
             "is_protagonist": self.is_protagonist,
             "protagonist_name": self.protagonist_name,
             "inner_monologue": self.inner_monologue[-10:],
+            "chronicle": [c.to_dict() for c in self.chronicle],
             "memory_summary": self.memory_summary,
             "proximity_ticks": {},  # Don't persist
         }
@@ -479,6 +525,8 @@ class Agent:
             is_protagonist=d.get("is_protagonist", False),
             protagonist_name=d.get("protagonist_name"),
             inner_monologue=d.get("inner_monologue", []),
+            # Chronicle
+            chronicle=[ChronicleEntry.from_dict(c) for c in d.get("chronicle", [])],
             # Memory summary
             memory_summary=d.get("memory_summary", ""),
         )
@@ -541,6 +589,8 @@ def create_agent(cfg, generation: int = 0, randomize_age: bool = False,
         beliefs=_make_starting_beliefs(starting_beliefs),
     )
 
+    agent.add_chronicle(0, "born", "Emerged into the simulation")
+
     if randomize_age:
         max_start_age = int(agent.traits.max_age * 0.6)
         agent.age = random.randint(0, max_start_age)
@@ -586,6 +636,8 @@ def create_offspring(parent_a: Agent, parent_b: Agent, tick: int,
     )
     child.x = max(0.0, min(1.0, child.x))
     child.y = max(0.0, min(1.0, child.y))
+    child.add_chronicle(tick, "born", f"Born to #{parent_a.id} and #{parent_b.id}",
+                         parent_a_id=parent_a.id, parent_b_id=parent_b.id)
 
     # Redpilled parents pass stronger awareness and lower system trust to children
     if parent_a.redpilled or parent_b.redpilled:

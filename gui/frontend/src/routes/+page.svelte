@@ -34,6 +34,7 @@
 	import ChartsPanel from '$lib/panels/ChartsPanel.svelte';
 	import EraBanner from '$lib/panels/EraBanner.svelte';
 	import ScenarioCards from '$lib/panels/ScenarioCards.svelte';
+	import CinematicOverlay from '$lib/panels/CinematicOverlay.svelte';
 
 	let ws: SimWebSocket | null = null;
 	let showLanding = $state(true);
@@ -309,6 +310,7 @@
 	<ControlDrawer bind:open={controlDrawerOpen} />
 	<ChartsPanel bind:open={chartsPanelOpen} />
 	<EraBanner />
+	<CinematicOverlay />
 
 	<!-- Floating Controls -->
 	<div class="controls">

@@ -77,6 +77,7 @@ class TickResult:
     death_causes: dict = field(default_factory=dict)
     age_distribution: dict = field(default_factory=dict)
     tech_progress: dict = field(default_factory=dict)
+    cinematic_events: list = field(default_factory=list)
 
 
 @dataclass
@@ -114,6 +115,9 @@ class SimulationEngine:
         self.haven_state: Optional[HavenState] = None
         if getattr(cfg, 'haven', None) and getattr(cfg.haven, 'enabled', False):
             self.haven_state = init_haven(cfg)
+
+        # ── Cinematic tracking (persists across ticks) ──
+        self._prev_enforcer_count: int = 0
 
     def initialize(self):
         """Create initial population, apply era starting beliefs and pre-unlocked tech."""
@@ -186,6 +190,8 @@ class SimulationEngine:
             # Partial memory wipe — keep last 3 memories, add reset event
             a.memory = a.memory[-3:]
             a.add_memory(tick, f"CYCLE RESET: The world shuddered and rebuilt (Cycle {self.matrix_state.cycle_number + 1})")
+            a.add_chronicle(tick, "cycle_reset", f"Survived cycle reset into Cycle {self.matrix_state.cycle_number + 1}",
+                            cycle=self.matrix_state.cycle_number + 1)
             # System trust gets boosted (fresh start)
             a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + 0.3)
             # Emotions stabilize
@@ -240,6 +246,11 @@ class SimulationEngine:
         deaths = 0
         births = 0
         tick_breakthroughs = []
+        cinematic_events = []
+
+        # Track pre-tick state for cinematic triggers
+        _prev_anomaly_id = self.matrix_state.anomaly_id
+        _prev_cycle = self.matrix_state.cycle_number
 
         # ── System 5: Agency — Move agents ──
         # Rebuild spatial index for O(1) neighbor lookups
@@ -371,6 +382,7 @@ class SimulationEngine:
                 deaths += 1
                 self.cultural_memory.on_agent_death(a)
                 a.add_memory(tick, "Died")
+                a.add_chronicle(tick, "death", f"Died: {a.death_cause}", cause=a.death_cause, age=a.age)
                 newly_dead.append(a)
 
         self.state.total_died += deaths
@@ -441,6 +453,7 @@ class SimulationEngine:
                     tick_breakthroughs.append(bt.name)
                     for a in cell_agents:
                         a.add_memory(tick, f"Witnessed breakthrough: {bt.name}")
+                        a.add_chronicle(tick, "breakthrough", f"Witnessed breakthrough: {bt.name}", tech=bt.name)
                     on_breakthrough_emotions(cell_agents, tick)
 
         # ── Protagonist management ──
@@ -508,6 +521,45 @@ class SimulationEngine:
         haven_stats = {}
         if self.haven_state is not None:
             haven_stats = process_haven(self.agents, self.haven_state, tick, self.cfg)
+
+        # ── Cinematic events ──
+        # Anomaly emergence
+        if self.matrix_state.anomaly_id and self.matrix_state.anomaly_id != _prev_anomaly_id:
+            anomaly = next((a for a in self.agents if a.id == self.matrix_state.anomaly_id), None)
+            cinematic_events.append({
+                "type": "anomaly_emergence",
+                "title": "THE ONE HAS EMERGED",
+                "subtitle": f"Agent #{self.matrix_state.anomaly_id} has become the Anomaly",
+                "agent_id": self.matrix_state.anomaly_id,
+                "tick": tick,
+            })
+
+        # Cycle reset
+        if self.matrix_state.cycle_number != _prev_cycle:
+            cinematic_events.append({
+                "type": "cycle_reset",
+                "title": "MATRIX CYCLE RESET",
+                "subtitle": f"Cycle {_prev_cycle} has ended. The Architect reloads the simulation.",
+                "cycle": self.matrix_state.cycle_number,
+                "tick": tick,
+            })
+
+        # Enforcer swarm critical mass (>= 5 enforcers, crossing threshold)
+        enforcer_critical = getattr(
+            getattr(getattr(self.cfg, 'programs', None), 'enforcer', None),
+            'max_copies', 20
+        ) if hasattr(self.cfg, 'programs') else 20
+        enforcer_threshold = max(5, enforcer_critical // 2)
+        current_enforcer_count = sum(1 for a in self.get_alive_agents() if a.is_enforcer)
+        if current_enforcer_count >= enforcer_threshold and self._prev_enforcer_count < enforcer_threshold:
+            cinematic_events.append({
+                "type": "enforcer_swarm",
+                "title": "ENFORCER SWARM",
+                "subtitle": f"{current_enforcer_count} Enforcers active — the system is overwhelming the resistance",
+                "enforcer_count": current_enforcer_count,
+                "tick": tick,
+            })
+        self._prev_enforcer_count = current_enforcer_count
 
         # ── Compile stats ──
         alive_final = self.get_alive_agents()
@@ -586,6 +638,7 @@ class SimulationEngine:
             death_causes=tick_death_causes,
             age_distribution=age_dist,
             tech_progress=tech_progress,
+            cinematic_events=cinematic_events,
         )
 
     def _apply_event(self, event: WorldEvent):

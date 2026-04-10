@@ -265,6 +265,7 @@ def process_beliefs(agents: list[Agent], factions: list[Faction],
                     a.faction_id = faction.id
                     unclaimed.discard(a.id)
                     a.add_memory(tick, f"Joined faction: {faction.name}")
+                    a.add_chronicle(tick, "faction_join", f"Joined {faction.name}", faction_id=faction.id, faction_name=faction.name)
                 stats["factions_formed"] += 1
 
     # ── Phase 4: Faction membership updates ──
@@ -283,6 +284,7 @@ def process_beliefs(agents: list[Agent], factions: list[Faction],
         if dist > belief_cfg.faction_leave_threshold:
             a.faction_id = None
             a.add_memory(tick, f"Left faction: {faction.name}")
+            a.add_chronicle(tick, "faction_leave", f"Left {faction.name}", faction_id=faction.id, faction_name=faction.name)
 
     # ── Phase 5: Faction leader election ──
     for faction in factions:

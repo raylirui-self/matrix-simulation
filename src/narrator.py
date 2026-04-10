@@ -23,6 +23,7 @@ def _load_prompt(filename: str) -> str:
 
 NARRATOR_SYSTEM = _load_prompt("narrator.txt")
 EVENT_SYSTEM = _load_prompt("event_generator.txt")
+OBITUARY_SYSTEM = _load_prompt("obituary.txt")
 
 
 def _build_narrator_prompt(summary: dict) -> str:
@@ -325,3 +326,96 @@ class Narrator:
             ]
         name, desc, effects = random.choice(pool)
         return WorldEvent(tick=tick, name=name, description=desc, effects=effects)
+
+    def generate_obituary(self, agent) -> str:
+        """Generate a life summary for a dead agent using their chronicle + memories.
+        Falls back to template-based generation when LLM is unavailable."""
+        if not self.enabled or not self._ensure_connected():
+            return _fallback_obituary(agent)
+        prompt = _build_obituary_prompt(agent)
+        text = self.active_provider.generate(
+            OBITUARY_SYSTEM, prompt, temperature=0.7, max_tokens=200,
+        )
+        return text if text else _fallback_obituary(agent)
+
+
+def _build_obituary_prompt(agent) -> str:
+    """Build the LLM prompt for obituary generation from an agent's data."""
+    lines = [f"Agent #{agent.id}, {agent.sex}, died at age {agent.age}."]
+    lines.append(f"Cause of death: {agent.death_cause or 'unknown'}.")
+
+    # Chronicle
+    if agent.chronicle:
+        lines.append("\nChronicle:")
+        for entry in agent.chronicle:
+            lines.append(f"  t={entry.tick} [{entry.event_type}]: {entry.description}")
+
+    # Recent memories
+    if agent.memory:
+        lines.append("\nRecent memories:")
+        for m in agent.memory[-8:]:
+            lines.append(f"  t={m.get('tick', '?')}: {m.get('event', '...')}")
+
+    # Key flags
+    flags = []
+    if agent.redpilled:
+        flags.append("redpilled")
+    if agent.is_anomaly:
+        flags.append("The Anomaly")
+    if agent.is_exile:
+        flags.append("exile")
+    if getattr(agent, 'is_recruiter', False):
+        flags.append("recruiter")
+    if flags:
+        lines.append(f"\nNotable status: {', '.join(flags)}")
+
+    lines.append(f"\nGeneration: {agent.generation}. "
+                 f"Top skill: {max(agent.skills, key=agent.skills.get)}. "
+                 f"Bonds at death: {len(agent.bonds)}.")
+
+    lines.append("\nWrite a 2-4 sentence obituary for this agent.")
+    return "\n".join(lines)
+
+
+def _fallback_obituary(agent) -> str:
+    """Template-based obituary when no LLM is available."""
+    name = f"Agent #{agent.id}"
+    cause = agent.death_cause or "unknown causes"
+
+    # Find the most interesting chronicle events
+    highlights = []
+    for entry in getattr(agent, 'chronicle', []):
+        if entry.event_type in ("red_pill", "became_anomaly", "first_combat",
+                                 "faction_join", "recruited", "cycle_reset"):
+            highlights.append(entry)
+
+    opening = f"{name} lived {agent.age} ticks and died of {cause}."
+
+    if not highlights:
+        top_skill = max(agent.skills, key=agent.skills.get) if agent.skills else "nothing"
+        return (
+            f"{opening} A quiet soul of generation {agent.generation}, "
+            f"skilled in {top_skill}, leaving {len(agent.bonds)} bonds behind."
+        )
+
+    # Build narrative from highlights
+    mid_parts = []
+    for h in highlights[:3]:
+        if h.event_type == "red_pill":
+            mid_parts.append("saw through the veil of the simulation")
+        elif h.event_type == "became_anomaly":
+            mid_parts.append("became The One — the Anomaly that shook the system")
+        elif h.event_type == "first_combat":
+            mid_parts.append(f"drew first blood against {h.details.get('target_id', 'a rival')}")
+        elif h.event_type == "faction_join":
+            mid_parts.append(f"joined the {h.details.get('faction_name', 'unknown')} faction")
+        elif h.event_type == "recruited":
+            mid_parts.append("was recruited into the resistance")
+        elif h.event_type == "cycle_reset":
+            mid_parts.append("survived a cycle reset")
+
+    middle = ", ".join(mid_parts) if mid_parts else "lived an unremarkable life"
+    children = len(agent.child_ids) if hasattr(agent, 'child_ids') else 0
+    closing = f"{children} children carry the legacy forward." if children else "No descendants remain."
+
+    return f"{opening} In life, they {middle}. {closing}"

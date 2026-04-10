@@ -47,9 +47,9 @@ matrix-simulation/
 │   ├── communication.py              <- Info objects, propagation, mutation, propaganda
 │   ├── engine.py                     <- Core tick orchestrator (all 11 systems)
 │   ├── config_loader.py              <- YAML loading with deep-merge and attribute access
-│   ├── narrator.py                   <- Multi-provider LLM (Ollama + HuggingFace + fallback)
+│   ├── narrator.py                   <- Multi-provider LLM (Ollama + HuggingFace + fallback + obituary generation)
 │   ├── persistence.py                <- SQLite snapshots, tick stats, events, narratives
-│   └── prompts/                      <- LLM prompt templates
+│   └── prompts/                      <- LLM prompt templates (narrator, event_generator, obituary)
 ├── gui/                              <- All GUI/frontend code
 │   ├── backend/                      <- FastAPI backend (The Nexus API)
 │   │   └── api/
@@ -65,7 +65,7 @@ matrix-simulation/
 │   ├── frontend/                     <- SvelteKit web frontend ("The Nexus")
 │   │   └── src/
 │   │       ├── lib/canvas/           <- Zoom levels: CodeRain, WorldMap, CellView, SoulView
-│   │       ├── lib/panels/           <- EdgePanels, ControlDrawer, ChartsPanel, EraBanner
+│   │       ├── lib/panels/           <- EdgePanels, ControlDrawer, ChartsPanel, EraBanner, CinematicOverlay
 │   │       ├── lib/terminal/         <- Architect's Terminal (command console)
 │   │       ├── lib/stores/           <- Svelte stores (simulation state, UI state)
 │   │       ├── lib/api/              <- REST + WebSocket client
@@ -859,7 +859,7 @@ Sources used to calibrate historically-researched era presets:
 | **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
 | **0.1** | Quick-start scenario cards and preset gameplay scenarios (complete) |
 | **1** | Deepen lore — The Haven (complete), Programs: Enforcer/Broker/Guardian/Locksmith (complete), deeper red pill mechanics, The Core |
-| **2** | Spectacle — cinematic events, agent chronicles, data sonification, memetic warfare visualization, procedural mythology |
+| **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), data sonification, memetic warfare visualization, procedural mythology |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
 | **5** | Consciousness frontier — dream cycles, Gnostic mythology layer, nested simulations, emergent agent language, free will gradient |
@@ -884,3 +884,4 @@ Sources used to calibrate historically-researched era presets:
 - One-click scenario cards on landing screen (4 presets: Awakening, War World, Dark Ages, Prophet Era) with preview metadata
 - The Haven: second world layer with jack-in missions and council politics
 - Programs as First-Class Entities: The Enforcer (copy-on-kill swarm), The Broker (black market trades), The Guardian (Oracle bodyguard), The Locksmith (teleport keys)
+- Phase 2: Cinematic event system (full-screen overlays for Anomaly emergence, cycle reset, Enforcer swarm), Agent chronicles (structured life events across all systems), Obituary generation (LLM + fallback template)

@@ -92,6 +92,18 @@ export type War = {
 };
 export const wars = writable<War[]>([]);
 
+// Cinematic events — full-screen overlays for key moments
+export type CinematicEvent = {
+	type: string;
+	title: string;
+	subtitle: string;
+	tick: number;
+	agent_id?: number;
+	cycle?: number;
+	enforcer_count?: number;
+};
+export const cinematicEventQueue = writable<CinematicEvent[]>([]);
+
 // Tick history for sparkline
 export const tickHistory = writable<
 	Array<{ tick: number; alive: number; intelligence: number; health: number }>
@@ -284,5 +296,10 @@ export function applyTickMessage(msg: TickMessage) {
 			if ($e.length > 10000) $e = $e.slice(-10000);
 			return $e;
 		});
+	}
+
+	// Cinematic events
+	if ((msg as any).cinematic_events?.length) {
+		cinematicEventQueue.update(($q) => [...$q, ...(msg as any).cinematic_events]);
 	}
 }

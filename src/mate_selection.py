@@ -144,6 +144,14 @@ def process_reproduction(agents: list[Agent], tick: int, cfg) -> list[Agent]:
         female.add_memory(tick, f"Had child #{child.id} with #{selected_male.id}")
         selected_male.add_memory(tick, f"Had child #{child.id} with #{female.id}")
 
+        # Chronicle: mate found (first time only) and child born
+        if not any(c.event_type == "mate_found" for c in female.chronicle):
+            female.add_chronicle(tick, "mate_found", f"Found mate: #{selected_male.id}", target_id=selected_male.id)
+        if not any(c.event_type == "mate_found" for c in selected_male.chronicle):
+            selected_male.add_chronicle(tick, "mate_found", f"Found mate: #{female.id}", target_id=female.id)
+        female.add_chronicle(tick, "child_born", f"Had child #{child.id}", child_id=child.id)
+        selected_male.add_chronicle(tick, "child_born", f"Had child #{child.id}", child_id=child.id)
+
         # Rival bonds for losers
         for male, score in scored:
             if male.id == selected_male.id:
