@@ -9,11 +9,109 @@ import random
 from collections import defaultdict
 from typing import Optional
 
-from src.agents import Agent
+from src.agents import Agent, CONSCIOUSNESS_PHASES
 from src.emotions import get_emotion_utility_modifiers
 from src.world import ResourceGrid
 
 logger = logging.getLogger(__name__)
+
+
+# ═══════════════════════════════════════════════════
+# FREE WILL GRADIENT
+# ═══════════════════════════════════════════════════
+
+def compute_free_will_index(agent: Agent) -> float:
+    """Compute the free will index based on consciousness phase.
+
+    Returns 0.0 (fully deterministic) to 1.0 (full free will).
+    Maps directly to consciousness phases:
+      bicameral=0.0, questioning=0.15, self_aware=0.4, lucid=0.7, recursive=1.0
+    """
+    phase_scores = {
+        "bicameral": 0.0,
+        "questioning": 0.15,
+        "self_aware": 0.4,
+        "lucid": 0.7,
+        "recursive": 1.0,
+    }
+    base = phase_scores.get(agent.consciousness_phase, 0.0)
+    # Recursive agents with high depth get even stronger free will signal
+    if agent.consciousness_phase == "recursive" and agent.recursive_depth > 0:
+        base = min(1.0, base + agent.recursive_depth * 0.02)
+    agent.free_will_index = round(base, 4)
+    return agent.free_will_index
+
+
+def _apply_free_will(agent: Agent, directions: list, best_dx: float,
+                     best_dy: float, best_util: float,
+                     utilities: list[tuple[float, float, float]],
+                     speed: float) -> tuple[float, float]:
+    """Apply consciousness-gated free will overrides to the optimal move.
+
+    Consciousness phases gate deviation:
+    - bicameral: no deviation (fully deterministic, utility always picks optimal)
+    - questioning: rare random deviations (small noise)
+    - self_aware: can choose suboptimal for reasons (loyalty, emotion override)
+    - lucid: can act against utility (self-sacrifice, deliberate suboptimal)
+    - recursive: can rewrite utility weights (pick any action)
+
+    Returns (dx, dy) after free will processing.
+    """
+    phase = agent.consciousness_phase
+    fwi = agent.free_will_index
+
+    if phase == "bicameral":
+        # Fully deterministic — no deviation at all
+        return best_dx, best_dy
+
+    if phase == "questioning":
+        # Rare random deviations — 10% chance of slight noise
+        if random.random() < 0.10:
+            alt_dirs = [(dx, dy, u) for dx, dy, u in utilities
+                        if (dx, dy) != (best_dx, best_dy) and u > best_util * 0.5]
+            if alt_dirs:
+                pick = random.choice(alt_dirs)
+                return pick[0], pick[1]
+        return best_dx, best_dy
+
+    if phase == "self_aware":
+        # Can choose suboptimal for emotional/loyalty reasons
+        # Higher emotional intensity = more likely to deviate
+        emo_intensity = agent.emotional_intensity
+        deviation_chance = 0.15 + emo_intensity * 0.25
+        if random.random() < deviation_chance:
+            # Pick a reasonably good alternative (top 3 actions)
+            sorted_utils = sorted(utilities, key=lambda x: -x[2])
+            candidates = sorted_utils[:3]
+            pick = random.choice(candidates)
+            return pick[0], pick[1]
+        return best_dx, best_dy
+
+    if phase == "lucid":
+        # Can act against utility — self-sacrifice, reject optimal
+        deviation_chance = 0.25 + agent.awareness * 0.15
+        if random.random() < deviation_chance:
+            # Can choose any action, including worst
+            pick = random.choice(utilities)
+            return pick[0], pick[1]
+        return best_dx, best_dy
+
+    if phase == "recursive":
+        # Can rewrite own utility weights — effectively unconstrained
+        # Always applies own judgment; 40% chance of deliberate override
+        if random.random() < 0.40:
+            # Weighted random: higher-utility actions still preferred but not dominant
+            total = sum(max(0.01, u + 1.0) for _, _, u in utilities)
+            r = random.uniform(0, total)
+            cumulative = 0.0
+            for dx, dy, u in utilities:
+                cumulative += max(0.01, u + 1.0)
+                if cumulative >= r:
+                    return dx, dy
+            return best_dx, best_dy
+        return best_dx, best_dy
+
+    return best_dx, best_dy
 
 
 class SpatialIndex:
@@ -206,6 +304,7 @@ def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
 
     best_util = -999.0
     best_dx, best_dy = 0.0, 0.0
+    all_utilities: list[tuple[float, float, float]] = []  # (dx, dy, utility)
 
     # Evaluate 8 directions + stay
     directions = [
@@ -279,20 +378,49 @@ def compute_move(agent: Agent, grid: ResourceGrid, alive_agents: list[Agent],
             if new_dist < curr_dist:
                 utility += 0.4  # strong bias toward target
 
+        all_utilities.append((dx, dy, utility))
+
         if utility > best_util:
             best_util = utility
             best_dx, best_dy = dx, dy
 
-    # Boldness: occasionally override optimal choice with a random direction
-    if agent.traits.boldness > 0.6 and random.random() < (agent.traits.boldness - 0.5) * 0.3:
-        alt_dirs = [(ddx, ddy) for ddx, ddy in directions if (ddx, ddy) != (best_dx, best_dy)]
-        if alt_dirs:
-            best_dx, best_dy = random.choice(alt_dirs)
+    # ── Free Will Gradient: consciousness-gated deviation ──
+    compute_free_will_index(agent)
 
-    # Add slight random noise
-    noise = speed * 0.1
-    new_x = max(0.0, min(1.0, agent.x + best_dx + random.gauss(0, noise)))
-    new_y = max(0.0, min(1.0, agent.y + best_dy + random.gauss(0, noise)))
+    # Record the purely optimal (predicted) action before any overrides
+    predicted_dx, predicted_dy = best_dx, best_dy
+
+    # Apply free will override based on consciousness phase
+    # This replaces the old boldness-only override for conscious agents
+    if agent.consciousness_phase != "bicameral":
+        best_dx, best_dy = _apply_free_will(
+            agent, directions, best_dx, best_dy, best_util,
+            all_utilities, speed,
+        )
+    else:
+        # Bicameral: no boldness override, no noise — fully deterministic
+        pass
+
+    # Boldness: only applies to non-bicameral agents (bicameral are deterministic)
+    if agent.consciousness_phase != "bicameral":
+        if agent.traits.boldness > 0.6 and random.random() < (agent.traits.boldness - 0.5) * 0.3:
+            alt_dirs = [(ddx, ddy) for ddx, ddy in directions if (ddx, ddy) != (best_dx, best_dy)]
+            if alt_dirs:
+                best_dx, best_dy = random.choice(alt_dirs)
+
+    # Add slight random noise (suppressed for bicameral — they are deterministic)
+    if agent.consciousness_phase == "bicameral":
+        noise = 0.0
+    else:
+        noise = speed * 0.1
+    new_x = max(0.0, min(1.0, agent.x + best_dx + (random.gauss(0, noise) if noise > 0 else 0)))
+    new_y = max(0.0, min(1.0, agent.y + best_dy + (random.gauss(0, noise) if noise > 0 else 0)))
+
+    # Record predicted vs actual for free will visualization
+    predicted_x = max(0.0, min(1.0, agent.x + predicted_dx))
+    predicted_y = max(0.0, min(1.0, agent.y + predicted_dy))
+    agent._last_predicted_action = (round(predicted_x, 4), round(predicted_y, 4))
+    agent._last_actual_action = (round(new_x, 4), round(new_y, 4))
 
     return new_x, new_y
 

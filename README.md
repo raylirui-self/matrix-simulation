@@ -865,7 +865,7 @@ Sources used to calibrate historically-researched era presets:
 | **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), procedural mythology (done: chronicle, myths, faction revisionism, legends), data sonification, memetic warfare visualization |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
-| **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles, Gnostic mythology layer, nested simulations, emergent agent language, free will gradient |
+| **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles (done), free will gradient (done), Gnostic mythology layer, nested simulations, emergent agent language |
 | **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
 
 ### What's Done
@@ -879,6 +879,8 @@ Sources used to calibrate historically-researched era presets:
 - Consciousness maze: 5 qualitative phases (bicameral → recursive), strange loops, reality testing
 - Agent archaeology: artifacts persist across cycle resets, discoverable by curious agents
 - Soul trap: consciousness recycled into newborns, memory preservation gated by awareness
+- Free will gradient: consciousness-gated determinism spectrum (bicameral=deterministic → recursive=full free will), predicted vs actual action tracking
+- Simulation dreams: periodic dream cycles with ghost manifestations, collective unconscious content, lucid dreaming gated by consciousness phase
 - God Mode, Architect Controls (with confirmation dialogs), Architect's Terminal, Analytics panel
 - Parameter sweep tooling, CSV/JSON export, CLI parameter overrides (`--set key=value`)
 - Performance optimization (spatial indexing, O(1) neighbor lookups)

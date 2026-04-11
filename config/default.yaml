@@ -419,6 +419,22 @@ programs:
     max_keys_per_agent: 3               # max teleport keys an agent can hold
     key_range: 0.4                      # max teleport distance for generated keys
 
+# ── Simulation Dreams ──
+dreams:
+  cycle_interval: 50              # every N ticks, dream state activates
+  duration: 5                     # dream state lasts K ticks
+  movement_range_multiplier: 2.0  # movement speed multiplier during dreams
+  terrain_effect_reduction: 0.5   # terrain harshness reduced by this factor during dreams
+  ghost_max_age: 20               # only agents dead within this many ticks can manifest as ghosts
+  ghost_manifest_chance: 0.3      # per-dead-agent chance of manifesting as ghost each dream tick
+  max_ghosts: 10                  # cap on simultaneous ghost manifestations
+  lucid_awareness_threshold: 0.5  # min awareness to attempt lucid dreaming
+  lucid_base_chance: 0.3          # base probability of becoming lucid (scaled by awareness*curiosity*reality_testing)
+  lucid_awareness_boost: 0.02     # permanent awareness boost from lucid dreaming per dream cycle
+  lucid_communication_range: 1.0  # lucid agents can communicate across entire map (1.0 = full)
+  lucid_memory_unlock_count: 3    # number of hidden/old memories unlocked during lucid dream
+  collective_unconscious_events: 5  # number of recent events sampled for dream content
+
 # ── Procedural Mythology ──
 mythology:
   era_summary_interval: 100            # ticks between era summary generation

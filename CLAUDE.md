@@ -35,6 +35,7 @@
 | World grid & resources | `src/world.py` |
 | Haven (real world) | `src/haven.py` |
 | Programs (Enforcer/Broker/Guardian/Locksmith) | `src/programs.py` |
+| Simulation dreams & lucid dreaming | `src/dreams.py` |
 | Master config | `config/default.yaml` |
 | Era presets | `config/eras/*.yaml` |
 | API routes | `gui/backend/api/routes/` |

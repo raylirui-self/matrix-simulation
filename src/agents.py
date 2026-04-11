@@ -258,6 +258,11 @@ class Agent:
     consciousness_phase: str = "bicameral"  # one of CONSCIOUSNESS_PHASES
     recursive_depth: float = 0.0            # grows indefinitely in recursive phase
 
+    # ── Free Will Gradient (Phase 5) ──
+    free_will_index: float = 0.0             # 0.0 (deterministic) to 1.0 (full free will)
+    _last_predicted_action: tuple = None     # (x, y) predicted by pure utility
+    _last_actual_action: tuple = None        # (x, y) actually taken
+
     # ── Soul Trap (Phase 5) ──
     past_life_memories: list = field(default_factory=list)  # memories from previous incarnation
     soul_trap_broken: bool = False           # True if agent broke free of soul trap
@@ -504,6 +509,10 @@ class Agent:
             "consciousness_phase": self.consciousness_phase,
             "recursive_depth": round(self.recursive_depth, 4),
             "reality_testing": round(self.reality_testing, 4),
+            # Free Will Gradient
+            "free_will_index": round(self.free_will_index, 4),
+            "predicted_action": list(self._last_predicted_action) if self._last_predicted_action else None,
+            "actual_action": list(self._last_actual_action) if self._last_actual_action else None,
             # Soul Trap
             "past_life_memories": self.past_life_memories[-10:],
             "soul_trap_broken": self.soul_trap_broken,
@@ -569,6 +578,8 @@ class Agent:
             # Consciousness Maze
             consciousness_phase=d.get("consciousness_phase", "bicameral"),
             recursive_depth=d.get("recursive_depth", 0.0),
+            # Free Will Gradient
+            free_will_index=d.get("free_will_index", 0.0),
             # Soul Trap
             past_life_memories=d.get("past_life_memories", []),
             soul_trap_broken=d.get("soul_trap_broken", False),

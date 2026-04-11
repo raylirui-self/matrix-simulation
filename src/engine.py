@@ -37,6 +37,10 @@ from src.mythology import (
     generate_faction_myths, identify_legendary_candidates,
     create_legendary_figure, process_legend_discoveries,
 )
+from src.dreams import (
+    DreamState, process_dreams, get_dream_movement_multiplier,
+    get_dream_terrain_reduction,
+)
 
 
 @dataclass
@@ -85,6 +89,7 @@ class TickResult:
     tech_progress: dict = field(default_factory=dict)
     cinematic_events: list = field(default_factory=list)
     mythology_stats: dict = field(default_factory=dict)
+    dream_stats: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -125,6 +130,9 @@ class SimulationEngine:
 
         # ── Mythology (procedural narrative) ──
         self.mythology_state: MythologyState = MythologyState()
+
+        # ── Dreams (simulation dream cycles) ──
+        self.dream_state: DreamState = DreamState()
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
@@ -423,13 +431,30 @@ class SimulationEngine:
         _prev_anomaly_id = self.matrix_state.anomaly_id
         _prev_cycle = self.matrix_state.cycle_number
 
+        # ── Dreams: process dream state (must run before movement for modifiers) ──
+        dream_stats = process_dreams(
+            sim_alive, self.agents, self.dream_state, tick, self.cfg,
+            recent_events=self.recent_events,
+        )
+
         # ── System 5: Agency — Move agents ──
         # Rebuild spatial index for O(1) neighbor lookups
         build_spatial_index(sim_alive, self.cfg)
+
+        # Apply dream movement multiplier if dreaming
+        dream_move_mult = get_dream_movement_multiplier(self.dream_state, self.cfg)
+
         for a in sim_alive:
             if a.is_sentinel:
                 continue  # Sentinels move via matrix_layer
-            new_x, new_y = compute_move(a, self.world, sim_alive, self.cfg)
+            # During dreams, temporarily boost movement speed
+            if dream_move_mult != 1.0:
+                orig_speed = self.cfg.agency.movement_speed
+                self.cfg.agency.movement_speed = orig_speed * dream_move_mult
+                new_x, new_y = compute_move(a, self.world, sim_alive, self.cfg)
+                self.cfg.agency.movement_speed = orig_speed
+            else:
+                new_x, new_y = compute_move(a, self.world, sim_alive, self.cfg)
             a.x, a.y = new_x, new_y
 
         # ── Update spatial grid ──
@@ -521,6 +546,9 @@ class SimulationEngine:
         elder_mult = self.cfg.lifecycle.elder_decay_multiplier
         harshness = self.cfg.environment.harshness
 
+        # During dreams, terrain effects are reduced
+        dream_terrain_mult = get_dream_terrain_reduction(self.dream_state, self.cfg)
+
         newly_dead = []
         for a in alive:
             if a.is_sentinel:
@@ -534,7 +562,7 @@ class SimulationEngine:
                 continue
 
             cell = self.world.get_cell(a.x, a.y)
-            decay = base_decay * harshness * cell.harshness_modifier
+            decay = base_decay * harshness * cell.harshness_modifier * dream_terrain_mult
 
             resource_factor = 1.5 - cell.effective_resources
             decay *= resource_factor
@@ -907,6 +935,7 @@ class SimulationEngine:
             tech_progress=tech_progress,
             cinematic_events=cinematic_events,
             mythology_stats=mythology_stats,
+            dream_stats=dream_stats,
         )
 
     def _apply_event(self, event: WorldEvent):
