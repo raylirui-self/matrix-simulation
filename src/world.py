@@ -11,6 +11,54 @@ from src.config_loader import SimConfig
 
 
 @dataclass
+class Artifact:
+    """A remnant left by dead agents or collapsed civilizations.
+    Survives cycle resets — the archaeological record of the simulation."""
+    artifact_id: int
+    faction_name: str           # faction that produced it (or "unknown")
+    era_tick: int               # tick when created
+    cycle_number: int           # which Matrix cycle
+    awareness_level: float      # awareness of the agent who left it
+    tech_level: float           # avg tech skill at time of creation
+    key_events: list = field(default_factory=list)   # notable events from the agent's life
+    artifact_type: str = "ruin"  # ruin, inscription, tech_remnant
+
+    def to_dict(self) -> dict:
+        return {
+            "artifact_id": self.artifact_id,
+            "faction_name": self.faction_name,
+            "era_tick": self.era_tick,
+            "cycle_number": self.cycle_number,
+            "awareness_level": round(self.awareness_level, 4),
+            "tech_level": round(self.tech_level, 4),
+            "key_events": self.key_events[:5],
+            "artifact_type": self.artifact_type,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Artifact":
+        return cls(
+            artifact_id=d["artifact_id"],
+            faction_name=d.get("faction_name", "unknown"),
+            era_tick=d.get("era_tick", 0),
+            cycle_number=d.get("cycle_number", 1),
+            awareness_level=d.get("awareness_level", 0.0),
+            tech_level=d.get("tech_level", 0.0),
+            key_events=d.get("key_events", []),
+            artifact_type=d.get("artifact_type", "ruin"),
+        )
+
+
+_artifact_id_counter = 0
+
+
+def next_artifact_id() -> int:
+    global _artifact_id_counter
+    _artifact_id_counter += 1
+    return _artifact_id_counter
+
+
+@dataclass
 class TechBreakthrough:
     """A technology that has been unlocked in a specific cell."""
     name: str
@@ -33,6 +81,7 @@ class ResourceCell:
     carrying_capacity: int
     regeneration_rate: float
     unlocked_techs: list[TechBreakthrough] = field(default_factory=list)
+    artifacts: list[Artifact] = field(default_factory=list)
     agent_count: int = 0
 
     resource_cap: float = 1.5
@@ -65,6 +114,7 @@ class ResourceCell:
             "agent_count": self.agent_count,
             "pressure": round(self.pressure, 2),
             "techs": [t.name for t in self.unlocked_techs],
+            "artifacts": [a.to_dict() for a in self.artifacts],
         }
 
 
@@ -244,6 +294,7 @@ class ResourceGrid:
                                "resource_bonus": t.resource_bonus,
                                "capacity_bonus": t.capacity_bonus}
                               for t in cell.unlocked_techs],
+                    "artifacts": [a.to_dict() for a in cell.artifacts],
                 }
                 row_data.append(cell_data)
             cells_data.append(row_data)
@@ -277,6 +328,7 @@ class ResourceGrid:
                             resource_bonus=td.get("resource_bonus", 0.05),
                             capacity_bonus=td.get("capacity_bonus", 2),
                         ))
+                artifacts = [Artifact.from_dict(ad) for ad in cd.get("artifacts", [])]
                 cell = ResourceCell(
                     row=cd["row"], col=cd["col"], terrain=cd["terrain"],
                     base_resources=cd["base_resources"],
@@ -287,6 +339,7 @@ class ResourceGrid:
                     carrying_capacity=cd.get("carrying_capacity", cfg.environment.base_carrying_capacity),
                     regeneration_rate=cd.get("regeneration_rate", cfg.environment.regeneration_rate),
                     unlocked_techs=techs,
+                    artifacts=artifacts,
                 )
                 row.append(cell)
             grid.cells.append(row)

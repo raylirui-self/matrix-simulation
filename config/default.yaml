@@ -324,6 +324,15 @@ matrix:
   core_fight_awareness_boost: 0.3       # global awareness boost on successful fight
   core_reset_haven_preserved: true      # Haven survives cycle reset
 
+  # ── Consciousness Maze (Phase 5) ──
+  strange_loop_radius: 0.15              # max distance for strange loop formation
+  strange_loop_min_awareness: 0.3        # both agents need awareness above this
+  strange_loop_boost: 0.01               # awareness boost per strange loop per tick
+
+# ── Agent Archaeology (Phase 5) ──
+archaeology:
+  discovery_chance: 0.01                 # base chance per tick for artifact discovery
+
 # ── The Haven — The Real World ──
 haven:
   enabled: true

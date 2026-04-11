@@ -12,7 +12,10 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from src.agents import Agent, Bond, Traits, next_id, SKILL_NAMES
+from src.agents import (
+    Agent, Bond, Traits, next_id, SKILL_NAMES,
+    CONSCIOUSNESS_PHASES, CONSCIOUSNESS_PHASE_THRESHOLDS,
+)
 from src.programs import guardian_intercept_sentinel
 
 
@@ -57,6 +60,94 @@ class MatrixState:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+def update_consciousness_phase(agent: Agent, tick: int) -> Optional[str]:
+    """Update an agent's consciousness phase based on awareness.
+    Returns the new phase name if a transition occurred, else None."""
+    old_phase = agent.consciousness_phase
+    new_phase = old_phase
+
+    # Walk thresholds in reverse to find the highest qualifying phase
+    for phase in reversed(CONSCIOUSNESS_PHASES):
+        if agent.awareness >= CONSCIOUSNESS_PHASE_THRESHOLDS[phase]:
+            new_phase = phase
+            break
+
+    if new_phase != old_phase:
+        agent.consciousness_phase = new_phase
+        # Recursive phase: track growing depth (no endstate)
+        if new_phase == "recursive":
+            agent.recursive_depth = max(agent.recursive_depth, agent.awareness)
+        return new_phase
+
+    # Even within recursive, depth keeps growing
+    if agent.consciousness_phase == "recursive":
+        agent.recursive_depth = max(agent.recursive_depth, agent.awareness)
+
+    return None
+
+
+def process_strange_loops(agents: list[Agent], tick: int, cfg) -> dict:
+    """Strange Loops: when two bonded agents mutually model each other
+    (both aware, bonded), a self-referential loop forms that accelerates
+    awareness growth for both.
+
+    Returns stats about strange loops formed this tick."""
+    mx_cfg = cfg.matrix
+    loop_radius = getattr(mx_cfg, 'strange_loop_radius', 0.15)
+    loop_min_awareness = getattr(mx_cfg, 'strange_loop_min_awareness', 0.3)
+    loop_boost = getattr(mx_cfg, 'strange_loop_boost', 0.01)
+
+    stats = {"strange_loops_formed": 0}
+    seen_pairs = set()
+
+    aware_agents = [a for a in agents if a.alive and not a.is_sentinel
+                    and a.awareness >= loop_min_awareness]
+
+    for a in aware_agents:
+        for bond in a.bonds:
+            if bond.bond_type not in ("friend", "mate", "family", "resistance", "ally"):
+                continue
+            b = next((ag for ag in aware_agents if ag.id == bond.target_id), None)
+            if b is None:
+                continue
+
+            # Check mutual bond
+            b_bond = b.has_bond_with(a.id)
+            if b_bond is None:
+                continue
+
+            # Avoid double-counting
+            pair = (min(a.id, b.id), max(a.id, b.id))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+
+            # Both must be within range
+            if spatial_distance(a, b) > loop_radius:
+                continue
+
+            # Strange loop forms: mutual awareness acceleration
+            # Boost scales with bond strength and min awareness of the pair
+            min_aw = min(a.awareness, b.awareness)
+            avg_strength = (bond.strength + b_bond.strength) / 2
+            boost = loop_boost * avg_strength * (1.0 + min_aw)
+
+            a.awareness = min(1.0, a.awareness + boost)
+            b.awareness = min(1.0, b.awareness + boost)
+            stats["strange_loops_formed"] += 1
+
+            # Chronicle the loop formation (once per pair per 50 ticks)
+            if tick % 50 == 0:
+                a.add_chronicle(tick, "strange_loop",
+                                f"Strange loop with #{b.id} — mutual awareness accelerating",
+                                partner_id=b.id)
+                b.add_chronicle(tick, "strange_loop",
+                                f"Strange loop with #{a.id} — mutual awareness accelerating",
+                                partner_id=a.id)
+
+    return stats
+
+
 def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                    tick: int, cfg) -> dict:
     """Run one tick of Matrix meta-layer dynamics. Returns stats."""
@@ -99,6 +190,21 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         spirituality = a.beliefs.get("spirituality", 0)
         if spirituality > 0.2:
             base_growth += spirituality * mx_cfg.awareness_growth_rate * 0.5
+
+        # Consciousness phase modifiers — deeper phases grow faster
+        if a.consciousness_phase == "questioning":
+            base_growth *= 1.2
+        elif a.consciousness_phase == "self_aware":
+            base_growth *= 1.5
+        elif a.consciousness_phase == "lucid":
+            base_growth *= 2.0
+        elif a.consciousness_phase == "recursive":
+            base_growth *= 2.5
+
+        # Reality testing skill accelerates awareness
+        rt = a.reality_testing
+        if rt > 0.2:
+            base_growth *= (1.0 + rt * 0.5)
 
         # Age-based growth: elders question reality more (existential reflection)
         if a.phase == "elder":
@@ -183,11 +289,13 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
 
         elif glitch_type == "terrain_flicker":
             # A cell briefly changes terrain (visual only, logged)
-            # High-awareness agents nearby notice
+            # High-awareness agents nearby notice; reality_testing improves detection
             for a in non_sentinels:
-                if a.awareness > 0.4 and random.random() < 0.3:
+                detect_threshold = max(0.1, 0.4 - a.reality_testing * 0.3)
+                if a.awareness > detect_threshold and random.random() < (0.3 + a.reality_testing * 0.3):
                     a.add_memory(tick, "The terrain seemed to shift and shimmer for a moment")
-                    a.awareness = min(1.0, a.awareness + mx_cfg.glitch_awareness_boost * 0.3)
+                    rt_bonus = 1.0 + a.reality_testing * 0.5
+                    a.awareness = min(1.0, a.awareness + mx_cfg.glitch_awareness_boost * 0.3 * rt_bonus)
 
         elif glitch_type == "ghost":
             # A dead agent briefly "appears" near their old position
@@ -204,6 +312,9 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     if tick % mx_cfg.redpill_check_interval == 0:
         for a in non_sentinels:
             if a.redpilled or a.awareness < mx_cfg.redpill_threshold:
+                continue
+            # Consciousness phase gate: bicameral agents can't even perceive the choice
+            if a.consciousness_phase == "bicameral":
                 continue
             # Agent faces the choice
             system_trust = a.beliefs.get("system_trust", 0.5)
@@ -545,6 +656,21 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + ci_trust)
                 a.awareness = max(0.0, a.awareness - ci_awareness)
                 stats["awareness_suppressed"] += 1
+
+    # ── Phase 9b: Consciousness phase transitions ──
+    phase_transitions = 0
+    for a in non_sentinels:
+        new_phase = update_consciousness_phase(a, tick)
+        if new_phase is not None:
+            phase_transitions += 1
+            a.add_chronicle(tick, "phase_transition",
+                            f"Consciousness shifted to {new_phase}",
+                            old_phase=a.consciousness_phase, new_phase=new_phase)
+    stats["phase_transitions"] = phase_transitions
+
+    # ── Phase 9c: Strange Loops (mutual awareness acceleration) ──
+    loop_stats = process_strange_loops(non_sentinels, tick, cfg)
+    stats["strange_loops"] = loop_stats["strange_loops_formed"]
 
     # ── Phase 10: Exile management ──
     # Sentinels that survive too long become exiles

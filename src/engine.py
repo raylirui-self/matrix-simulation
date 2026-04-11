@@ -6,6 +6,7 @@ Systems 6-11: New (Emotions, Beliefs, Economy, Matrix, Conflict, Communication)
 """
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -13,7 +14,7 @@ from src.config_loader import SimConfig
 from src.agents import (
     Agent, SKILL_NAMES, PHASES, create_agent,
 )
-from src.world import ResourceGrid, TechBreakthrough
+from src.world import ResourceGrid, TechBreakthrough, Artifact, next_artifact_id
 from src.knowledge import CulturalMemory, parent_teaching, social_transfer_multiplier
 from src.social import process_bonds
 from src.mate_selection import process_reproduction
@@ -128,6 +129,9 @@ class SimulationEngine:
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
 
+        # ── Soul Trap: captured consciousness pool for recycling into newborns ──
+        self._soul_pool: list[dict] = []  # list of {memories, awareness, beliefs, skills, ...}
+
     def initialize(self):
         """Create initial population, apply era starting beliefs and pre-unlocked tech."""
         era = self.cfg.era_metadata
@@ -232,10 +236,168 @@ class SimulationEngine:
         # ── Dissolve wars ──
         self.wars.clear()
 
-        # ── Regenerate world resources ──
+        # ── Regenerate world resources (artifacts survive reset) ──
         for row in self.world.cells:
             for cell in row:
                 cell.current_resources = cell.base_resources
+                # Artifacts persist across cycles — this is the archaeological record
+
+    def _capture_soul(self, dead_agent: Agent, tick: int):
+        """Soul Trap: capture consciousness/memories from a dying agent for recycling."""
+        soul = {
+            "memories": list(dead_agent.memory[-10:]),
+            "memory_summary": dead_agent.memory_summary,
+            "awareness": dead_agent.awareness,
+            "consciousness_phase": dead_agent.consciousness_phase,
+            "beliefs": dict(dead_agent.beliefs),
+            "skills": dict(dead_agent.skills),
+            "faction_id": dead_agent.faction_id,
+            "redpilled": dead_agent.redpilled,
+            "soul_trap_broken": dead_agent.soul_trap_broken,
+            "incarnation_count": dead_agent.incarnation_count,
+            "tick_captured": tick,
+            "source_id": dead_agent.id,
+        }
+        self._soul_pool.append(soul)
+        # Cap pool size
+        if len(self._soul_pool) > 100:
+            self._soul_pool = self._soul_pool[-100:]
+
+    def _apply_soul_to_newborn(self, agent: Agent, tick: int):
+        """Soul Trap: recycle captured consciousness into a newborn.
+        Memory preservation depends on the soul's awareness level."""
+        if not self._soul_pool:
+            return
+
+        soul = self._soul_pool.pop(0)  # FIFO — oldest soul first
+        agent.incarnation_count = soul["incarnation_count"] + 1
+
+        awareness = soul["awareness"]
+        was_broken = soul["soul_trap_broken"]
+
+        if was_broken:
+            # Broke the trap: full memory preservation
+            agent.past_life_memories = soul["memories"]
+            agent.awareness = min(0.5, awareness * 0.7)
+            agent.soul_trap_broken = True
+            agent.beliefs = {k: v * 0.8 for k, v in soul["beliefs"].items()}
+            for skill, val in soul["skills"].items():
+                if skill in agent.skills:
+                    agent.skills[skill] = max(agent.skills[skill], val * 0.5)
+            agent.add_memory(tick, f"INCARNATION #{agent.incarnation_count}: I remember everything. I have lived before.")
+            agent.add_chronicle(tick, "soul_recycled",
+                                f"Reincarnated with full memories (incarnation #{agent.incarnation_count})",
+                                source_id=soul["source_id"], memories_preserved="full")
+        elif awareness >= 0.6:
+            # High awareness: partial memory preservation
+            kept = soul["memories"][-3:]
+            agent.past_life_memories = kept
+            agent.awareness = min(0.2, awareness * 0.3)
+            # Faint echoes of beliefs
+            for axis in agent.beliefs:
+                if axis in soul["beliefs"]:
+                    agent.beliefs[axis] = agent.beliefs[axis] * 0.7 + soul["beliefs"][axis] * 0.3
+            agent.add_memory(tick, f"INCARNATION #{agent.incarnation_count}: Faint echoes of a past life linger...")
+            agent.add_chronicle(tick, "soul_recycled",
+                                f"Reincarnated with partial memories (incarnation #{agent.incarnation_count})",
+                                source_id=soul["source_id"], memories_preserved="partial")
+        else:
+            # Default: memories wiped (normal reincarnation)
+            agent.past_life_memories = []
+            agent.incarnation_count = soul["incarnation_count"] + 1
+            # Tiny residual awareness — something feels off
+            agent.awareness = min(0.05, awareness * 0.1)
+            agent.add_chronicle(tick, "soul_recycled",
+                                f"Reincarnated with wiped memories (incarnation #{agent.incarnation_count})",
+                                source_id=soul["source_id"], memories_preserved="none")
+
+    def _create_artifact(self, dead_agent: Agent, tick: int):
+        """Create an artifact in the cell where the agent died."""
+        # Only notable agents leave artifacts
+        if dead_agent.awareness < 0.1 and dead_agent.avg_skill < 0.2:
+            return
+
+        cell = self.world.get_cell(dead_agent.x, dead_agent.y)
+
+        # Determine artifact type
+        if dead_agent.avg_skill > 0.5:
+            artifact_type = "tech_remnant"
+        elif dead_agent.awareness > 0.4:
+            artifact_type = "inscription"
+        else:
+            artifact_type = "ruin"
+
+        # Gather key events from chronicle
+        key_events = []
+        for entry in dead_agent.chronicle[-5:]:
+            key_events.append(entry.description)
+
+        faction_name = "unknown"
+        if dead_agent.faction_id is not None:
+            faction = next((f for f in self.factions if f.id == dead_agent.faction_id), None)
+            if faction:
+                faction_name = faction.name
+
+        artifact = Artifact(
+            artifact_id=next_artifact_id(),
+            faction_name=faction_name,
+            era_tick=tick,
+            cycle_number=self.matrix_state.cycle_number,
+            awareness_level=dead_agent.awareness,
+            tech_level=dead_agent.skills.get("tech", 0.0),
+            key_events=key_events,
+            artifact_type=artifact_type,
+        )
+        cell.artifacts.append(artifact)
+        # Cap artifacts per cell
+        max_artifacts = 20
+        if len(cell.artifacts) > max_artifacts:
+            cell.artifacts = cell.artifacts[-max_artifacts:]
+
+    def _process_artifact_discovery(self, agents: list, tick: int) -> int:
+        """Agents in cells with artifacts may discover them.
+        Returns number of discoveries."""
+        discoveries = 0
+        discovery_chance = getattr(
+            getattr(self.cfg, 'archaeology', None),
+            'discovery_chance', 0.01
+        ) if hasattr(self.cfg, 'archaeology') else 0.01
+
+        for a in agents:
+            if not a.alive or a.is_sentinel:
+                continue
+            cell = self.world.get_cell(a.x, a.y)
+            if not cell.artifacts:
+                continue
+
+            # Discovery probability: base * (curiosity + logic) / 2
+            chance = discovery_chance * (a.traits.curiosity + a.skills.get("logic", 0.0)) / 2
+            if random.random() > chance:
+                continue
+
+            # Discover the oldest artifact in the cell
+            artifact = cell.artifacts[0]
+
+            # Knowledge boost
+            for skill in a.skills:
+                a.skills[skill] = min(1.0, a.skills[skill] + artifact.tech_level * 0.02)
+            a.intelligence = sum(a.skills.values()) / len(a.skills)
+
+            # Awareness clue from high-awareness artifacts
+            if artifact.awareness_level > 0.3:
+                awareness_boost = artifact.awareness_level * 0.05
+                a.awareness = min(1.0, a.awareness + awareness_boost)
+
+            a.add_memory(tick,
+                         f"Discovered {artifact.artifact_type} from {artifact.faction_name} "
+                         f"(Cycle {artifact.cycle_number}): {artifact.key_events[0] if artifact.key_events else 'ancient remnant'}")
+            a.add_chronicle(tick, "artifact_discovered",
+                            f"Discovered {artifact.artifact_type} from Cycle {artifact.cycle_number}",
+                            artifact_id=artifact.artifact_id,
+                            faction=artifact.faction_name)
+            discoveries += 1
+
+        return discoveries
 
     def get_alive_agents(self) -> list[Agent]:
         return [a for a in self.agents if a.alive]
@@ -286,6 +448,9 @@ class SimulationEngine:
             new_children = process_reproduction(self.agents, tick, self.cfg)
         for child in new_children:
             self.cultural_memory.apply_to_newborn(child)
+            # Soul Trap: recycle captured consciousness into newborn
+            if self._soul_pool:
+                self._apply_soul_to_newborn(child, tick)
             self.agents.append(child)
             births += 1
             # System 6: Emotional response to birth
@@ -409,6 +574,8 @@ class SimulationEngine:
                 for _ in range(immigrants_needed):
                     immigrant = create_agent(self.cfg, randomize_age=True)
                     self.cultural_memory.apply_to_newborn(immigrant)
+                    if self._soul_pool:
+                        self._apply_soul_to_newborn(immigrant, tick)
                     immigrant.add_memory(tick, "Immigrated to the settlement")
                     self.agents.append(immigrant)
                     births += 1
@@ -419,6 +586,18 @@ class SimulationEngine:
             on_agent_death_emotions(dead, self.agents, tick, self.cfg)
             # System 8: Inheritance
             process_inheritance(dead, self.agents, tick, self.cfg)
+            # Check if agent breaks the soul trap before death
+            # Requires: recursive consciousness + high awareness + broken free or high reality_testing
+            if (dead.consciousness_phase == "recursive"
+                    and dead.awareness >= 0.9
+                    and (dead.soul_trap_broken or dead.reality_testing >= 0.7)):
+                dead.soul_trap_broken = True
+                dead.add_chronicle(tick, "soul_trap_broken",
+                                   "Broke free of the soul trap — memories will persist across incarnations")
+            # Soul Trap: capture consciousness for recycling
+            self._capture_soul(dead, tick)
+            # Archaeology: leave artifacts
+            self._create_artifact(dead, tick)
             # Revenge: mate seeks vengeance for killed partner
             if dead.killed_by is not None:
                 for bond in dead.bonds:
@@ -469,6 +648,9 @@ class SimulationEngine:
                         a.add_chronicle(tick, "breakthrough", f"Witnessed breakthrough: {bt.name}", tech=bt.name)
                     on_breakthrough_emotions(cell_agents, tick)
 
+        # ── Artifact discovery (Agent Archaeology) ──
+        artifact_discoveries = self._process_artifact_discovery(sim_alive, tick)
+
         # ── Protagonist management ──
         self.protagonist_ids = auto_select_protagonists(
             self.agents, self.cfg, self.protagonist_ids
@@ -499,6 +681,9 @@ class SimulationEngine:
         if check_cycle_reset(self.matrix_state, self.agents, self.cfg):
             self._perform_cycle_reset(tick)
             matrix_stats["cycle_reset"] = True
+
+        matrix_stats["artifact_discoveries"] = artifact_discoveries
+        matrix_stats["soul_pool_size"] = len(self._soul_pool)
 
         # ── Programs: First-Class Entities (Enforcer, Broker, Guardian, Locksmith) ──
         program_stats = process_programs(

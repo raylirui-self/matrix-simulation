@@ -13,12 +13,25 @@ PHASES = ["infant", "child", "adolescent", "adult", "elder"]
 EMOTION_NAMES = ["happiness", "fear", "anger", "grief", "hope"]
 BELIEF_AXES = ["individualism", "tradition", "system_trust", "spirituality"]
 
+# Consciousness phases — qualitative states that gate behavioral changes
+# Ordered by depth: bicameral < questioning < self_aware < lucid < recursive
+CONSCIOUSNESS_PHASES = ["bicameral", "questioning", "self_aware", "lucid", "recursive"]
+CONSCIOUSNESS_PHASE_THRESHOLDS = {
+    "bicameral": 0.0,      # default — hears Architect's voice as own
+    "questioning": 0.15,    # "wait, that thought wasn't mine"
+    "self_aware": 0.35,     # recognizes self as separate from system
+    "lucid": 0.6,           # perceives simulation structure
+    "recursive": 0.85,      # self-referential awareness, no endstate
+}
+
 # Chronicle event types — structured life events for narrative generation
 CHRONICLE_TYPES = [
     "born", "first_friend", "first_combat", "faction_join", "faction_leave",
     "mate_found", "child_born", "witnessed_death", "red_pill", "blue_pill",
     "became_anomaly", "quest_stage", "cycle_reset", "jack_out", "jack_in",
     "recruited", "became_recruiter", "breakthrough", "death",
+    "phase_transition", "strange_loop", "artifact_discovered",
+    "soul_recycled", "soul_trap_broken",
 ]
 
 _agent_id_counter = 0
@@ -241,6 +254,15 @@ class Agent:
     memory_summary: str = ""           # Compressed summary of older memories
     _last_summary_tick: int = 0        # When the summary was last updated
 
+    # ── Consciousness Maze (Phase 5) ──
+    consciousness_phase: str = "bicameral"  # one of CONSCIOUSNESS_PHASES
+    recursive_depth: float = 0.0            # grows indefinitely in recursive phase
+
+    # ── Soul Trap (Phase 5) ──
+    past_life_memories: list = field(default_factory=list)  # memories from previous incarnation
+    soul_trap_broken: bool = False           # True if agent broke free of soul trap
+    incarnation_count: int = 1               # how many lives this soul has lived
+
     # ── Social tracking for friend formation ──
     proximity_ticks: dict = field(default_factory=dict)
 
@@ -258,6 +280,13 @@ class Agent:
         """How emotionally charged the agent is (0-1)."""
         vals = list(self.emotions.values())
         return max(vals) - min(vals) if vals else 0.0
+
+    @property
+    def reality_testing(self) -> float:
+        """Derived stat: ability to detect inconsistencies in the simulation.
+        Based on logic skill + curiosity trait. Range 0-1."""
+        logic = self.skills.get("logic", 0.0)
+        return min(1.0, (logic * 0.6 + self.traits.curiosity * 0.4))
 
     @property
     def belief_extremism(self) -> float:
@@ -471,6 +500,14 @@ class Agent:
             "inner_monologue": self.inner_monologue[-10:],
             "chronicle": [c.to_dict() for c in self.chronicle],
             "memory_summary": self.memory_summary,
+            # Consciousness Maze
+            "consciousness_phase": self.consciousness_phase,
+            "recursive_depth": round(self.recursive_depth, 4),
+            "reality_testing": round(self.reality_testing, 4),
+            # Soul Trap
+            "past_life_memories": self.past_life_memories[-10:],
+            "soul_trap_broken": self.soul_trap_broken,
+            "incarnation_count": self.incarnation_count,
             "proximity_ticks": {},  # Don't persist
         }
 
@@ -529,6 +566,13 @@ class Agent:
             chronicle=[ChronicleEntry.from_dict(c) for c in d.get("chronicle", [])],
             # Memory summary
             memory_summary=d.get("memory_summary", ""),
+            # Consciousness Maze
+            consciousness_phase=d.get("consciousness_phase", "bicameral"),
+            recursive_depth=d.get("recursive_depth", 0.0),
+            # Soul Trap
+            past_life_memories=d.get("past_life_memories", []),
+            soul_trap_broken=d.get("soul_trap_broken", False),
+            incarnation_count=d.get("incarnation_count", 1),
         )
         return a
 
