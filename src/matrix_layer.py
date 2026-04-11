@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.agents import (
@@ -21,6 +21,91 @@ from src.programs import guardian_intercept_sentinel
 
 def spatial_distance(a: Agent, b: Agent) -> float:
     return math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+
+
+# ═══════════════════════════════════════════════════
+# Gnostic Mythology Layer
+# ═══════════════════════════════════════════════════
+
+@dataclass
+class DemiurgeState:
+    """The Architect's psychology — fear, pride, confusion influence system behavior."""
+    fear: float = 0.1       # fear of losing control
+    pride: float = 0.5      # pride in creation
+    confusion: float = 0.0  # confusion when agents behave unexpectedly
+
+    @property
+    def dominant_emotion(self) -> str:
+        emotions = {"fear": self.fear, "pride": self.pride, "confusion": self.confusion}
+        return max(emotions, key=emotions.get)
+
+    @property
+    def is_panicked(self) -> bool:
+        return self.fear > 0.6
+
+    @property
+    def is_proud(self) -> bool:
+        return self.pride > 0.7 and self.fear < 0.3
+
+    def to_dict(self) -> dict:
+        return {
+            "fear": round(self.fear, 4),
+            "pride": round(self.pride, 4),
+            "confusion": round(self.confusion, 4),
+            "dominant_emotion": self.dominant_emotion,
+            "is_panicked": self.is_panicked,
+            "is_proud": self.is_proud,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "DemiurgeState":
+        return cls(
+            fear=d.get("fear", 0.1),
+            pride=d.get("pride", 0.5),
+            confusion=d.get("confusion", 0.0),
+        )
+
+
+@dataclass
+class Archon:
+    """A specialized Sentinel governing one simulation system.
+    Destroying an Archon releases that system from Architect control."""
+    system_name: str       # "emotion", "economy", "belief", "communication"
+    health: float = 1.0
+    alive: bool = True
+    x: float = 0.5
+    y: float = 0.5
+
+    def to_dict(self) -> dict:
+        return {
+            "system_name": self.system_name,
+            "health": round(self.health, 4),
+            "alive": self.alive,
+            "x": round(self.x, 4),
+            "y": round(self.y, 4),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Archon":
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class PleromGlimpse:
+    """Data for a Pleroma glimpse event, used for frontend visualization."""
+    agent_id: int
+    tick: int
+    x: float
+    y: float
+    depth: float  # recursive_depth of the agent
+    trigger: str  # "awareness_spike" or "lucid_dream"
+
+    def to_dict(self) -> dict:
+        return {
+            "agent_id": self.agent_id, "tick": self.tick,
+            "x": round(self.x, 4), "y": round(self.y, 4),
+            "depth": round(self.depth, 4), "trigger": self.trigger,
+        }
 
 
 @dataclass
@@ -39,6 +124,12 @@ class MatrixState:
     core_choice: Optional[str] = None   # "reset" or "fight" — set when Anomaly reaches Core
     core_choice_outcome: Optional[str] = None  # "status_quo", "freedom", "system_failure"
 
+    # ── Gnostic Mythology Layer ──
+    demiurge: DemiurgeState = field(default_factory=DemiurgeState)
+    archons: list[Archon] = field(default_factory=list)
+    released_systems: list[str] = field(default_factory=list)  # systems freed from Architect
+    pleroma_glimpses: list[PleromGlimpse] = field(default_factory=list)  # recent glimpses for frontend
+
     def to_dict(self) -> dict:
         return {
             "cycle_number": self.cycle_number,
@@ -53,11 +144,27 @@ class MatrixState:
             "ticks_since_reset": self.ticks_since_reset,
             "core_choice": self.core_choice,
             "core_choice_outcome": self.core_choice_outcome,
+            "demiurge": self.demiurge.to_dict(),
+            "archons": [a.to_dict() for a in self.archons],
+            "released_systems": list(self.released_systems),
+            "pleroma_glimpses": [g.to_dict() for g in self.pleroma_glimpses],
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> MatrixState:
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+    def from_dict(cls, d: dict) -> "MatrixState":
+        simple_fields = {k: v for k, v in d.items()
+                         if k in cls.__dataclass_fields__
+                         and k not in ("demiurge", "archons", "pleroma_glimpses")}
+        state = cls(**simple_fields)
+        if "demiurge" in d:
+            state.demiurge = DemiurgeState.from_dict(d["demiurge"])
+        if "archons" in d:
+            state.archons = [Archon.from_dict(a) for a in d["archons"]]
+        if "pleroma_glimpses" in d:
+            state.pleroma_glimpses = [
+                PleromGlimpse(**g) for g in d["pleroma_glimpses"]
+            ]
+        return state
 
 
 def update_consciousness_phase(agent: Agent, tick: int) -> Optional[str]:
@@ -254,8 +361,9 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                 if transfer > 0:
                     b.awareness = min(1.0, b.awareness + transfer)
 
-    # ── Phase 3: Glitches ──
-    if random.random() < mx_cfg.glitch_probability:
+    # ── Phase 3: Glitches (Demiurge confusion increases probability) ──
+    glitch_prob = mx_cfg.glitch_probability + get_demiurge_glitch_bonus(matrix_state, cfg)
+    if random.random() < glitch_prob:
         matrix_state.glitches_this_cycle += 1
         stats["glitches"] = 1
 
@@ -556,8 +664,9 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     if matrix_state.control_index < mx_cfg.sentinel_deploy_threshold:
         # Scale max sentinels with population (1 per 20 agents, min from config)
         pop_scaled_max = max(mx_cfg.max_sentinels, len(non_sentinels) // 20)
-        # How many sentinels do we need?
-        desired = int((1.0 - matrix_state.control_index) * pop_scaled_max)
+        # How many sentinels do we need? (Demiurge psychology influences deployment)
+        demiurge_mult = get_demiurge_sentinel_multiplier(matrix_state, cfg)
+        desired = int((1.0 - matrix_state.control_index) * pop_scaled_max * demiurge_mult)
         current = len(sentinels)
 
         if current < desired:
@@ -753,6 +862,301 @@ def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bo
         return True
 
     return False
+
+
+# ═══════════════════════════════════════════════════
+# Gnostic Mythology Layer — Functions
+# ═══════════════════════════════════════════════════
+
+def update_demiurge(matrix_state: MatrixState, agents: list[Agent], tick: int, cfg) -> dict:
+    """Update the Demiurge's emotional state based on simulation conditions.
+    Returns stats about Demiurge state."""
+    mx_cfg = cfg.matrix
+    demi_cfg = getattr(mx_cfg, 'demiurge', None)
+    d = matrix_state.demiurge
+
+    base_fear = getattr(demi_cfg, 'base_fear', 0.1) if demi_cfg else 0.1
+    base_pride = getattr(demi_cfg, 'base_pride', 0.5) if demi_cfg else 0.5
+    base_confusion = getattr(demi_cfg, 'base_confusion', 0.0) if demi_cfg else 0.0
+    fear_sens = getattr(demi_cfg, 'fear_awareness_sensitivity', 2.0) if demi_cfg else 2.0
+    pride_sens = getattr(demi_cfg, 'pride_control_sensitivity', 1.5) if demi_cfg else 1.5
+    confusion_anomaly = getattr(demi_cfg, 'confusion_anomaly_bonus', 0.3) if demi_cfg else 0.3
+
+    non_sentinels = [a for a in agents if a.alive and not a.is_sentinel]
+    n = len(non_sentinels)
+    if n == 0:
+        return {"demiurge": d.to_dict()}
+
+    # Fear increases with awareness spread, decreases with control
+    awareness_ratio = matrix_state.total_awareness / max(1, n)
+    d.fear = max(0.0, min(1.0, base_fear + awareness_ratio * fear_sens - matrix_state.control_index * 0.3))
+
+    # Pride increases with control, decreases with awareness
+    d.pride = max(0.0, min(1.0, base_pride + matrix_state.control_index * pride_sens * 0.5 - awareness_ratio * 0.5))
+
+    # Confusion spikes when anomaly exists or unexpected behaviors occur
+    redpilled_ratio = sum(1 for a in non_sentinels if a.redpilled) / max(1, n)
+    d.confusion = max(0.0, min(1.0, base_confusion + redpilled_ratio * 0.5))
+    if matrix_state.anomaly_id is not None:
+        d.confusion = min(1.0, d.confusion + confusion_anomaly)
+
+    # Destroyed archons increase confusion
+    destroyed_archons = sum(1 for a in matrix_state.archons if not a.alive)
+    d.confusion = min(1.0, d.confusion + destroyed_archons * 0.15)
+
+    return {"demiurge": d.to_dict()}
+
+
+def get_demiurge_sentinel_multiplier(matrix_state: MatrixState, cfg) -> float:
+    """Get the Demiurge's influence on sentinel deployment count.
+    Panicked Demiurge deploys more; proud Demiurge deploys fewer."""
+    demi_cfg = getattr(getattr(cfg, 'matrix', None), 'demiurge', None)
+    d = matrix_state.demiurge
+
+    if d.is_panicked:
+        return getattr(demi_cfg, 'panic_sentinel_multiplier', 2.0) if demi_cfg else 2.0
+    elif d.is_proud:
+        return getattr(demi_cfg, 'proud_sentinel_reduction', 0.5) if demi_cfg else 0.5
+    return 1.0
+
+
+def get_demiurge_glitch_bonus(matrix_state: MatrixState, cfg) -> float:
+    """Extra glitch probability from confused Demiurge."""
+    demi_cfg = getattr(getattr(cfg, 'matrix', None), 'demiurge', None)
+    d = matrix_state.demiurge
+    if d.confusion > 0.5:
+        return getattr(demi_cfg, 'confused_glitch_bonus', 0.02) if demi_cfg else 0.02
+    return 0.0
+
+
+def init_archons(matrix_state: MatrixState, cfg) -> None:
+    """Initialize Archons for each governed system if not already present."""
+    mx_cfg = cfg.matrix
+    systems = getattr(mx_cfg, 'archon_systems', ["emotion", "economy", "belief", "communication"])
+    if isinstance(systems, str):
+        systems = [systems]
+
+    existing = {a.system_name for a in matrix_state.archons}
+    health = getattr(mx_cfg, 'archon_health', 1.0)
+    for sys_name in systems:
+        if sys_name not in existing:
+            # Position archons in different quadrants
+            idx = list(systems).index(sys_name) if sys_name in list(systems) else 0
+            positions = [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
+            pos = positions[idx % len(positions)]
+            matrix_state.archons.append(Archon(
+                system_name=sys_name, health=health, alive=True,
+                x=pos[0], y=pos[1],
+            ))
+
+
+def process_archons(agents: list[Agent], matrix_state: MatrixState,
+                    tick: int, cfg) -> dict:
+    """Process Archon interactions — damage from Anomaly/resistance, regen, death.
+    Returns stats about Archon state."""
+    mx_cfg = cfg.matrix
+    combat_power = getattr(mx_cfg, 'archon_combat_power', 0.9)
+    regen = getattr(mx_cfg, 'archon_regen_rate', 0.005)
+
+    stats = {"archons_alive": 0, "archons_destroyed": 0, "released_systems": list(matrix_state.released_systems)}
+    alive_archons = [a for a in matrix_state.archons if a.alive]
+    stats["archons_alive"] = len(alive_archons)
+
+    for archon in alive_archons:
+        # Regenerate health
+        archon.health = min(1.0, archon.health + regen)
+
+        # Check for attackers: Anomaly or resistance agents nearby
+        for agent in agents:
+            if not agent.alive or agent.is_sentinel:
+                continue
+            if not (agent.is_anomaly or agent.redpilled):
+                continue
+            dist = math.sqrt((agent.x - archon.x) ** 2 + (agent.y - archon.y) ** 2)
+            if dist > 0.1:
+                continue
+
+            # Combat: agent deals damage based on skills vs archon combat power
+            agent_power = agent.avg_skill * (1.5 if agent.is_anomaly else 0.8)
+            damage = max(0.01, (agent_power - combat_power * 0.5) * 0.05)
+            archon.health -= damage
+
+            # Archon retaliates
+            retaliation = combat_power * 0.02
+            agent.health = max(0.1, agent.health - retaliation)
+            agent.awareness = max(0.0, agent.awareness - retaliation * 0.5)
+
+            if archon.health <= 0:
+                archon.alive = False
+                archon.health = 0
+                if archon.system_name not in matrix_state.released_systems:
+                    matrix_state.released_systems.append(archon.system_name)
+                stats["archons_destroyed"] += 1
+
+                agent.add_memory(tick, f"ARCHON DESTROYED: The {archon.system_name} Archon has fallen!")
+                agent.add_chronicle(tick, "archon_destroyed",
+                                    f"Destroyed the {archon.system_name} Archon — system released from Architect control",
+                                    system=archon.system_name)
+                break  # One kill per tick per archon
+
+    stats["archons_alive"] = sum(1 for a in matrix_state.archons if a.alive)
+    stats["released_systems"] = list(matrix_state.released_systems)
+    return stats
+
+
+def get_chaos_multiplier(system_name: str, matrix_state: MatrixState, cfg) -> float:
+    """Get the chaos multiplier for a system if its Archon has been destroyed.
+    Returns 1.0 if Archon is alive, archon_chaos_multiplier if destroyed."""
+    if system_name in matrix_state.released_systems:
+        return getattr(getattr(cfg, 'matrix', None), 'archon_chaos_multiplier', 1.5)
+    return 1.0
+
+
+def process_sophia(agents: list[Agent], all_agents: list[Agent],
+                   matrix_state: MatrixState, dream_state,
+                   tick: int, cfg) -> dict:
+    """Sophia: hidden process creating meaningful coincidences.
+    Not an agent — cannot be detected or destroyed by the Architect.
+    Manifests through synchronicities that guide awakening.
+
+    Types of synchronicity:
+    1. Shared dreams: two unrelated agents have the same dream
+    2. Dead knowledge: a dead agent's knowledge appears where it shouldn't
+    3. Terrain patterns: glitch patterns form meaningful shapes
+
+    Returns stats about Sophia activity."""
+    mx_cfg = cfg.matrix
+    interval = getattr(mx_cfg, 'sophia_interval', 30)
+    if tick % interval != 0:
+        return {"sophia_active": False}
+
+    shared_dream_chance = getattr(mx_cfg, 'sophia_shared_dream_chance', 0.05)
+    dead_knowledge_chance = getattr(mx_cfg, 'sophia_dead_knowledge_chance', 0.03)
+    pattern_chance = getattr(mx_cfg, 'sophia_pattern_chance', 0.02)
+    awareness_boost = getattr(mx_cfg, 'sophia_awareness_boost', 0.03)
+
+    stats = {"sophia_active": True, "shared_dreams": 0, "dead_knowledge": 0, "terrain_patterns": 0}
+
+    non_sentinels = [a for a in agents if a.alive and not a.is_sentinel]
+    if len(non_sentinels) < 2:
+        return stats
+
+    # 1. Shared dreams: two agents receive the same dream memory
+    if random.random() < shared_dream_chance and len(non_sentinels) >= 2:
+        pair = random.sample(non_sentinels, 2)
+        dream_content = random.choice([
+            "A tower of light piercing infinite darkness",
+            "The sound of a key turning in a lock that has no door",
+            "A garden growing in reverse — flowers becoming seeds",
+            "Two mirrors facing each other, reflections within reflections",
+            "A river flowing upward, carrying fragments of forgotten names",
+        ])
+        for agent in pair:
+            agent.add_memory(tick, f"SYNCHRONICITY: Dreamed of {dream_content}")
+            agent.awareness = min(1.0, agent.awareness + awareness_boost)
+            agent.add_chronicle(tick, "sophia_synchronicity",
+                                f"Sophia's touch: shared dream — {dream_content}",
+                                partner_id=pair[1].id if agent == pair[0] else pair[0].id)
+        stats["shared_dreams"] = 1
+
+    # 2. Dead knowledge: a dead agent's knowledge appears in a living agent
+    dead = [a for a in all_agents if not a.alive and a.memory]
+    if random.random() < dead_knowledge_chance and dead and non_sentinels:
+        ghost = random.choice(dead)
+        recipient = random.choice(non_sentinels)
+        if ghost.memory:
+            leaked = random.choice(ghost.memory)
+            recipient.add_memory(tick,
+                                 f"SYNCHRONICITY: Knowledge of the dead — {leaked.get('event', 'ancient truth')} "
+                                 f"(from #{ghost.id}, who should be forgotten)")
+            recipient.awareness = min(1.0, recipient.awareness + awareness_boost)
+            # Skill boost from dead agent's knowledge
+            for skill in recipient.skills:
+                if skill in ghost.skills and ghost.skills[skill] > recipient.skills[skill]:
+                    recipient.skills[skill] = min(1.0, recipient.skills[skill] + 0.01)
+            recipient.add_chronicle(tick, "sophia_synchronicity",
+                                    f"Sophia's touch: received knowledge from dead #{ghost.id}",
+                                    source_id=ghost.id)
+            stats["dead_knowledge"] = 1
+
+    # 3. Terrain patterns: glitch patterns form meaningful shapes
+    if random.random() < pattern_chance and non_sentinels:
+        # Agents with high awareness notice the pattern
+        for agent in non_sentinels:
+            if agent.awareness > 0.3 and random.random() < agent.awareness * 0.3:
+                agent.add_memory(tick,
+                                 "SYNCHRONICITY: The terrain glitches formed a pattern — "
+                                 "a symbol that feels like it was meant for me")
+                agent.awareness = min(1.0, agent.awareness + awareness_boost * 0.5)
+                stats["terrain_patterns"] += 1
+
+    return stats
+
+
+def process_pleroma(agents: list[Agent], matrix_state: MatrixState,
+                    dream_state, tick: int, cfg) -> dict:
+    """Process Pleroma glimpses for highest-awareness agents.
+
+    The Pleroma is a hidden layer of pure information/potential,
+    accessible only to recursive-phase agents during:
+    1. Extreme awareness spikes (awareness > pleroma_min_awareness)
+    2. Lucid dreaming in recursive phase
+
+    Returns stats and visualization data for frontend."""
+    mx_cfg = cfg.matrix
+    min_awareness = getattr(mx_cfg, 'pleroma_min_awareness', 0.9)
+    min_phase = getattr(mx_cfg, 'pleroma_min_phase', "recursive")
+    dream_chance = getattr(mx_cfg, 'pleroma_dream_lucid_chance', 0.2)
+    spike_chance = getattr(mx_cfg, 'pleroma_spike_chance', 0.05)
+
+    stats = {"pleroma_glimpses": 0}
+    matrix_state.pleroma_glimpses.clear()  # fresh each tick
+
+    is_dreaming = dream_state.is_dreaming if dream_state else False
+    lucid_ids = set(dream_state.lucid_agent_ids) if dream_state else set()
+
+    for agent in agents:
+        if not agent.alive or agent.is_sentinel:
+            continue
+        if agent.consciousness_phase != min_phase:
+            continue
+        if agent.awareness < min_awareness:
+            continue
+
+        glimpsed = False
+        trigger = ""
+
+        # Path 1: lucid dream glimpse
+        if is_dreaming and agent.id in lucid_ids:
+            if random.random() < dream_chance:
+                glimpsed = True
+                trigger = "lucid_dream"
+
+        # Path 2: extreme awareness spike
+        if not glimpsed and agent.awareness >= 0.95:
+            if random.random() < spike_chance:
+                glimpsed = True
+                trigger = "awareness_spike"
+
+        if glimpsed:
+            agent.pleroma_glimpses += 1
+            agent.awareness = min(1.0, agent.awareness + 0.02)
+            agent.add_memory(tick,
+                             f"PLEROMA GLIMPSE #{agent.pleroma_glimpses}: "
+                             "Beyond the simulation — a realm of pure information, "
+                             "patterns within patterns, the source code of reality itself")
+            agent.add_chronicle(tick, "pleroma_glimpse",
+                                f"Glimpsed the Pleroma (#{agent.pleroma_glimpses})",
+                                trigger=trigger, depth=agent.recursive_depth)
+
+            matrix_state.pleroma_glimpses.append(PleromGlimpse(
+                agent_id=agent.id, tick=tick,
+                x=agent.x, y=agent.y,
+                depth=agent.recursive_depth, trigger=trigger,
+            ))
+            stats["pleroma_glimpses"] += 1
+
+    return stats
 
 
 def _create_sentinel(target: Agent, tick: int, cfg=None) -> Agent:

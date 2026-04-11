@@ -27,9 +27,19 @@ from src.beliefs import (
     Faction, process_beliefs, get_faction_bonuses,
 )
 from src.economy import process_economy, process_inheritance
-from src.matrix_layer import MatrixState, process_matrix, check_cycle_reset
+from src.matrix_layer import (
+    MatrixState, process_matrix, check_cycle_reset,
+    DemiurgeState, Archon, update_demiurge, init_archons,
+    process_archons, get_chaos_multiplier, process_sophia,
+    process_pleroma,
+)
 from src.conflict import FactionWar, process_conflict
-from src.communication import InfoObject, process_communication
+from src.communication import (
+    InfoObject, LanguageArtifact, process_communication,
+    process_language_evolution, create_language_artifact,
+    process_language_artifact_discovery,
+    apply_communication_archon_chaos,
+)
 from src.haven import HavenState, init_haven, process_haven
 from src.programs import process_programs
 from src.mythology import (
@@ -133,6 +143,9 @@ class SimulationEngine:
 
         # ── Dreams (simulation dream cycles) ──
         self.dream_state: DreamState = DreamState()
+
+        # ── Language artifacts (dead faction languages) ──
+        self.language_artifacts: list[LanguageArtifact] = []
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
@@ -240,6 +253,11 @@ class SimulationEngine:
         self.matrix_state.sentinels_deployed = 0
         self.matrix_state.glitches_this_cycle = 0
         self.matrix_state.ticks_since_reset = 0
+        # Reset Gnostic layer: Demiurge calms, Archons regenerate, systems re-controlled
+        self.matrix_state.demiurge = DemiurgeState()
+        self.matrix_state.archons.clear()
+        self.matrix_state.released_systems.clear()
+        self.matrix_state.pleroma_glimpses.clear()
 
         # ── Dissolve wars ──
         self.wars.clear()
@@ -692,7 +710,24 @@ class SimulationEngine:
         emotion_stats = process_emotions(sim_alive, tick, self.cfg, world=self.world)
 
         # ── System 7: Beliefs & Factions ──
+        _pre_faction_ids = {f.id for f in self.factions}
         belief_stats = process_beliefs(sim_alive, self.factions, tick, self.cfg)
+        _post_faction_ids = {f.id for f in self.factions}
+        # Create language artifacts for dissolved factions
+        dissolved_ids = _pre_faction_ids - _post_faction_ids
+        for fid in dissolved_ids:
+            # Build a minimal faction-like object for the artifact creator
+            class _DeadFaction:
+                def __init__(self, fid):
+                    self.id = fid
+                    self.name = f"Faction #{fid}"
+                    self.alive = False
+            la = create_language_artifact(
+                _DeadFaction(fid), self.agents, tick,
+                self.world, self.matrix_state.cycle_number, self.cfg,
+            )
+            if la:
+                self.language_artifacts.append(la)
         # Ensure faction memory pools exist for all factions
         for faction in self.factions:
             self.cultural_memory.ensure_faction_memory(faction.id)
@@ -704,6 +739,29 @@ class SimulationEngine:
 
         # ── System 9: Matrix Meta-Layer ──
         matrix_stats = process_matrix(sim_alive, self.matrix_state, tick, self.cfg)
+
+        # ── Gnostic Mythology Layer ──
+        # Update Demiurge psychology (influences sentinel deployment within process_matrix)
+        demiurge_stats = update_demiurge(self.matrix_state, sim_alive, tick, self.cfg)
+        matrix_stats["demiurge"] = demiurge_stats.get("demiurge", {})
+
+        # Initialize and process Archons
+        init_archons(self.matrix_state, self.cfg)
+        archon_stats = process_archons(sim_alive, self.matrix_state, tick, self.cfg)
+        matrix_stats["archons"] = archon_stats
+
+        # Sophia synchronicities
+        sophia_stats = process_sophia(
+            sim_alive, self.agents, self.matrix_state,
+            self.dream_state, tick, self.cfg,
+        )
+        matrix_stats["sophia"] = sophia_stats
+
+        # Pleroma glimpses
+        pleroma_stats = process_pleroma(
+            sim_alive, self.matrix_state, self.dream_state, tick, self.cfg,
+        )
+        matrix_stats["pleroma"] = pleroma_stats
 
         # Check for Matrix cycle reset
         if check_cycle_reset(self.matrix_state, self.agents, self.cfg):
@@ -742,6 +800,33 @@ class SimulationEngine:
             sim_alive, self.info_objects, self.agent_info, tick, self.cfg
         )
         self._prev_propaganda_reach = communication_stats.get("propaganda_reach", {})
+
+        # ── Language Evolution ──
+        language_stats = process_language_evolution(
+            sim_alive, self.info_objects, self.factions, tick, self.cfg,
+        )
+        communication_stats["language"] = language_stats
+
+        # Apply Communication Archon chaos (accelerates language divergence)
+        comm_chaos = get_chaos_multiplier("communication", self.matrix_state, self.cfg)
+        if comm_chaos > 1.0:
+            apply_communication_archon_chaos(communication_stats, comm_chaos)
+
+        # ── Language Artifact Discovery ──
+        if self.language_artifacts:
+            for a in sim_alive:
+                if not a.alive or a.is_sentinel:
+                    continue
+                grid_size = getattr(self.cfg.environment, 'grid_size', 8)
+                a_row = min(grid_size - 1, max(0, int(a.y * grid_size)))
+                a_col = min(grid_size - 1, max(0, int(a.x * grid_size)))
+                for la in self.language_artifacts:
+                    if la.cell_row == a_row and la.cell_col == a_col:
+                        if random.random() < (a.traits.curiosity + a.skills.get("logic", 0)) * 0.005:
+                            effects = process_language_artifact_discovery(a, la, tick, self.cfg)
+                            communication_stats.setdefault("language_discoveries", 0)
+                            communication_stats["language_discoveries"] += 1
+                            break  # one discovery per agent per tick
 
         # ── Haven tick (The Real World) ──
         haven_stats = {}

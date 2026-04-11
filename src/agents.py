@@ -32,6 +32,8 @@ CHRONICLE_TYPES = [
     "recruited", "became_recruiter", "breakthrough", "death",
     "phase_transition", "strange_loop", "artifact_discovered",
     "soul_recycled", "soul_trap_broken",
+    "archon_destroyed", "pleroma_glimpse", "sophia_synchronicity",
+    "language_artifact_discovered",
 ]
 
 _agent_id_counter = 0
@@ -267,6 +269,9 @@ class Agent:
     past_life_memories: list = field(default_factory=list)  # memories from previous incarnation
     soul_trap_broken: bool = False           # True if agent broke free of soul trap
     incarnation_count: int = 1               # how many lives this soul has lived
+
+    # ── Gnostic Layer (Phase 5) ──
+    pleroma_glimpses: int = 0            # number of times agent has glimpsed the Pleroma
 
     # ── Social tracking for friend formation ──
     proximity_ticks: dict = field(default_factory=dict)

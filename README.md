@@ -42,9 +42,9 @@ matrix-simulation/
 │   ├── emotions.py                   <- Emotional states, contagion, trauma, decision distortion
 │   ├── beliefs.py                    <- Belief axes, factions, prophets, schisms, leaders
 │   ├── economy.py                    <- Wealth, trade, theft, taxation, inheritance
-│   ├── matrix_layer.py              <- Awareness, glitches, Sentinels, The One, Oracle, cycles
+│   ├── matrix_layer.py              <- Awareness, glitches, Sentinels, The One, Oracle, cycles, Demiurge, Archons, Sophia, Pleroma
 │   ├── conflict.py                   <- Combat, faction wars, territorial disputes, peace
-│   ├── communication.py              <- Info objects, propagation, mutation, propaganda
+│   ├── communication.py              <- Info objects, propagation, mutation, propaganda, language evolution, encryption
 │   ├── engine.py                     <- Core tick orchestrator (all 11 systems)
 │   ├── config_loader.py              <- YAML loading with deep-merge and attribute access
 │   ├── mythology.py                  <- Procedural mythology (era chronicles, myths, faction revisionism, legends)
@@ -463,9 +463,12 @@ The simulation IS the Matrix. Most agents are asleep inside it.
 - **The Architect's Choice**: At the Core, the Anomaly's beliefs, bonds, and trauma determine the outcome. High fight score (low trust, resistance bonds, high awareness) = FIGHT — risk system failure (awareness wipe) or achieve freedom (global awareness boost). Low score = RESET — cycle resets but the Haven is preserved. Both outcomes trigger cycle reset with different consequences.
 - **Sentinels**: System-deployed enforcer agents with maxed combat stats that hunt high-awareness agents. They suppress awareness and damage health. The Anomaly can destroy them.
 - **The Oracle**: A hidden system process that identifies promising candidates and subtly guides them toward awakening.
-- **The Architect**: Monitors total awareness via a control index. When control drops, deploys Sentinels, injects comfort (happiness + system trust boosts), and engineers distractions.
+- **The Architect / Demiurge**: Monitors total awareness via a control index. The Demiurge has psychology — fear (of losing control), pride (in creation), confusion (when agents behave unexpectedly). A panicked Demiurge deploys 2x Sentinels; a proud one relaxes to 0.5x. Confused Demiurge increases glitch probability. Tracked in `MatrixState.demiurge`.
+- **Archons**: Four specialized Sentinels (Emotion, Economy, Belief, Communication), each governing one system. Positioned in map quadrants. The Anomaly or coordinated resistance agents can damage and destroy Archons. Destroying an Archon releases that system from Architect control — released systems become chaotic (1.5x multiplier). Destroying the Communication Archon accelerates language divergence and boosts resistance encryption.
+- **Sophia**: A hidden process creating meaningful coincidences that cannot be detected or destroyed by the Architect. Manifests as: shared dreams (two unrelated agents receive the same dream), dead knowledge (a dead agent's memories/skills appear in a living agent), and terrain patterns (glitch patterns noticed by high-awareness agents). All synchronicities boost awareness.
+- **The Pleroma**: A hidden layer of pure information accessible only to recursive-phase agents with awareness >= 0.9. Brief glimpses during lucid dreams or extreme awareness spikes. Visualization data (`PleromGlimpse`) emitted each tick for frontend rendering.
 - **Exiles**: Sentinels that survive too long refuse deletion and become independent agents with unique abilities.
-- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Cultural memory partially persists across cycles.
+- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Cultural memory partially persists across cycles. Archons and Demiurge state reset on cycle reset.
 
 ### System 10: Conflict & Warfare
 
@@ -474,6 +477,10 @@ Individual combat: agents with high effective aggression (trait + anger + rival 
 ### System 11: Communication & Information
 
 Information objects (knowledge, rumors, warnings, propaganda, system narratives) propagate hop-by-hop through bond networks. Each transmission has a mutation chance — truth degrades like a telephone game. Knowledge boosts skills. Propaganda shifts beliefs. System narratives (injected by the Matrix) suppress awareness. Secrets only travel through resistance bonds. Information expires after a configurable lifetime.
+
+- **Emergent Language**: Info objects carry `encoding_complexity` (1.0 default). Frequently-communicated concepts compress over generations (floor 0.2). Factions develop divergent encodings (dialects) tracked in `_faction_dialects`. `get_dialect_distance()` measures encoding gap.
+- **Resistance Encryption**: Redpilled agents' secret communications are automatically encrypted. An arms race mechanic: resistance encryption strength grows each tick, Sentinels' decryption capability grows slower. `attempt_sentinel_interception()`: Sentinels always intercept but only decode if decryption > encryption.
+- **Language Archaeology**: When factions dissolve, their language persists as `LanguageArtifact` in cells. Future agents can discover these artifacts for knowledge boosts and (if the faction had redpilled members) awareness clues from pre-reset data.
 
 ### The Haven — The Real World
 

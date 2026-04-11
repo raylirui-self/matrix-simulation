@@ -324,6 +324,39 @@ matrix:
   core_fight_awareness_boost: 0.3       # global awareness boost on successful fight
   core_reset_haven_preserved: true      # Haven survives cycle reset
 
+  # ── Gnostic Mythology Layer (Phase 5) ──
+  demiurge:
+    base_fear: 0.1                       # baseline fear of losing control
+    base_pride: 0.5                      # baseline pride in creation
+    base_confusion: 0.0                  # baseline confusion
+    fear_awareness_sensitivity: 2.0      # how much total awareness ratio increases fear
+    pride_control_sensitivity: 1.5       # how much control_index feeds pride
+    confusion_anomaly_bonus: 0.3         # confusion spike when anomaly exists
+    panic_sentinel_multiplier: 2.0       # sentinel deployment multiplier when panicked (fear > 0.6)
+    proud_sentinel_reduction: 0.5        # sentinel deployment multiplier when proud (pride > 0.7, fear < 0.3)
+    confused_glitch_bonus: 0.02          # extra glitch probability when confused > 0.5
+
+  archon_systems:                        # which simulation systems have Archons
+    - emotion
+    - economy
+    - belief
+    - communication
+  archon_health: 1.0                     # starting health for each Archon
+  archon_combat_power: 0.9              # combat power (vs Anomaly/resistance)
+  archon_chaos_multiplier: 1.5          # how much released systems become chaotic
+  archon_regen_rate: 0.005              # Archon health regen per tick
+
+  sophia_interval: 30                    # ticks between Sophia synchronicity checks
+  sophia_shared_dream_chance: 0.05       # chance of shared dream synchronicity
+  sophia_dead_knowledge_chance: 0.03     # chance of dead agent knowledge appearing
+  sophia_pattern_chance: 0.02            # chance of terrain pattern synchronicity
+  sophia_awareness_boost: 0.03           # awareness boost from synchronicities
+
+  pleroma_min_awareness: 0.9             # minimum awareness for Pleroma glimpse
+  pleroma_min_phase: "recursive"         # minimum consciousness phase
+  pleroma_dream_lucid_chance: 0.2        # chance during lucid dream state
+  pleroma_spike_chance: 0.05             # chance during extreme awareness spike
+
   # ── Consciousness Maze (Phase 5) ──
   strange_loop_radius: 0.15              # max distance for strange loop formation
   strange_loop_min_awareness: 0.3        # both agents need awareness above this
@@ -379,6 +412,22 @@ communication:
   knowledge_skill_boost: 0.001        # skill boost from received knowledge
   system_narrative_interval: 50       # ticks between system narrative injections
   info_lifetime: 500                  # ticks before info expires
+
+  # ── Emergent Agent Language (Phase 5) ──
+  encoding_base_complexity: 1.0        # starting encoding complexity for new info
+  compression_rate: 0.05               # how much encoding compresses per repeated concept
+  min_encoding_complexity: 0.2         # minimum encoding complexity (fully compressed)
+  dialect_drift_rate: 0.01             # per-tick encoding divergence between factions
+  dialect_check_interval: 50           # ticks between dialect divergence updates
+
+  resistance_encryption_base: 0.5      # base encryption strength for resistance comms
+  resistance_encryption_growth: 0.01   # encryption strength growth per tick
+  sentinel_decryption_power: 0.3       # Sentinel base decryption capability
+  sentinel_decryption_growth: 0.005    # Sentinel decryption improvement per tick
+
+  language_artifact_chance: 0.02       # chance of leaving language artifact on faction death
+  language_artifact_knowledge_boost: 0.03  # skill boost from studying language artifact
+  language_artifact_awareness_boost: 0.02  # awareness boost from pre-reset language artifacts
 
 # ── Programs — First-Class Entities ──
 programs:
