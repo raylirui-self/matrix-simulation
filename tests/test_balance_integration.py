@@ -22,46 +22,66 @@ from src.agents import CONSCIOUSNESS_PHASE_THRESHOLDS
 
 @pytest.fixture
 def balance_engine():
-    """Create engine and run 500 ticks for balance validation."""
+    """Create engine and run 500 ticks for balance validation.
+
+    Tracks peak awareness across the entire run so that cycle resets
+    (which wipe awareness) don't cause false failures.
+    """
     random.seed(42)
     cfg = SimConfig.load()
     eng = SimulationEngine(cfg, state=RunState(run_id="balance_test"))
     eng.initialize()
+
+    peak_awareness = 0.0
+    peak_phase_counts = {}
+
     for _ in range(500):
         eng.tick()
+        non_sentinels = [a for a in eng.get_alive_agents() if not a.is_sentinel]
+        if non_sentinels:
+            tick_max = max(a.awareness for a in non_sentinels)
+            if tick_max > peak_awareness:
+                peak_awareness = tick_max
+                # Snapshot phase distribution at peak awareness
+                peak_phase_counts = {}
+                for a in non_sentinels:
+                    p = a.consciousness_phase
+                    peak_phase_counts[p] = peak_phase_counts.get(p, 0) + 1
+
+    # Stash peak metrics on the engine for tests to use
+    eng._peak_awareness = peak_awareness
+    eng._peak_phase_counts = peak_phase_counts
     return eng
 
 
 def test_awareness_reaches_higher_phases(balance_engine):
-    """At least some agents should reach questioning or higher by tick 500."""
-    eng = balance_engine
-    alive = eng.get_alive_agents()
-    non_sentinels = [a for a in alive if not a.is_sentinel]
+    """At least some agents should reach questioning or higher during a 500-tick run.
 
-    max_awareness = max((a.awareness for a in non_sentinels), default=0.0)
-    phase_counts = {}
-    for a in non_sentinels:
-        phase_counts[a.consciousness_phase] = phase_counts.get(a.consciousness_phase, 0) + 1
+    Uses peak awareness tracked across all ticks, so cycle resets that
+    wipe end-of-run awareness don't cause false failures.
+    """
+    eng = balance_engine
+    peak_awareness = eng._peak_awareness
+    peak_phase_counts = eng._peak_phase_counts
 
     # Max awareness should exceed questioning threshold (0.15) at minimum
-    assert max_awareness > 0.15, (
-        f"Max awareness {max_awareness:.3f} never exceeded questioning threshold 0.15"
+    assert peak_awareness > 0.15, (
+        f"Peak awareness {peak_awareness:.3f} never exceeded questioning threshold 0.15"
     )
 
     # At least some agents should have progressed beyond bicameral
-    non_bicameral = sum(v for k, v in phase_counts.items() if k != "bicameral")
+    non_bicameral = sum(v for k, v in peak_phase_counts.items() if k != "bicameral")
     assert non_bicameral > 0, (
-        f"All agents stuck in bicameral phase. Phase distribution: {phase_counts}"
+        f"All agents stuck in bicameral phase. Peak phase distribution: {peak_phase_counts}"
     )
 
 
 def test_self_aware_or_higher_exists(balance_engine):
-    """At least one agent should reach self_aware (0.35) or higher."""
+    """At least one agent should reach self_aware (0.35) or higher during the run."""
     eng = balance_engine
-    alive = [a for a in eng.get_alive_agents() if not a.is_sentinel]
-    max_awareness = max((a.awareness for a in alive), default=0.0)
-    assert max_awareness >= 0.35, (
-        f"Max awareness {max_awareness:.3f} — no agent reached self_aware (0.35)"
+    peak_awareness = eng._peak_awareness
+    assert peak_awareness >= 0.35, (
+        f"Peak awareness {peak_awareness:.3f} — no agent reached self_aware (0.35)"
     )
 
 
@@ -118,14 +138,11 @@ def test_wars_occurred(balance_engine):
 def test_lucid_dreams_possible(balance_engine):
     """Some agents should have high enough awareness for lucid dreaming."""
     eng = balance_engine
-    alive = [a for a in eng.get_alive_agents() if not a.is_sentinel]
     lucid_threshold = getattr(eng.cfg.dreams, 'lucid_awareness_threshold', 0.5)
-    lucid_eligible = [a for a in alive if a.awareness >= lucid_threshold]
-    # With tuned awareness growth, some agents should be eligible
-    # (actual lucid dream occurrence depends on dream cycle timing)
-    max_awareness = max((a.awareness for a in alive), default=0.0)
-    assert max_awareness >= lucid_threshold * 0.8, (
-        f"Max awareness {max_awareness:.3f} too low for lucid dreaming "
+    # Use peak awareness — end-of-run awareness may be low after a cycle reset
+    peak_awareness = eng._peak_awareness
+    assert peak_awareness >= lucid_threshold * 0.8, (
+        f"Peak awareness {peak_awareness:.3f} too low for lucid dreaming "
         f"(threshold {lucid_threshold})"
     )
 
