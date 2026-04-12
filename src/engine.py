@@ -215,9 +215,21 @@ class SimulationEngine:
             "effects": {"cycle": self.matrix_state.cycle_number},
         })
 
-        # ── Wipe awareness and Matrix-specific state ──
+        # ── Partial awareness wipe — high-awareness agents retain echoes ──
         for a in non_sentinels:
-            a.awareness = 0.0
+            old_awareness = a.awareness
+            if a.soul_trap_broken:
+                # Broke the soul trap: retain 50% awareness
+                a.awareness = old_awareness * 0.5
+            elif old_awareness >= 0.6:
+                # High awareness: retain 35% — déjà vu of awakening
+                a.awareness = old_awareness * 0.35
+            elif old_awareness >= 0.3:
+                # Moderate awareness: retain 20%
+                a.awareness = old_awareness * 0.2
+            else:
+                # Low awareness: full wipe
+                a.awareness = 0.0
             a.redpilled = False
             a.is_anomaly = False
             a.is_exile = False
@@ -226,8 +238,9 @@ class SimulationEngine:
             a.add_memory(tick, f"CYCLE RESET: The world shuddered and rebuilt (Cycle {self.matrix_state.cycle_number + 1})")
             a.add_chronicle(tick, "cycle_reset", f"Survived cycle reset into Cycle {self.matrix_state.cycle_number + 1}",
                             cycle=self.matrix_state.cycle_number + 1)
-            # System trust gets boosted (fresh start)
-            a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + 0.3)
+            # System trust gets boosted (fresh start) — but less for those who remember
+            trust_boost = 0.15 if old_awareness >= 0.3 else 0.3
+            a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + trust_boost)
             # Emotions stabilize
             a.emotions["fear"] = max(0.0, a.emotions.get("fear", 0) - 0.3)
             a.emotions["hope"] = min(1.0, a.emotions.get("hope", 0) + 0.1)
@@ -304,7 +317,7 @@ class SimulationEngine:
         if was_broken:
             # Broke the trap: full memory preservation
             agent.past_life_memories = soul["memories"]
-            agent.awareness = min(0.5, awareness * 0.7)
+            agent.awareness = min(0.6, awareness * 0.8)
             agent.soul_trap_broken = True
             agent.beliefs = {k: v * 0.8 for k, v in soul["beliefs"].items()}
             for skill, val in soul["skills"].items():
@@ -314,11 +327,11 @@ class SimulationEngine:
             agent.add_chronicle(tick, "soul_recycled",
                                 f"Reincarnated with full memories (incarnation #{agent.incarnation_count})",
                                 source_id=soul["source_id"], memories_preserved="full")
-        elif awareness >= 0.6:
-            # High awareness: partial memory preservation
+        elif awareness >= 0.4:
+            # Moderate-to-high awareness: partial memory preservation
             kept = soul["memories"][-3:]
             agent.past_life_memories = kept
-            agent.awareness = min(0.2, awareness * 0.3)
+            agent.awareness = min(0.3, awareness * 0.4)
             # Faint echoes of beliefs
             for axis in agent.beliefs:
                 if axis in soul["beliefs"]:
@@ -331,8 +344,8 @@ class SimulationEngine:
             # Default: memories wiped (normal reincarnation)
             agent.past_life_memories = []
             agent.incarnation_count = soul["incarnation_count"] + 1
-            # Tiny residual awareness — something feels off
-            agent.awareness = min(0.05, awareness * 0.1)
+            # Residual awareness — something feels off
+            agent.awareness = min(0.1, awareness * 0.2)
             agent.add_chronicle(tick, "soul_recycled",
                                 f"Reincarnated with wiped memories (incarnation #{agent.incarnation_count})",
                                 source_id=soul["source_id"], memories_preserved="none")
@@ -409,9 +422,9 @@ class SimulationEngine:
                 a.skills[skill] = min(1.0, a.skills[skill] + artifact.tech_level * 0.02)
             a.intelligence = sum(a.skills.values()) / len(a.skills)
 
-            # Awareness clue from high-awareness artifacts
-            if artifact.awareness_level > 0.3:
-                awareness_boost = artifact.awareness_level * 0.05
+            # Awareness clue from artifacts — any artifact with awareness echoes
+            if artifact.awareness_level > 0.1:
+                awareness_boost = artifact.awareness_level * 0.15
                 a.awareness = min(1.0, a.awareness + awareness_boost)
 
             a.add_memory(tick,

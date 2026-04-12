@@ -468,7 +468,7 @@ The simulation IS the Matrix. Most agents are asleep inside it.
 - **Sophia**: A hidden process creating meaningful coincidences that cannot be detected or destroyed by the Architect. Manifests as: shared dreams (two unrelated agents receive the same dream), dead knowledge (a dead agent's memories/skills appear in a living agent), and terrain patterns (glitch patterns noticed by high-awareness agents). All synchronicities boost awareness.
 - **The Pleroma**: A hidden layer of pure information accessible only to recursive-phase agents with awareness >= 0.9. Brief glimpses during lucid dreams or extreme awareness spikes. Visualization data (`PleromGlimpse`) emitted each tick for frontend rendering.
 - **Exiles**: Sentinels that survive too long refuse deletion and become independent agents with unique abilities.
-- **Cycles**: The simulation resets when total awareness exceeds critical mass, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Cultural memory partially persists across cycles. Archons and Demiurge state reset on cycle reset.
+- **Cycles**: The simulation resets when average awareness exceeds 0.6, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Minimum cycle length is 150 ticks (Architect reboot time). High-awareness agents retain partial awareness across resets (35% at 0.6+, 50% if soul trap broken). Cultural memory partially persists. Archons and Demiurge state reset.
 
 ### System 10: Conflict & Warfare
 
@@ -606,7 +606,7 @@ era_specific:
 | Emotion baselines | `emotions.baselines.*` | Target emotions for natural decay |
 | Emotional contagion | `emotions.contagion_rate` | Higher = mass panics, collective joy |
 | Faction similarity | `beliefs.faction_formation_similarity` | Lower = more factions, more fragmented |
-| Awareness growth | `matrix.awareness_growth_rate` | Higher = faster awakening, more system resistance |
+| Awareness growth | `matrix.awareness_growth_rate` | Higher = faster awakening, more system resistance (tuned to 0.008 so agents reach lucid within ~80-tick lifespan) |
 | Glitch probability | `matrix.glitch_probability` | Higher = more Matrix instability |
 | Sentinel traits | `matrix.sentinel_traits.*` | Customize Sentinel stats (resilience, aggression, speed) |
 | Comfort injection | `matrix.comfort_injection.*` | System comfort values (happiness, trust, awareness) |

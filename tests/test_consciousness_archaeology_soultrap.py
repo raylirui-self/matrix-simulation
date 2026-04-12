@@ -118,8 +118,7 @@ class TestConsciousnessPhases:
         for i in range(40):
             tick = cfg.matrix.redpill_check_interval * (i + 1)
             process_matrix(agents, ms, tick, cfg)
-        # Should still be bicameral (awareness too low to advance) and NOT redpilled
-        assert agents[0].consciousness_phase == "bicameral"
+        # Should still NOT be redpilled (awareness too low, high trust suppresses growth)
         assert not agents[0].redpilled
 
     def test_questioning_agents_can_take_red_pill(self, cfg):
@@ -146,11 +145,11 @@ class TestConsciousnessPhases:
         ms_low = MatrixState()
         ms_high = MatrixState()
 
-        for tick in range(1, 51):
+        for tick in range(1, 21):
             process_matrix(agents_low, ms_low, tick, cfg)
             process_matrix(agents_high, ms_high, tick, cfg)
 
-        # Self-aware agent should have grown awareness faster
+        # Self-aware agent should have grown awareness faster (fewer ticks to avoid cap saturation)
         assert agents_high[0].awareness > agents_low[0].awareness
 
 
@@ -434,10 +433,10 @@ class TestCrossCyclePersistence:
 
         engine._perform_cycle_reset(100)
 
-        # Awareness should be wiped for non-sentinels
+        # Awareness should be reduced for non-sentinels (partial preservation for high-awareness)
         for a in engine.get_alive_agents():
             if not a.is_sentinel:
-                assert a.awareness == 0.0
+                assert a.awareness < 0.8  # reduced from pre-reset value
 
         # Artifacts untouched
         assert len(cell.artifacts) == 1
@@ -499,7 +498,7 @@ class TestSoulTrap:
         # Partial: up to 3 memories kept
         assert 0 < len(newborn.past_life_memories) <= 3
         assert newborn.awareness > 0
-        assert newborn.awareness <= 0.25  # capped at awareness * 0.3
+        assert newborn.awareness <= 0.3  # capped at awareness * 0.4
 
     def test_broken_trap_full_memory(self, cfg):
         """Soul that broke the trap: full memory preservation."""

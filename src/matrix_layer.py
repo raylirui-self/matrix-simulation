@@ -833,14 +833,22 @@ def check_cycle_reset(matrix_state: MatrixState, agents: list[Agent], cfg) -> bo
     if not alive:
         return False
 
+    # Minimum cycle length — the Architect needs time to reboot the Matrix
+    min_ticks = getattr(mx_cfg, 'min_ticks_per_cycle', 150)
+    if matrix_state.ticks_since_reset < min_ticks:
+        # Only the Anomaly's Core choice can override the minimum
+        if matrix_state.core_choice is not None:
+            return True
+        return False
+
     # Condition 1: Average awareness exceeds critical ratio
     # (scales with population — fixed threshold of 50.0 was broken for large populations)
     n = len(alive)
     if n > 0:
         avg_awareness = matrix_state.total_awareness / n
-        # Reset when average awareness exceeds ~50% (adjustable via reset_threshold as ratio)
+        # Reset when average awareness exceeds ~60% (raised from 40% — let agents develop)
         awareness_ratio = matrix_state.reset_threshold / max(100, n * 2)  # normalize
-        if avg_awareness > max(0.4, min(0.8, awareness_ratio)):
+        if avg_awareness > max(0.6, min(0.8, awareness_ratio)):
             return True
 
     # Condition 2: The Anomaly completed the quest and made a choice at the Core

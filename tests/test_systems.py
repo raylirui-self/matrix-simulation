@@ -580,6 +580,8 @@ def test_cycle_reset(cfg):
     for a in engine.get_alive_agents():
         a.awareness = 0.95
         a.redpilled = True
+    # Fast-forward past min_ticks_per_cycle so reset can trigger
+    engine.matrix_state.ticks_since_reset = 200
     # Run ticks — should trigger cycle reset
     reset_happened = False
     for _ in range(50):

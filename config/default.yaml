@@ -259,7 +259,7 @@ economy:
 
 # ── System 9: Matrix Meta-Layer ──
 matrix:
-  awareness_growth_rate: 0.003        # base awareness growth per tick (tuned: 0.005 caused 9 resets/2000 ticks)
+  awareness_growth_rate: 0.008        # base awareness growth per tick (tuned up: agents live ~80 ticks, need 0.008 to reach lucid/recursive)
   sentinel_traits:                    # default traits for spawned Sentinels
     learning_rate: 0.1
     resilience: 0.9
@@ -270,7 +270,7 @@ matrix:
   comfort_injection:                  # system comfort values injected periodically
     happiness_boost: 0.1
     trust_boost: 0.05
-    awareness_penalty: 0.02
+    awareness_penalty: 0.01
   oracle_targeting_weights:           # weights for Oracle candidate selection
     awareness: 1.0
     curiosity: 1.0
@@ -283,11 +283,11 @@ matrix:
     - terrain_flicker
     - memory_leak
     - ghost
-  trauma_awareness_boost: 0.005       # awareness boost from trauma
-  awareness_contagion_radius: 0.12    # proximity for awareness spread
-  awareness_transfer_rate: 0.01       # how fast awareness spreads
+  trauma_awareness_boost: 0.012       # awareness boost from trauma (scaled up with growth rate)
+  awareness_contagion_radius: 0.15    # proximity for awareness spread (widened for faster cascade)
+  awareness_transfer_rate: 0.02       # how fast awareness spreads (doubled)
   glitch_probability: 0.02            # chance of glitch per tick
-  glitch_awareness_boost: 0.05        # awareness gained from witnessing glitch
+  glitch_awareness_boost: 0.08        # awareness gained from witnessing glitch (bumped)
   redpill_check_interval: 25          # ticks between red pill events
   redpill_threshold: 0.5              # min awareness for red pill choice
   sentinel_deploy_threshold: 0.6      # control_index below this triggers sentinels
@@ -296,6 +296,7 @@ matrix:
   sentinels_per_deploy: 1             # sentinels spawned per deployment
   oracle_guidance_interval: 30        # ticks between oracle nudges
   comfort_injection_interval: 40      # ticks between system comfort injections
+  min_ticks_per_cycle: 150            # Architect can't reset before this many ticks (reboot takes time)
   max_ticks_per_cycle: 5000           # forced reset after this many ticks
 
   # ── Red Pill / Blue Pill deepened mechanics ──
@@ -359,12 +360,12 @@ matrix:
 
   # ── Consciousness Maze (Phase 5) ──
   strange_loop_radius: 0.15              # max distance for strange loop formation
-  strange_loop_min_awareness: 0.3        # both agents need awareness above this
-  strange_loop_boost: 0.01               # awareness boost per strange loop per tick
+  strange_loop_min_awareness: 0.2        # both agents need awareness above this (lowered for earlier loops)
+  strange_loop_boost: 0.015              # awareness boost per strange loop per tick (bumped)
 
 # ── Agent Archaeology (Phase 5) ──
 archaeology:
-  discovery_chance: 0.01                 # base chance per tick for artifact discovery
+  discovery_chance: 0.03                 # base chance per tick for artifact discovery (tripled)
 
 # ── The Haven — The Real World ──
 haven:
@@ -433,7 +434,7 @@ communication:
 programs:
   enforcer:
     enabled: true
-    spawn_chance: 0.002                # per tick, when no enforcers exist
+    spawn_chance: 0.01                 # per tick, when no enforcers exist (5x: was too rare)
     min_tick: 50                        # earliest tick an enforcer can spawn
     combat_power: 0.85                  # combat stat multiplier
     copy_trait_override:                # traits applied to copies (victims)
@@ -454,7 +455,7 @@ programs:
     trade_cooldown: 10                  # min ticks between trades for same agent
   guardian:
     enabled: true
-    spawn_chance: 0.001                 # per tick, when no guardians exist
+    spawn_chance: 0.006                 # per tick, when no guardians exist (6x: was too rare)
     min_tick: 30                        # earliest tick a guardian can spawn
     combat_power: 0.95                  # very high combat stats
     patrol_radius: 0.15                 # patrols near Oracle-guided agents
@@ -462,8 +463,8 @@ programs:
     enforcer_immune: true               # cannot be copied by Enforcer
   locksmith:
     enabled: true
-    spawn_chance: 0.0005                # rare spawn
-    min_tick: 80                        # earliest tick
+    spawn_chance: 0.004                 # was 0.0005 — too rare, never appeared in 500 ticks
+    min_tick: 60                        # earliest tick (was 80)
     key_creation_interval: 20           # ticks between key creation
     max_keys_per_agent: 3               # max teleport keys an agent can hold
     key_range: 0.4                      # max teleport distance for generated keys
@@ -477,7 +478,7 @@ dreams:
   ghost_max_age: 20               # only agents dead within this many ticks can manifest as ghosts
   ghost_manifest_chance: 0.3      # per-dead-agent chance of manifesting as ghost each dream tick
   max_ghosts: 10                  # cap on simultaneous ghost manifestations
-  lucid_awareness_threshold: 0.5  # min awareness to attempt lucid dreaming
+  lucid_awareness_threshold: 0.4  # min awareness to attempt lucid dreaming (lowered from 0.5)
   lucid_base_chance: 0.3          # base probability of becoming lucid (scaled by awareness*curiosity*reality_testing)
   lucid_awareness_boost: 0.02     # permanent awareness boost from lucid dreaming per dream cycle
   lucid_communication_range: 1.0  # lucid agents can communicate across entire map (1.0 = full)
