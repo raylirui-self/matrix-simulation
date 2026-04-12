@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Optional
 
-from src.agents import Agent, Traits, SKILL_NAMES, CONSCIOUSNESS_PHASE_THRESHOLDS
+from src.agents import Agent, CONSCIOUSNESS_PHASE_THRESHOLDS
 
 
 @dataclass
@@ -336,8 +335,8 @@ def process_nested_simulations(world_engines: list[WorldEngine],
                         parent.awareness = min(1.0, parent.awareness + recursive_boost)
                         parent.add_memory(
                             tick,
-                            f"A being in my World Engine asked: 'Am I in the real Matrix "
-                            f"or a nested one?' — and I cannot answer."
+                            "A being in my World Engine asked: 'Am I in the real Matrix "
+                            "or a nested one?' — and I cannot answer."
                         )
                         parent.add_chronicle(
                             tick, "nested_recursive_paradox",

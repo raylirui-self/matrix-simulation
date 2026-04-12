@@ -29,7 +29,7 @@ from src.beliefs import (
 from src.economy import process_economy, process_inheritance
 from src.matrix_layer import (
     MatrixState, process_matrix, check_cycle_reset,
-    DemiurgeState, Archon, update_demiurge, init_archons,
+    DemiurgeState, update_demiurge, init_archons,
     process_archons, get_chaos_multiplier, process_sophia,
     process_pleroma,
 )
@@ -1074,7 +1074,7 @@ class SimulationEngine:
                 for la in self.language_artifacts:
                     if la.cell_row == a_row and la.cell_col == a_col:
                         if random.random() < (a.traits.curiosity + a.skills.get("logic", 0)) * 0.005:
-                            effects = process_language_artifact_discovery(a, la, tick, self.cfg)
+                            process_language_artifact_discovery(a, la, tick, self.cfg)
                             communication_stats.setdefault("language_discoveries", 0)
                             communication_stats["language_discoveries"] += 1
                             break  # one discovery per agent per tick

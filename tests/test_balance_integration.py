@@ -17,7 +17,6 @@ import pytest
 
 from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
-from src.agents import CONSCIOUSNESS_PHASE_THRESHOLDS
 
 
 @pytest.fixture

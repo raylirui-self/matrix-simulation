@@ -16,9 +16,8 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass, field
-from typing import Optional
 
-from src.agents import Agent, CONSCIOUSNESS_PHASES
+from src.agents import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +256,7 @@ def _process_lucid_dreaming(agents: list[Agent], dream_state: DreamState,
         # Access hidden memories: unlock compressed memories
         if agent.memory_summary and memory_unlock_count > 0:
             agent.add_memory(tick,
-                             f"LUCID DREAM: Recovered lost memories from the collective unconscious")
+                             "LUCID DREAM: Recovered lost memories from the collective unconscious")
 
         # Perceive simulation architecture
         if agent.consciousness_phase in ("lucid", "recursive"):

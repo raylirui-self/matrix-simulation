@@ -15,7 +15,6 @@ import csv
 import json
 import os
 import random
-import tempfile
 
 import pytest
 
@@ -31,8 +30,7 @@ from src.causal_graph import (
     export_events_json, export_chains_json,
 )
 from src.batch import (
-    RunResult, AggregateStats,
-    run_single, aggregate_results,
+    RunResult, run_single, aggregate_results,
     export_results_csv, export_results_json,
     _compute_gini,
 )
@@ -233,8 +231,6 @@ class TestBatchCliParsing:
         """Verify the batch subcommand is registered and parses correctly."""
         import argparse
         # Import the main module's parser setup
-        from main import main
-        import sys
 
         # Test that batch args parse correctly by importing the parser
         # We test the argparse setup indirectly

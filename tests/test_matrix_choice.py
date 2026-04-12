@@ -8,16 +8,13 @@ Tests for Phase 1 Matrix features:
 """
 import random
 
-import pytest
 
-from src.agents import Agent, Bond, Traits, create_agent, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
-from src.config_loader import SimConfig
+from src.agents import Agent, Bond, create_agent
 from src.matrix_layer import (
     MatrixState,
     process_matrix,
     _compute_core_choice_score,
     check_cycle_reset,
-    _create_sentinel,
 )
 from src.programs import _create_locksmith
 
@@ -374,7 +371,7 @@ class TestAnomalyQuest:
         ms.anomaly_id = anomaly.id
         ms.oracle_target_id = anomaly.id  # Oracle is guiding the Anomaly
 
-        stats = process_matrix([anomaly], ms, 1, cfg)
+        process_matrix([anomaly], ms, 1, cfg)
 
         assert anomaly.anomaly_quest_stage == 1
         assert any("Locksmith" in m["event"] for m in anomaly.memory)

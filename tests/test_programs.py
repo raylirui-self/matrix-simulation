@@ -4,9 +4,8 @@ The Enforcer, The Broker, The Guardian, The Locksmith.
 """
 import random
 
-import pytest
 
-from src.agents import Agent, Bond, Traits, create_agent, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
+from src.agents import Agent, create_agent
 from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
 from src.matrix_layer import MatrixState, process_matrix, _create_sentinel
@@ -158,7 +157,6 @@ class TestEnforcer:
         enforcer = _create_enforcer(0.5, 0.5, 10, cfg)
         enforcer.health = 1.0
 
-        agents = [enforcer, guardian]
 
         # Simulate the copy check from conflict.py
         guardian_immune = getattr(
@@ -394,7 +392,6 @@ class TestGuardian:
         matrix_state = MatrixState()
         matrix_state.oracle_target_id = target.id
 
-        initial_health = target.health
         process_matrix(agents, matrix_state, 10, cfg)
 
         # Target should be somewhat protected by Guardian
@@ -557,7 +554,7 @@ class TestProgramsIntegration:
         eng = SimulationEngine(cfg, state=RunState(run_id="test_programs_full"))
         eng.initialize()
         for _ in range(50):
-            result = eng.tick()
+            eng.tick()
         alive = eng.get_alive_agents()
         assert len(alive) > 0
 

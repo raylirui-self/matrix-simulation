@@ -11,7 +11,7 @@ import math
 import random
 from typing import Optional
 
-from src.agents import Agent, Bond, Traits, next_id, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
+from src.agents import Agent, Traits, next_id, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
 
 
 def spatial_distance(a: Agent, b: Agent) -> float:
@@ -252,7 +252,7 @@ def broker_trade(agent: Agent, broker: Agent, trade_type: str,
         boost = getattr(bcfg, 'memory_sacrifice_awareness_boost', 0.12)
         if not agent.memory:
             return None
-        sacrificed = agent.memory.pop(random.randint(0, len(agent.memory) - 1))
+        agent.memory.pop(random.randint(0, len(agent.memory) - 1))
         agent.awareness = min(1.0, agent.awareness + boost)
         broker.wealth += 1.0  # Broker hoards information
         agent.add_memory(tick, "BLACK MARKET: Sacrificed a memory for forbidden knowledge — "

@@ -6,19 +6,16 @@ Tests for Phase 5 features:
 """
 import random
 
-import pytest
 
 from src.agents import (
-    Agent, Bond, Traits, create_agent, CONSCIOUSNESS_PHASES,
-    CONSCIOUSNESS_PHASE_THRESHOLDS, SKILL_NAMES,
+    Agent, Bond, Traits, create_agent, SKILL_NAMES,
 )
-from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
 from src.matrix_layer import (
     MatrixState, process_matrix, update_consciousness_phase,
-    process_strange_loops, spatial_distance,
+    process_strange_loops,
 )
-from src.world import ResourceGrid, Artifact, next_artifact_id
+from src.world import Artifact, next_artifact_id
 
 
 # ═══════════════════════════════════════════════════
@@ -353,8 +350,7 @@ class TestArtifactDiscovery:
         )
         cell.artifacts.append(artifact)
 
-        skills_before = dict(agent.skills)
-        awareness_before = agent.awareness
+        dict(agent.skills)
         agent.traits = Traits(curiosity=0.99, learning_rate=0.5, resilience=0.5,
                                sociability=0.5, charisma=0.5, aggression=0.3,
                                boldness=0.5, max_age=80)

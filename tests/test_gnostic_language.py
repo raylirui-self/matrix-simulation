@@ -8,12 +8,11 @@ import random
 import pytest
 
 from src.agents import (
-    Agent, Bond, Traits, SKILL_NAMES, CONSCIOUSNESS_PHASES,
+    Agent, Traits, SKILL_NAMES,
 )
 from src.config_loader import SimConfig
 from src.matrix_layer import (
-    MatrixState, DemiurgeState, Archon, PleromGlimpse,
-    update_demiurge, get_demiurge_sentinel_multiplier,
+    MatrixState, DemiurgeState, Archon, update_demiurge, get_demiurge_sentinel_multiplier,
     get_demiurge_glitch_bonus, init_archons, process_archons,
     get_chaos_multiplier, process_sophia, process_pleroma,
 )
@@ -23,8 +22,7 @@ from src.communication import (
     create_language_artifact, process_language_artifact_discovery,
     get_dialect_distance, apply_communication_archon_chaos,
     _next_info_id, set_info_id_counter,
-    _faction_concept_usage, _faction_dialects,
-    _resistance_encryption_level, _sentinel_decryption_level,
+    _faction_dialects,
 )
 from src.dreams import DreamState
 
@@ -243,7 +241,7 @@ class TestArchons:
             x=archon.x, y=archon.y,
         )
         agent.skills = {s: 0.9 for s in SKILL_NAMES}
-        stats = process_archons([agent], ms, 100, cfg)
+        process_archons([agent], ms, 100, cfg)
         assert archon.health < 1.0  # took damage
 
     def test_archon_destruction_releases_system(self):

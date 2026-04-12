@@ -8,8 +8,8 @@ import random
 import pytest
 
 from src.agents import (
-    Agent, Bond, Traits, create_agent, CONSCIOUSNESS_PHASES,
-    CONSCIOUSNESS_PHASE_THRESHOLDS, SKILL_NAMES,
+    Agent, Traits, CONSCIOUSNESS_PHASES,
+    SKILL_NAMES,
 )
 from src.config_loader import SimConfig
 from src.agency import compute_free_will_index, compute_move, _apply_free_will, build_spatial_index
@@ -295,7 +295,7 @@ class TestDreamCycle:
         assert ds.total_dream_cycles == 1
 
     def test_end_dream_clears_state(self):
-        cfg = _make_cfg()
+        _make_cfg()
         ds = DreamState(is_dreaming=True, dream_start_tick=100, dream_end_tick=105)
         ds.lucid_agent_ids = [1, 2, 3]
         _end_dream(ds, 105)

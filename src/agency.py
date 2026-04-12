@@ -9,7 +9,7 @@ import random
 from collections import defaultdict
 from typing import Optional
 
-from src.agents import Agent, CONSCIOUSNESS_PHASES
+from src.agents import Agent
 from src.emotions import get_emotion_utility_modifiers
 from src.world import ResourceGrid
 
@@ -58,7 +58,6 @@ def _apply_free_will(agent: Agent, directions: list, best_dx: float,
     Returns (dx, dy) after free will processing.
     """
     phase = agent.consciousness_phase
-    fwi = agent.free_will_index
 
     if phase == "bicameral":
         # Fully deterministic — no deviation at all

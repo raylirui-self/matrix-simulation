@@ -6,15 +6,12 @@ Tests for Phase 2 Cinematic & Narrative features:
 """
 import random
 
-import pytest
 
 from src.agents import (
-    Agent, Bond, Traits, ChronicleEntry, create_agent, create_offspring,
-    SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES, CHRONICLE_TYPES,
+    Agent, Bond, ChronicleEntry, create_agent, create_offspring,
+    CHRONICLE_TYPES,
 )
-from src.config_loader import SimConfig
-from src.engine import SimulationEngine, RunState, TickResult
-from src.matrix_layer import MatrixState, process_matrix
+from src.engine import SimulationEngine, RunState
 from src.narrator import Narrator, _fallback_obituary, _build_obituary_prompt
 
 
@@ -161,7 +158,7 @@ class TestChronicleAccumulation:
             eng.tick()
 
         # At least some agents should have more than just the birth entry
-        agents_with_multiple = [
+        [
             a for a in eng.agents
             if len(a.chronicle) > 1
         ]
@@ -174,7 +171,7 @@ class TestChronicleAccumulation:
 
     def test_faction_join_chronicle(self, cfg):
         """Faction join creates chronicle entry in beliefs system."""
-        from src.beliefs import process_beliefs, Faction
+        from src.beliefs import process_beliefs
 
         agents = []
         for _ in range(10):
@@ -289,7 +286,6 @@ class TestCinematicEvents:
         # Force a cycle reset by setting core_choice (triggers reset in check_cycle_reset)
         eng.matrix_state.core_choice = "reset"
         eng.matrix_state.core_choice_outcome = "status_quo"
-        prev_cycle = eng.matrix_state.cycle_number
 
         result = eng.tick()
 

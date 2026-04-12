@@ -8,8 +8,7 @@ import random
 
 import pytest
 
-from src.agents import Agent, Bond, Traits, create_agent, SKILL_NAMES, EMOTION_NAMES, BELIEF_AXES
-from src.config_loader import SimConfig
+from src.agents import Bond, create_agent, SKILL_NAMES
 from src.engine import SimulationEngine, RunState
 from src.matrix_layer import MatrixState, process_matrix
 from src.programs import (
@@ -164,7 +163,7 @@ class TestObserverEffect:
             agent.y = (target_cell.row + 0.5) / grid_size
 
             # Record memory count before tick
-            mem_count_before = len(agent.memory)
+            len(agent.memory)
 
             # Tick — the observer effect should potentially fire
             eng.tick()

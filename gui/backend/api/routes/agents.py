@@ -127,7 +127,7 @@ def get_obituary(run_id: str, agent_id: int):
     if agent.alive:
         raise HTTPException(status_code=400, detail="Agent is still alive")
 
-    from src.narrator import Narrator, _fallback_obituary
+    from src.narrator import Narrator
     narrator = getattr(engine, '_narrator', None)
     if narrator is None:
         narrator = Narrator.from_config(engine.cfg)

@@ -9,9 +9,8 @@ import random
 
 import pytest
 
-from src.agents import Agent, Traits, Bond, ChronicleEntry, create_agent, SKILL_NAMES
+from src.agents import Agent, Traits, ChronicleEntry, SKILL_NAMES
 from src.beliefs import Faction
-from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
 from src.mythology import (
     EraSummary, Myth, LegendaryFigure, MythologyState,
@@ -20,7 +19,6 @@ from src.mythology import (
     generate_faction_myths,
     identify_legendary_candidates, create_legendary_figure, _fallback_legend,
     apply_legend_discovery, process_legend_discoveries,
-    _next_myth_id, _next_legend_id,
     set_myth_id_counter, set_legend_id_counter,
 )
 
@@ -478,7 +476,7 @@ class TestEngineIntegration:
         engine.initialize()
         # Run enough ticks to trigger era summary (default 100)
         for _ in range(100):
-            result = engine.tick()
+            engine.tick()
         assert len(engine.mythology_state.era_summaries) >= 1
         assert engine.mythology_state.era_summaries[0].tick_end == 100
 
@@ -496,7 +494,7 @@ class TestEngineIntegration:
         engine.initialize()
         # Run 50 ticks (default myth check interval)
         for _ in range(50):
-            result = engine.tick()
+            engine.tick()
         # Should have generated some myths (depends on event classification)
         assert engine.mythology_state.last_myth_check_tick == 50
 

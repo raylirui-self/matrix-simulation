@@ -386,7 +386,7 @@ def process_language_evolution(agents: list[Agent], info_objects: list[InfoObjec
 
     compression_rate = getattr(comm_cfg, 'compression_rate', 0.05)
     min_complexity = getattr(comm_cfg, 'min_encoding_complexity', 0.2)
-    base_complexity = getattr(comm_cfg, 'encoding_base_complexity', 1.0)
+    getattr(comm_cfg, 'encoding_base_complexity', 1.0)
     dialect_rate = getattr(comm_cfg, 'dialect_drift_rate', 0.01)
     dialect_interval = getattr(comm_cfg, 'dialect_check_interval', 50)
 
@@ -422,9 +422,9 @@ def process_language_evolution(agents: list[Agent], info_objects: list[InfoObjec
             stats["dialect_divergence"] = round(max_d, 4)
 
     # ── Resistance encryption: redpilled agents encrypt their comms ──
-    encryption_base = getattr(comm_cfg, 'resistance_encryption_base', 0.5)
+    getattr(comm_cfg, 'resistance_encryption_base', 0.5)
     encryption_growth = getattr(comm_cfg, 'resistance_encryption_growth', 0.01)
-    decryption_power = getattr(comm_cfg, 'sentinel_decryption_power', 0.3)
+    getattr(comm_cfg, 'sentinel_decryption_power', 0.3)
     decryption_growth = getattr(comm_cfg, 'sentinel_decryption_growth', 0.005)
 
     # Arms race: both sides improve over time
@@ -453,7 +453,6 @@ def attempt_sentinel_interception(info: InfoObject, sentinel: Agent, cfg) -> dic
     if not info.encrypted:
         return {"intercepted": True, "decoded": True}
 
-    comm_cfg = cfg.communication
     decryption_power = _sentinel_decryption_level
 
     # Sentinel can intercept (see the message exists) but may not decode
@@ -474,7 +473,7 @@ def create_language_artifact(faction, agents: list[Agent], tick: int,
 
     Returns the created artifact or None."""
     comm_cfg = cfg.communication
-    chance = getattr(comm_cfg, 'language_artifact_chance', 0.02)
+    getattr(comm_cfg, 'language_artifact_chance', 0.02)
 
     # Get faction members (dead or alive)
     members = [a for a in agents if a.faction_id == faction.id]

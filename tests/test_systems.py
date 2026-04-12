@@ -5,9 +5,12 @@ Tests each system independently and then integration.
 import os
 import random
 
+import pytest
+
 from src.agents import create_agent, create_offspring, Agent, Bond, Traits, EMOTION_NAMES, BELIEF_AXES
 from src.beliefs import process_beliefs, belief_similarity, Faction
 from src.communication import process_communication, InfoObject
+from src.config_loader import SimConfig
 from src.conflict import process_conflict, FactionWar
 from src.economy import process_economy, process_inheritance
 from src.emotions import process_emotions, on_agent_death_emotions, get_emotion_utility_modifiers
@@ -40,9 +43,6 @@ def test_config_new_system_configs_exist(cfg):
 # ===================================================
 # TEST: Scenario YAML Loading & Engine Runs
 # ===================================================
-
-import pytest
-from src.config_loader import SimConfig
 
 _PRESET_SCENARIOS = ["awakening", "warworld", "dark_ages", "prophet_era"]
 
@@ -598,7 +598,6 @@ def test_cycle_reset(cfg):
 
 def test_haven_agents_excluded_from_emotions(cfg):
     """Haven agents should not be processed by the emotion system."""
-    from src.emotions import process_emotions
     agents = [create_agent(cfg) for _ in range(5)]
     for a in agents:
         a.alive = True
@@ -614,7 +613,7 @@ def test_haven_agents_excluded_from_emotions(cfg):
     engine = SimulationEngine(cfg, state=RunState(run_id="haven_excl_test"))
     engine.agents = agents
     engine.state.current_tick = 0
-    result = engine.tick()
+    engine.tick()
     # Haven agents' emotions should be unchanged (no emotion processing)
     assert agents[0].emotions["happiness"] == h0_before, \
         "Haven agent emotions were modified by simulation emotion system"
@@ -678,7 +677,7 @@ def test_haven_agents_excluded_from_programs(cfg):
     from src.programs import _create_enforcer
     enforcer = _create_enforcer(0.5, 0.5, 1, cfg)
     agents.append(enforcer)
-    stats = process_programs(agents, 10, cfg)
+    process_programs(agents, 10, cfg)
     # Enforcer should only hunt simulation agents, not haven agents
     assert enforcer.goal_target_id is None or enforcer.goal_target_id not in {a.id for a in agents[:5]}, \
         "Enforcer targeted a haven agent"

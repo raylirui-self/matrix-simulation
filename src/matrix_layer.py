@@ -464,7 +464,7 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
                     a.add_chronicle(tick, "blue_pill", "Chose the blue pill — but a splinter remains")
 
     # ── Phase 4b: Redpilled agent perks (glitch foresight, Sentinel detection) ──
-    glitch_foresight_radius = getattr(mx_cfg, 'redpill_glitch_foresight_radius', 0.15)
+    getattr(mx_cfg, 'redpill_glitch_foresight_radius', 0.15)
     sentinel_detect_radius = getattr(mx_cfg, 'redpill_sentinel_detect_radius', 0.2)
     sentinels_list = [a for a in alive if a.is_sentinel]
     for a in non_sentinels:

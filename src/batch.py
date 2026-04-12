@@ -26,7 +26,6 @@ from dataclasses import dataclass, field
 from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState, reset_event_id_counter
 from src.agents import set_id_counter
-from src.causal_graph import export_chains_json, export_events_json
 
 
 @dataclass

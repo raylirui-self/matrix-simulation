@@ -19,8 +19,6 @@ from src.matrix_layer import MatrixState
 from src.communication import InfoObject, set_info_id_counter, get_info_id_counter
 from src.mythology import (
     MythologyState, EraSummary, Myth, LegendaryFigure,
-    get_myth_id_counter, get_legend_id_counter,
-    set_myth_id_counter, set_legend_id_counter,
 )
 
 

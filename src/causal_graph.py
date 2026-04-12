@@ -8,7 +8,6 @@ This module provides traversal (ancestors/descendants) and JSON export.
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 from src.engine import CausalEvent
 

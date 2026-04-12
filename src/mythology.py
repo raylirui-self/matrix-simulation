@@ -11,6 +11,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Optional
 
+from src.agents import ChronicleEntry
+
 
 # ═══════════════════════════════════════════════════════════════
 # Data Models
@@ -155,7 +157,7 @@ class MythologyState:
         return {
             "era_summaries": [s.to_dict() for s in self.era_summaries],
             "myths": [m.to_dict() for m in self.myths],
-            "legends": [l.to_dict() for l in self.legends],
+            "legends": [leg.to_dict() for leg in self.legends],
             "last_era_summary_tick": self.last_era_summary_tick,
             "last_myth_check_tick": self.last_myth_check_tick,
             "known_legend_agent_ids": list(self.known_legend_agent_ids),
@@ -168,7 +170,7 @@ class MythologyState:
         state = cls(
             era_summaries=[EraSummary.from_dict(s) for s in d.get("era_summaries", [])],
             myths=[Myth.from_dict(m) for m in d.get("myths", [])],
-            legends=[LegendaryFigure.from_dict(l) for l in d.get("legends", [])],
+            legends=[LegendaryFigure.from_dict(leg) for leg in d.get("legends", [])],
             last_era_summary_tick=d.get("last_era_summary_tick", 0),
             last_myth_check_tick=d.get("last_myth_check_tick", 0),
             known_legend_agent_ids=set(d.get("known_legend_agent_ids", [])),
@@ -402,7 +404,7 @@ def classify_events_for_myths(recent_events: list, stats: dict,
         for w in wars[:2]:
             triggers.append({
                 "archetype": "faction_war",
-                "source_event": f"War between factions (casualties on both sides)",
+                "source_event": "War between factions (casualties on both sides)",
                 "trigger_type": "era_transition",
             })
 
@@ -603,8 +605,8 @@ def _build_legend_prompt(agent, legend_type: str) -> str:
         lines.append("This agent is The Anomaly — The One who sees through the Matrix.")
     if agent.redpilled:
         lines.append("This agent took the red pill and knows the truth.")
-    lines.append(f"\nCreate a legendary title and 2-3 sentence mythological description. "
-                 f"Embellish their abilities and deeds. Use epic language.")
+    lines.append("\nCreate a legendary title and 2-3 sentence mythological description. "
+                 "Embellish their abilities and deeds. Use epic language.")
     lines.append("Respond as: TITLE: <title>\\nDESCRIPTION: <text>")
     return "\n".join(lines)
 
@@ -809,8 +811,8 @@ def process_legend_discoveries(agents: list, legends: list, tick: int,
             continue
         # Pick a legend they haven't discovered yet
         known = {m.get("event", "") for m in a.memory}
-        available = [l for l in legends
-                     if f"Discovered the legend of {l.title}" not in
+        available = [leg for leg in legends
+                     if f"Discovered the legend of {leg.title}" not in
                      " ".join(k for k in known)]
         if not available:
             continue
@@ -832,5 +834,3 @@ def process_legend_discoveries(agents: list, legends: list, tick: int,
     return discoveries
 
 
-# Need ChronicleEntry for legend discoveries
-from src.agents import ChronicleEntry

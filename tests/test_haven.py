@@ -4,16 +4,14 @@ Tests for The Haven — The Real World (Phase 1).
 Covers: Haven grid init, jack-out/jack-in transitions, mission lifecycle,
 council voting, and a 10-tick integration run with agents in both worlds.
 """
-import random
 
 import pytest
 
-from src.agents import Agent, Bond, Traits, create_agent
+from src.agents import Agent, create_agent
 from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
 from src.haven import (
-    HavenGrid, HavenState, Mission,
-    init_haven, process_haven,
+    HavenGrid, init_haven, process_haven,
     try_jack_out, try_jack_in, complete_mission,
     run_council_vote, reset_mission_id_counter,
 )
@@ -444,7 +442,7 @@ class TestIntegration:
         a.redpilled = True
         a.awareness = 0.9
         try_jack_out(a, eng.haven_state, tick=0, cfg=haven_cfg)
-        haven_x, haven_y = a.x, a.y
+        _haven_x, _haven_y = a.x, a.y
 
         eng.tick()
 

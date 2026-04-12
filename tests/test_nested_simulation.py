@@ -10,17 +10,14 @@ Tests for Nested Simulations (Phase 5):
 import time
 import random
 
-import pytest
 
-from src.agents import create_agent, Agent, SKILL_NAMES
-from src.config_loader import SimConfig
+from src.agents import create_agent
 from src.engine import SimulationEngine, RunState
 from src.nested_sim import (
-    SubAgent, SubSimulation, WorldEngine,
-    create_world_engine, process_nested_simulations,
+    SubSimulation, create_world_engine, process_nested_simulations,
     _create_sub_agent,
 )
-from src.world import ResourceGrid, ResourceCell, TechBreakthrough
+from src.world import ResourceGrid, TechBreakthrough
 
 
 # ===================================================
@@ -363,7 +360,7 @@ class TestRecursiveAwareness:
 
         stats1 = sub.tick(recursive_threshold=0.7)
         assert agent.recursive_detected
-        events_1 = len(stats1["recursive_events"])
+        len(stats1["recursive_events"])
 
         stats2 = sub.tick(recursive_threshold=0.7)
         events_2 = len(stats2["recursive_events"])
@@ -383,7 +380,7 @@ class TestRecursiveAwareness:
         agent.curiosity = 0.0  # minimize growth so we stay below lucid
         agent.intelligence = 0.0
 
-        stats = sub.tick(recursive_threshold=0.3)  # threshold below awareness
+        sub.tick(recursive_threshold=0.3)  # threshold below awareness
         # Agent has awareness > threshold but consciousness_phase is self_aware (not lucid/recursive)
         # so recursive should NOT fire despite awareness being above threshold
         assert not agent.recursive_detected
