@@ -89,32 +89,81 @@ async def sim_websocket(websocket: WebSocket, run_id: str):
             pass
 
 
-async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
-    """Run one tick and send the delta to the client."""
-    # Capture pre-tick state
-    prev_agents = {}
-    prev_alive_ids = set()
+def capture_prev_state(engine) -> tuple[set, dict]:
+    """Snapshot per-agent state used to gate delta emission next tick."""
+    prev_agents: dict = {}
+    prev_alive_ids: set = set()
     for a in engine.agents:
         if a.alive:
-            prev_agents[a.id] = {"x": a.x, "y": a.y, "health": a.health}
+            prev_agents[a.id] = {
+                "x": a.x,
+                "y": a.y,
+                "health": a.health,
+                "consciousness_phase": getattr(a, 'consciousness_phase', 'bicameral'),
+                "program_flags": (
+                    getattr(a, 'is_enforcer', False),
+                    getattr(a, 'is_broker', False),
+                    getattr(a, 'is_guardian', False),
+                    getattr(a, 'is_locksmith', False),
+                ),
+            }
             prev_alive_ids.add(a.id)
+    return prev_alive_ids, prev_agents
 
-    # Run tick
-    result = manager.run_tick(run_id)
-    if not result:
-        return {"alive_count": 0}
 
-    # Compute deltas
-    delta_data = manager.compute_delta(engine, prev_alive_ids, prev_agents)
-
-    # Build bond deltas (simplified — send bonds formed/broken count)
+def build_tick_message(engine, result, delta_data: dict) -> dict:
+    """Assemble the WebSocket tick payload. Pure function for testability."""
     bond_summary = {
         "formed": result.bonds_formed,
         "decayed": result.bonds_decayed,
     }
 
-    # Build tick message
-    msg = {
+    # Dream state (from engine.dream_state + result.dream_stats)
+    ds = getattr(engine, 'dream_state', None)
+    dream_payload = {}
+    if ds is not None:
+        dream_payload = {
+            "is_dreaming": bool(ds.is_dreaming),
+            "dream_start_tick": ds.dream_start_tick,
+            "ghosts": [g.to_dict() for g in getattr(ds, 'ghosts', []) or []],
+            "lucid_agent_ids": list(getattr(ds, 'lucid_agent_ids', []) or []),
+        }
+    if result.dream_stats:
+        dream_payload["stats"] = result.dream_stats
+
+    # Haven state summary
+    haven_payload = None
+    hs = getattr(engine, 'haven_state', None)
+    if hs is not None:
+        haven_agents = [
+            a for a in engine.agents
+            if getattr(a, 'alive', False)
+            and getattr(a, 'location', 'simulation') == 'haven'
+        ]
+        active_missions = [
+            m for m in getattr(hs, 'missions', []) or []
+            if not getattr(m, 'completed', False) and not getattr(m, 'failed', False)
+        ]
+        haven_payload = {
+            "population": len(haven_agents),
+            "active_missions": len(active_missions),
+            "last_vote_tick": getattr(hs, 'last_vote_tick', 0),
+            "stats": result.haven_stats or {},
+        }
+
+    # Nested simulations
+    nested_payload = {
+        "count": len(getattr(engine, 'world_engines', []) or []),
+        "stats": result.nested_sim_stats or {},
+    }
+
+    # Boltzmann brain events (pulled out of matrix_stats)
+    boltzmann_events = []
+    bb_id = (result.matrix_stats or {}).get("boltzmann_brain")
+    if bb_id is not None:
+        boltzmann_events.append({"agent_id": bb_id, "tick": result.tick})
+
+    return {
         "type": "tick",
         "tick": result.tick,
         "stats": {
@@ -140,7 +189,24 @@ async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
         "belief_stats": result.belief_stats,
         "cinematic_events": result.cinematic_events,
         "communication": result.communication_stats,
+        "dream": dream_payload,
+        "haven": haven_payload,
+        "nested_sims": nested_payload,
+        "boltzmann_events": boltzmann_events,
     }
+
+
+async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
+    """Run one tick and send the delta to the client."""
+    prev_alive_ids, prev_agents = capture_prev_state(engine)
+
+    # Run tick
+    result = manager.run_tick(run_id)
+    if not result:
+        return {"alive_count": 0}
+
+    delta_data = manager.compute_delta(engine, prev_alive_ids, prev_agents)
+    msg = build_tick_message(engine, result, delta_data)
 
     await websocket.send_json(msg)
     return {"alive_count": result.alive_count}
@@ -149,6 +215,14 @@ async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
 async def _send_full_state(websocket: WebSocket, engine):
     """Send a complete state sync."""
     alive = engine.get_alive_agents()
+    glimpse_counts: dict[int, int] = {}
+    for g in getattr(engine.matrix_state, 'pleroma_glimpses', []) or []:
+        aid = getattr(g, 'agent_id', None)
+        if aid is None and isinstance(g, dict):
+            aid = g.get('agent_id')
+        if aid is not None:
+            glimpse_counts[aid] = glimpse_counts.get(aid, 0) + 1
+
     agents = []
     for a in alive:
         agents.append({
@@ -169,7 +243,35 @@ async def _send_full_state(websocket: WebSocket, engine):
             "faction_id": a.faction_id,
             "wealth": round(a.wealth, 3),
             "trauma": round(a.trauma, 3),
+            "consciousness_phase": getattr(a, 'consciousness_phase', 'bicameral'),
+            "free_will_index": round(getattr(a, 'free_will_index', 0.0), 3),
+            "incarnation_count": getattr(a, 'incarnation_count', 1),
+            "soul_trap_broken": getattr(a, 'soul_trap_broken', False),
+            "past_life_memories": len(getattr(a, 'past_life_memories', []) or []),
+            "is_enforcer": getattr(a, 'is_enforcer', False),
+            "is_broker": getattr(a, 'is_broker', False),
+            "is_guardian": getattr(a, 'is_guardian', False),
+            "is_locksmith": getattr(a, 'is_locksmith', False),
+            "teleport_keys": len(getattr(a, 'teleport_keys', []) or []),
+            "location": getattr(a, 'location', 'simulation'),
+            "pleroma_glimpses": glimpse_counts.get(a.id, 0),
         })
+
+    ds = getattr(engine, 'dream_state', None)
+    dream_payload = ds.to_dict() if ds is not None else {}
+
+    hs = getattr(engine, 'haven_state', None)
+    haven_payload = None
+    if hs is not None:
+        haven_agents = [a for a in engine.agents if a.alive and getattr(a, 'location', 'simulation') == 'haven']
+        haven_payload = {
+            "population": len(haven_agents),
+            "active_missions": sum(
+                1 for m in getattr(hs, 'missions', []) or []
+                if not getattr(m, 'completed', False) and not getattr(m, 'failed', False)
+            ),
+            "last_vote_tick": getattr(hs, 'last_vote_tick', 0),
+        }
 
     msg = {
         "type": "state_sync",
@@ -180,5 +282,8 @@ async def _send_full_state(websocket: WebSocket, engine):
         "wars": [w.to_dict() for w in engine.wars],
         "world_summary": engine.world.summary(),
         "protagonist_ids": engine.protagonist_ids,
+        "dream": dream_payload,
+        "haven": haven_payload,
+        "nested_sims": {"count": len(getattr(engine, 'world_engines', []) or [])},
     }
     await websocket.send_json(msg)

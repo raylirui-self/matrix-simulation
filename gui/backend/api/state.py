@@ -12,6 +12,15 @@ from src.beliefs import set_faction_id_counter, get_faction_id_counter
 from src.communication import set_info_id_counter, get_info_id_counter
 
 
+def _action_str(action) -> str | None:
+    """Normalize a stored (x, y) action tuple into a compact string."""
+    if action is None:
+        return None
+    if isinstance(action, (tuple, list)) and len(action) >= 2:
+        return f"{int(action[0])},{int(action[1])}"
+    return str(action)
+
+
 class EngineManager:
     """Manages simulation engine instances and persistence."""
 
@@ -104,15 +113,48 @@ class EngineManager:
 
     def compute_delta(self, engine: SimulationEngine,
                       prev_alive_ids: set, prev_agents: dict) -> dict:
-        """Compute agent deltas between ticks for WebSocket protocol."""
+        """Compute agent deltas between ticks for WebSocket protocol.
+
+        Emits consciousness/program/incarnation fields whenever a delta is
+        sent for an agent (either movement or an attribute change). This
+        keeps the protocol simple while still being delta-gated — static
+        agents that don't move or change state emit no payload.
+        """
         agent_deltas = []
         alive_now = engine.get_alive_agents()
         alive_ids_now = {a.id for a in alive_now}
 
+        # Per-agent glimpse counts (derived from MatrixState.pleroma_glimpses)
+        glimpse_counts: dict[int, int] = {}
+        for g in getattr(engine.matrix_state, 'pleroma_glimpses', []) or []:
+            aid = getattr(g, 'agent_id', None)
+            if aid is None and isinstance(g, dict):
+                aid = g.get('agent_id')
+            if aid is not None:
+                glimpse_counts[aid] = glimpse_counts.get(aid, 0) + 1
+
+        def _extras(a) -> dict:
+            return {
+                "consciousness_phase": getattr(a, 'consciousness_phase', 'bicameral'),
+                "free_will_index": round(getattr(a, 'free_will_index', 0.0), 3),
+                "incarnation_count": getattr(a, 'incarnation_count', 1),
+                "soul_trap_broken": getattr(a, 'soul_trap_broken', False),
+                "is_enforcer": getattr(a, 'is_enforcer', False),
+                "is_broker": getattr(a, 'is_broker', False),
+                "is_guardian": getattr(a, 'is_guardian', False),
+                "is_locksmith": getattr(a, 'is_locksmith', False),
+                "teleport_keys": len(getattr(a, 'teleport_keys', []) or []),
+                "past_life_memories": len(getattr(a, 'past_life_memories', []) or []),
+                "location": getattr(a, 'location', 'simulation'),
+                "pleroma_glimpses": glimpse_counts.get(a.id, 0),
+                "predicted_action": _action_str(getattr(a, '_last_predicted_action', None)),
+                "actual_action": _action_str(getattr(a, '_last_actual_action', None)),
+            }
+
         # Newly born
         for a in alive_now:
             if a.id not in prev_alive_ids:
-                agent_deltas.append({
+                delta = {
                     "id": a.id, "born": True,
                     "x": round(a.x, 4), "y": round(a.y, 4),
                     "phase": a.phase, "sex": a.sex,
@@ -121,17 +163,29 @@ class EngineManager:
                     "emotion": a.dominant_emotion,
                     "awareness": round(a.awareness, 4),
                     "is_protagonist": a.is_protagonist,
-                })
+                }
+                delta.update(_extras(a))
+                agent_deltas.append(delta)
                 continue
 
-            # Existing agents — send if moved or state changed
+            # Existing agents — send if moved or salient state changed
             prev = prev_agents.get(a.id)
             if prev:
                 moved = (abs(a.x - prev["x"]) > 0.001 or
                          abs(a.y - prev["y"]) > 0.001)
                 health_changed = abs(a.health - prev["health"]) > 0.001
-                if moved or health_changed:
-                    agent_deltas.append({
+                phase_changed = (
+                    prev.get("consciousness_phase") !=
+                    getattr(a, 'consciousness_phase', 'bicameral')
+                )
+                program_changed = prev.get("program_flags") != (
+                    getattr(a, 'is_enforcer', False),
+                    getattr(a, 'is_broker', False),
+                    getattr(a, 'is_guardian', False),
+                    getattr(a, 'is_locksmith', False),
+                )
+                if moved or health_changed or phase_changed or program_changed:
+                    delta = {
                         "id": a.id,
                         "x": round(a.x, 4), "y": round(a.y, 4),
                         "health": round(a.health, 4),
@@ -145,7 +199,9 @@ class EngineManager:
                         "is_sentinel": a.is_sentinel,
                         "is_protagonist": a.is_protagonist,
                         "faction_id": a.faction_id,
-                    })
+                    }
+                    delta.update(_extras(a))
+                    agent_deltas.append(delta)
 
         # Deaths
         for aid in prev_alive_ids - alive_ids_now:

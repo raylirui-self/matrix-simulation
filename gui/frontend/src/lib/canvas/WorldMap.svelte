@@ -4,6 +4,7 @@
 		agents,
 		tick,
 		matrixState,
+		phasePulses,
 		type Agent
 	} from '$lib/stores/simulation';
 	import { zoomLevel, focusCell, focusAgentId, overlays, bondConstellationMode } from '$lib/stores/ui';
@@ -252,6 +253,55 @@
 		elder: '#aa66ff'
 	};
 
+	// Consciousness phase base tints
+	const CONSCIOUSNESS_COLORS: Record<string, string> = {
+		bicameral: '#888888',
+		questioning: '#88aacc',
+		self_aware: '#00ff88',
+		lucid: '#ffd700',
+		recursive: '#ff66ff'
+	};
+
+	// Toggle for secondary life-phase overlay (press 'L')
+	let showLifePhaseOverlay = false;
+
+	function handleKey(e: KeyboardEvent) {
+		if (e.key === 'l' || e.key === 'L') {
+			showLifePhaseOverlay = !showLifePhaseOverlay;
+		}
+	}
+
+	// Phase pulse wave animations — spawned by phasePulses store
+	type PulseWave = {
+		agent_id: number;
+		tick: number;
+		radius: number;
+		life: number;
+		color: string;
+	};
+	let pulseWaves: PulseWave[] = [];
+	let seenPulseKeys = new Set<string>();
+
+	$effect(() => {
+		const pulses = $phasePulses;
+		for (const p of pulses) {
+			const key = `${p.agent_id}:${p.tick}`;
+			if (seenPulseKeys.has(key)) continue;
+			seenPulseKeys.add(key);
+			pulseWaves.push({
+				agent_id: p.agent_id,
+				tick: p.tick,
+				radius: 4,
+				life: 1.0,
+				color: CONSCIOUSNESS_COLORS[p.to_phase] || '#00ff88'
+			});
+		}
+		// Prune seen keys
+		if (seenPulseKeys.size > 500) {
+			seenPulseKeys = new Set(Array.from(seenPulseKeys).slice(-250));
+		}
+	});
+
 	// Emotion colors
 	const EMOTION_COLORS: Record<string, string> = {
 		happiness: '#00ff88',
@@ -271,6 +321,199 @@
 		enemy: '#ff0000',
 		resistance: '#ffd700'
 	};
+
+	// ── Consciousness-phase agent rendering ──
+	function drawConsciousnessAgent(
+		ctx: CanvasRenderingContext2D,
+		agent: Agent,
+		ax: number,
+		ay: number,
+		size: number,
+		color: string,
+		cPhase: string
+	) {
+		const health = agent.health;
+		if (cPhase === 'bicameral') {
+			// Grey, translucent, minimal presence
+			ctx.globalAlpha = 0.5 * (0.6 + health * 0.4);
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 1;
+			return;
+		}
+
+		if (cPhase === 'questioning') {
+			// Faint emotion tint bleed-in + occasional jitter
+			const emo = EMOTION_COLORS[agent.emotion] || color;
+			ctx.globalAlpha = 0.75;
+			ctx.fillStyle = emo;
+			const jitter = ((agent.id * 13 + Math.floor(Date.now() / 400)) % 37 === 0) ? 1 : 0;
+			ctx.beginPath();
+			ctx.arc(ax + jitter, ay, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 1;
+			return;
+		}
+
+		if (cPhase === 'self_aware') {
+			// Full color, thin shimmering outline
+			ctx.globalAlpha = 0.7 + health * 0.3;
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(Date.now() / 300 + agent.id));
+			ctx.strokeStyle = '#ffffff';
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size + 1.5, 0, Math.PI * 2);
+			ctx.stroke();
+			ctx.globalAlpha = 1;
+			return;
+		}
+
+		if (cPhase === 'lucid') {
+			// Inner radial glow, light trail, occasional wireframe flicker
+			const grad = ctx.createRadialGradient(ax, ay, 0, ax, ay, size + 6);
+			grad.addColorStop(0, color);
+			grad.addColorStop(0.5, 'rgba(255, 215, 0, 0.5)');
+			grad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+			ctx.fillStyle = grad;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size + 6, 0, Math.PI * 2);
+			ctx.fill();
+
+			ctx.fillStyle = color;
+			ctx.globalAlpha = 0.9;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 1;
+
+			// Wireframe flicker
+			if ((agent.id + Math.floor(Date.now() / 250)) % 11 === 0) {
+				ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.moveTo(ax - size, ay);
+				ctx.lineTo(ax + size, ay);
+				ctx.moveTo(ax, ay - size);
+				ctx.lineTo(ax, ay + size);
+				ctx.stroke();
+			}
+			return;
+		}
+
+		if (cPhase === 'recursive') {
+			// Ghost-copy offset, fractal multi-outline, bright inner core
+			ctx.globalAlpha = 0.35;
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(ax + 2, ay + 2, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.beginPath();
+			ctx.arc(ax - 2, ay - 1, size, 0, Math.PI * 2);
+			ctx.fill();
+
+			ctx.globalAlpha = 1;
+			ctx.fillStyle = '#ffffff';
+			ctx.beginPath();
+			ctx.arc(ax, ay, size * 0.55, 0, Math.PI * 2);
+			ctx.fill();
+
+			ctx.fillStyle = color;
+			ctx.globalAlpha = 0.85;
+			ctx.beginPath();
+			ctx.arc(ax, ay, size, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 1;
+
+			// Fractal outlines
+			ctx.strokeStyle = color;
+			ctx.lineWidth = 1;
+			for (let r = 1; r <= 3; r++) {
+				ctx.globalAlpha = 0.25 / r;
+				ctx.beginPath();
+				ctx.arc(ax, ay, size + r * 2, 0, Math.PI * 2);
+				ctx.stroke();
+			}
+			ctx.globalAlpha = 1;
+			return;
+		}
+
+		// Fallback — plain circle
+		ctx.fillStyle = color;
+		ctx.globalAlpha = 0.7 + health * 0.3;
+		ctx.beginPath();
+		ctx.arc(ax, ay, size, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.globalAlpha = 1;
+	}
+
+	// ── Program icons (visually dominant) ──
+	function drawProgramIcon(
+		ctx: CanvasRenderingContext2D,
+		agent: Agent,
+		ax: number,
+		ay: number
+	) {
+		const r = 9; // bigger than regular agents
+		ctx.save();
+		if (agent.is_enforcer) {
+			// Red triangle
+			ctx.fillStyle = '#ff2222';
+			ctx.strokeStyle = '#ffaaaa';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.moveTo(ax, ay - r);
+			ctx.lineTo(ax + r, ay + r * 0.8);
+			ctx.lineTo(ax - r, ay + r * 0.8);
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		} else if (agent.is_broker) {
+			// Gold diamond
+			ctx.fillStyle = '#ffd700';
+			ctx.strokeStyle = '#ffffaa';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.moveTo(ax, ay - r);
+			ctx.lineTo(ax + r, ay);
+			ctx.lineTo(ax, ay + r);
+			ctx.lineTo(ax - r, ay);
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		} else if (agent.is_guardian) {
+			// Green shield (rounded triangle)
+			ctx.fillStyle = '#22cc44';
+			ctx.strokeStyle = '#aaffaa';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.moveTo(ax, ay - r);
+			ctx.lineTo(ax + r, ay - r * 0.3);
+			ctx.lineTo(ax + r * 0.6, ay + r);
+			ctx.lineTo(ax - r * 0.6, ay + r);
+			ctx.lineTo(ax - r, ay - r * 0.3);
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke();
+		} else if (agent.is_locksmith) {
+			// Cream key glyph — circle head + stem + tooth
+			ctx.fillStyle = '#f5f0dc';
+			ctx.strokeStyle = '#ffffff';
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.arc(ax - r * 0.4, ay, r * 0.5, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.stroke();
+			ctx.fillRect(ax - r * 0.1, ay - 1.5, r, 3);
+			ctx.fillRect(ax + r * 0.6, ay - 1.5, 2.5, r * 0.7);
+		}
+		ctx.restore();
+	}
 
 	// Hover state
 	let hoverAgent: Agent | null = null;
@@ -473,13 +716,23 @@
 			drawBeliefParticles(ctx);
 		}
 
-		// Draw agents as particles
+		// Update pulse waves once per frame
+		for (let i = pulseWaves.length - 1; i >= 0; i--) {
+			pulseWaves[i].radius += 1.8;
+			pulseWaves[i].life -= 0.025;
+			if (pulseWaves[i].life <= 0) pulseWaves.splice(i, 1);
+		}
+
+		// Build a quick index for pulse lookups
+		const pulseByAgent = new Map<number, PulseWave>();
+		for (const w of pulseWaves) pulseByAgent.set(w.agent_id, w);
+
+		// Draw agents
 		for (const agent of agentList) {
 			const ax = gridLeft + agent.x * gridSize * cellSize;
 			const ay = gridTop + agent.y * gridSize * cellSize;
 
 			if (bondMode && !agent.is_protagonist) {
-				// In bond constellation, agents are dim dots
 				ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
 				ctx.beginPath();
 				ctx.arc(ax, ay, 2, 0, Math.PI * 2);
@@ -487,35 +740,64 @@
 				continue;
 			}
 
-			// Size based on intelligence
-			const baseSize = 3 + agent.intelligence * 4;
-			const size = agent.is_protagonist ? baseSize + 2 : baseSize;
-
-			// Color based on phase (or emotion if overlay active)
-			let color = PHASE_COLORS[agent.phase] || '#00ff88';
-			if ($overlays.has('emotions') || $overlays.has('contagion')) {
-				color = EMOTION_COLORS[agent.emotion] || '#00ff88';
+			// ── Programs: distinct shapes, visually dominant ──
+			const isProgram =
+				agent.is_enforcer || agent.is_broker || agent.is_guardian || agent.is_locksmith;
+			if (isProgram) {
+				drawProgramIcon(ctx, agent, ax, ay);
+				continue;
 			}
 
-			// Sentinel special rendering
+			// ── Consciousness-phase rendering ──
+			const baseSize = 3 + agent.intelligence * 4;
+			const size = agent.is_protagonist ? baseSize + 2 : baseSize;
+			const cPhase = agent.consciousness_phase || 'bicameral';
+
+			// Base color per consciousness phase, emotion-overridable
+			let color = CONSCIOUSNESS_COLORS[cPhase] || '#888888';
+			if ($overlays.has('emotions') || $overlays.has('contagion')) {
+				color = EMOTION_COLORS[agent.emotion] || color;
+			}
+
+			// Sentinel special rendering (Sentinel trumps consciousness visuals)
 			if (agent.is_sentinel) {
 				color = '#ff0000';
-				// Scanning beam
 				ctx.strokeStyle = 'rgba(255, 0, 0, 0.15)';
 				ctx.lineWidth = 1;
 				ctx.beginPath();
 				ctx.moveTo(ax, ay);
-				ctx.lineTo(ax + Math.cos(Date.now() / 500 + agent.id) * 40, ay + Math.sin(Date.now() / 500 + agent.id) * 40);
+				ctx.lineTo(
+					ax + Math.cos(Date.now() / 500 + agent.id) * 40,
+					ay + Math.sin(Date.now() / 500 + agent.id) * 40
+				);
 				ctx.stroke();
 			}
 
-			// Draw agent circle
-			ctx.beginPath();
-			ctx.arc(ax, ay, size, 0, Math.PI * 2);
-			ctx.fillStyle = color;
-			ctx.globalAlpha = 0.7 + agent.health * 0.3;
-			ctx.fill();
-			ctx.globalAlpha = 1;
+			drawConsciousnessAgent(ctx, agent, ax, ay, size, color, cPhase);
+
+			// Pulse wave on phase threshold crossing
+			const pulse = pulseByAgent.get(agent.id);
+			if (pulse) {
+				ctx.strokeStyle = pulse.color;
+				ctx.globalAlpha = Math.max(0, pulse.life * 0.9);
+				ctx.lineWidth = 2;
+				ctx.beginPath();
+				ctx.arc(ax, ay, size + pulse.radius, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
+
+			// Secondary life-phase overlay (toggle with 'L')
+			if (showLifePhaseOverlay) {
+				const lifeColor = PHASE_COLORS[agent.phase] || '#00ff88';
+				ctx.strokeStyle = lifeColor;
+				ctx.globalAlpha = 0.5;
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.arc(ax, ay, size + 1.5, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
 
 			// Awareness glow
 			if (agent.awareness > 0.1) {
@@ -649,7 +931,6 @@
 
 	function applyGlitchEffect(controlIndex: number) {
 		const intensity = (0.5 - controlIndex) * 2; // 0-1
-		const now = Date.now();
 
 		// Random block displacement
 		if (Math.random() < intensity * 0.08) {
@@ -783,9 +1064,11 @@
 			height = canvas.height = window.innerHeight;
 		};
 		window.addEventListener('resize', handleResize);
+		window.addEventListener('keydown', handleKey);
 
 		return () => {
 			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('keydown', handleKey);
 			cancelAnimationFrame(animFrame);
 		};
 	});

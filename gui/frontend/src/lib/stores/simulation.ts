@@ -24,6 +24,22 @@ export type Agent = {
 	protagonist_name: string | null;
 	faction_id: number | null;
 	wealth: number;
+	// Phase 7 additions — consciousness / programs / soul-trap
+	consciousness_phase: string; // bicameral|questioning|self_aware|lucid|recursive
+	prev_consciousness_phase?: string; // client-tracked for pulse animation
+	free_will_index: number;
+	predicted_action?: string | null;
+	actual_action?: string | null;
+	incarnation_count: number;
+	soul_trap_broken: boolean;
+	past_life_memories: number;
+	is_enforcer: boolean;
+	is_broker: boolean;
+	is_guardian: boolean;
+	is_locksmith: boolean;
+	teleport_keys: number;
+	pleroma_glimpses: number;
+	location: string; // "simulation" | "haven"
 };
 
 // ── Stores ──
@@ -93,6 +109,33 @@ export type War = {
 };
 export const wars = writable<War[]>([]);
 
+// Dream state (simulation-wide dream cycle)
+export const dreamState = writable<{
+	is_dreaming: boolean;
+	dream_start_tick: number;
+	ghosts: any[];
+	lucid_agent_ids: number[];
+	stats?: Record<string, any>;
+}>({ is_dreaming: false, dream_start_tick: 0, ghosts: [], lucid_agent_ids: [] });
+
+// Haven summary
+export const havenSummary = writable<{
+	population: number;
+	active_missions: number;
+	last_vote_tick: number;
+	stats?: Record<string, any>;
+} | null>(null);
+
+// Nested simulation count
+export const nestedSims = writable<{ count: number; stats?: Record<string, any> }>({ count: 0 });
+
+// Boltzmann brain event ticker
+export const boltzmannEvents = writable<Array<{ agent_id: number; tick: number }>>([]);
+
+// Phase-transition pulses (for animating consciousness phase crossings)
+export type PhasePulse = { agent_id: number; tick: number; to_phase: string };
+export const phasePulses = writable<PhasePulse[]>([]);
+
 // Cinematic events — full-screen overlays for key moments
 export type CinematicEvent = {
 	type: string;
@@ -122,12 +165,53 @@ export const protagonists = derived(agents, ($agents) =>
 export const population = derived(agents, ($agents) => $agents.size);
 
 // ── Actions ──
+function withDefaults(a: Partial<Agent> & { id: number }): Agent {
+	return {
+		id: a.id,
+		x: a.x ?? 0.5,
+		y: a.y ?? 0.5,
+		sex: a.sex ?? 'M',
+		age: a.age ?? 0,
+		phase: a.phase ?? 'infant',
+		health: a.health ?? 1.0,
+		intelligence: a.intelligence ?? 0,
+		generation: a.generation ?? 0,
+		emotion: a.emotion ?? 'happiness',
+		awareness: a.awareness ?? 0,
+		redpilled: a.redpilled ?? false,
+		is_anomaly: a.is_anomaly ?? false,
+		is_sentinel: a.is_sentinel ?? false,
+		is_exile: a.is_exile ?? false,
+		is_protagonist: a.is_protagonist ?? false,
+		protagonist_name: a.protagonist_name ?? null,
+		faction_id: a.faction_id ?? null,
+		wealth: a.wealth ?? 0,
+		consciousness_phase: a.consciousness_phase ?? 'bicameral',
+		free_will_index: a.free_will_index ?? 0,
+		predicted_action: a.predicted_action ?? null,
+		actual_action: a.actual_action ?? null,
+		incarnation_count: a.incarnation_count ?? 1,
+		soul_trap_broken: a.soul_trap_broken ?? false,
+		past_life_memories: a.past_life_memories ?? 0,
+		is_enforcer: a.is_enforcer ?? false,
+		is_broker: a.is_broker ?? false,
+		is_guardian: a.is_guardian ?? false,
+		is_locksmith: a.is_locksmith ?? false,
+		teleport_keys: a.teleport_keys ?? 0,
+		pleroma_glimpses: a.pleroma_glimpses ?? 0,
+		location: a.location ?? 'simulation'
+	};
+}
+
 export function loadFullState(state: any) {
 	const agentMap = new Map<number, Agent>();
 	for (const a of state.agents || []) {
-		agentMap.set(a.id, a);
+		agentMap.set(a.id, withDefaults(a));
 	}
 	agents.set(agentMap);
+	if (state.dream) dreamState.set({ ...state.dream, stats: state.dream.stats });
+	if (state.haven) havenSummary.set(state.haven);
+	if (state.nested_sims) nestedSims.set(state.nested_sims);
 	tick.set(state.tick || 0);
 	stats.set({
 		alive_count: agentMap.size,
@@ -154,34 +238,15 @@ export function applyTickMessage(msg: TickMessage) {
 	stats.set(msg.stats);
 
 	// Apply agent deltas
+	const pulsesToEmit: PhasePulse[] = [];
 	agents.update(($agents) => {
-		for (const delta of msg.agent_deltas) {
+		for (const delta of msg.agent_deltas as any[]) {
 			if (delta.died) {
 				$agents.delete(delta.id);
 				continue;
 			}
 			if (delta.born) {
-				$agents.set(delta.id, {
-					id: delta.id,
-					x: delta.x ?? 0.5,
-					y: delta.y ?? 0.5,
-					sex: delta.sex ?? 'M',
-					age: 0,
-					phase: delta.phase ?? 'infant',
-					health: delta.health ?? 1.0,
-					intelligence: delta.intelligence ?? 0,
-					generation: 0,
-					emotion: delta.emotion ?? 'happiness',
-					awareness: delta.awareness ?? 0,
-					redpilled: false,
-					is_anomaly: false,
-					is_sentinel: delta.is_sentinel ?? false,
-					is_exile: false,
-					is_protagonist: delta.is_protagonist ?? false,
-					protagonist_name: null,
-					faction_id: delta.faction_id ?? null,
-					wealth: 0
-				});
+				$agents.set(delta.id, withDefaults(delta));
 				continue;
 			}
 			// Update existing
@@ -200,10 +265,57 @@ export function applyTickMessage(msg: TickMessage) {
 				if (delta.is_sentinel !== undefined) existing.is_sentinel = delta.is_sentinel;
 				if (delta.is_protagonist !== undefined) existing.is_protagonist = delta.is_protagonist;
 				if (delta.faction_id !== undefined) existing.faction_id = delta.faction_id;
+				// Phase 7 fields
+				if (delta.consciousness_phase !== undefined) {
+					const prev = existing.consciousness_phase;
+					if (prev !== delta.consciousness_phase) {
+						existing.prev_consciousness_phase = prev;
+						pulsesToEmit.push({
+							agent_id: existing.id,
+							tick: msg.tick,
+							to_phase: delta.consciousness_phase
+						});
+					}
+					existing.consciousness_phase = delta.consciousness_phase;
+				}
+				if (delta.free_will_index !== undefined) existing.free_will_index = delta.free_will_index;
+				if (delta.predicted_action !== undefined) existing.predicted_action = delta.predicted_action;
+				if (delta.actual_action !== undefined) existing.actual_action = delta.actual_action;
+				if (delta.incarnation_count !== undefined) existing.incarnation_count = delta.incarnation_count;
+				if (delta.soul_trap_broken !== undefined) existing.soul_trap_broken = delta.soul_trap_broken;
+				if (delta.past_life_memories !== undefined) existing.past_life_memories = delta.past_life_memories;
+				if (delta.is_enforcer !== undefined) existing.is_enforcer = delta.is_enforcer;
+				if (delta.is_broker !== undefined) existing.is_broker = delta.is_broker;
+				if (delta.is_guardian !== undefined) existing.is_guardian = delta.is_guardian;
+				if (delta.is_locksmith !== undefined) existing.is_locksmith = delta.is_locksmith;
+				if (delta.teleport_keys !== undefined) existing.teleport_keys = delta.teleport_keys;
+				if (delta.pleroma_glimpses !== undefined) existing.pleroma_glimpses = delta.pleroma_glimpses;
+				if (delta.location !== undefined) existing.location = delta.location;
 			}
 		}
 		return $agents;
 	});
+
+	if (pulsesToEmit.length) {
+		phasePulses.update(($p) => {
+			const next = [...$p, ...pulsesToEmit];
+			// Keep only recent (last 60 ticks worth)
+			const cutoff = msg.tick - 60;
+			return next.filter((p) => p.tick >= cutoff);
+		});
+	}
+
+	// Dream / haven / nested / boltzmann payloads
+	const mAny = msg as any;
+	if (mAny.dream) dreamState.set(mAny.dream);
+	if (mAny.haven) havenSummary.set(mAny.haven);
+	if (mAny.nested_sims) nestedSims.set(mAny.nested_sims);
+	if (mAny.boltzmann_events?.length) {
+		boltzmannEvents.update(($b) => {
+			const next = [...$b, ...mAny.boltzmann_events];
+			return next.slice(-50);
+		});
+	}
 
 	// Update matrix
 	if (msg.matrix) {
