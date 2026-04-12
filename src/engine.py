@@ -56,6 +56,58 @@ from src.nested_sim import (
 )
 
 
+# ── Causal Event System ──
+_next_event_id: int = 0
+
+
+def next_event_id() -> int:
+    """Generate a unique event ID."""
+    global _next_event_id
+    _next_event_id += 1
+    return _next_event_id
+
+
+def reset_event_id_counter(value: int = 0) -> None:
+    """Reset the event ID counter (used in tests and batch runs)."""
+    global _next_event_id
+    _next_event_id = value
+
+
+@dataclass
+class CausalEvent:
+    """A simulation event with causal linkage for graph analysis."""
+    event_id: int
+    tick: int
+    event_type: str          # e.g., "death", "trauma", "faction_founded", "war_started"
+    description: str
+    agent_id: Optional[int] = None
+    caused_by: Optional[int] = None   # event_id of the cause
+    details: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "event_id": self.event_id,
+            "tick": self.tick,
+            "event_type": self.event_type,
+            "description": self.description,
+            "agent_id": self.agent_id,
+            "caused_by": self.caused_by,
+            "details": self.details,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> CausalEvent:
+        return cls(
+            event_id=d["event_id"],
+            tick=d["tick"],
+            event_type=d["event_type"],
+            description=d["description"],
+            agent_id=d.get("agent_id"),
+            caused_by=d.get("caused_by"),
+            details=d.get("details", {}),
+        )
+
+
 @dataclass
 class WorldEvent:
     tick: int
@@ -156,6 +208,11 @@ class SimulationEngine:
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
+
+        # ── Causal Event Graph ──
+        self.causal_events: list[CausalEvent] = []
+        # Maps (agent_id, event_type) -> latest event_id for linking causes
+        self._agent_last_event: dict[tuple[int, str], int] = {}
 
         # ── Soul Trap: captured consciousness pool for recycling into newborns ──
         self._soul_pool: list[dict] = []  # list of {memories, awareness, beliefs, skills, ...}
@@ -448,6 +505,38 @@ class SimulationEngine:
     def get_alive_agents(self) -> list[Agent]:
         return [a for a in self.agents if a.alive]
 
+    def record_event(self, tick: int, event_type: str, description: str,
+                     agent_id: int | None = None,
+                     caused_by: int | None = None,
+                     **details) -> int:
+        """Record a causal event and return its event_id.
+
+        Args:
+            tick: Current simulation tick.
+            event_type: Category (death, trauma, faction_founded, war_started, etc.).
+            description: Human-readable description.
+            agent_id: The agent this event is about (if any).
+            caused_by: event_id of the causing event (if any).
+            **details: Additional metadata.
+
+        Returns:
+            The new event's ID, for use as caused_by in downstream events.
+        """
+        eid = next_event_id()
+        evt = CausalEvent(
+            event_id=eid, tick=tick, event_type=event_type,
+            description=description, agent_id=agent_id,
+            caused_by=caused_by, details=details,
+        )
+        self.causal_events.append(evt)
+        if agent_id is not None:
+            self._agent_last_event[(agent_id, event_type)] = eid
+        return eid
+
+    def get_agent_last_event(self, agent_id: int, event_type: str) -> int | None:
+        """Look up the most recent event_id for an agent+type pair."""
+        return self._agent_last_event.get((agent_id, event_type))
+
     def _agents_by_id(self) -> dict[int, Agent]:
         return {a.id: a for a in self.agents if a.alive}
 
@@ -516,6 +605,10 @@ class SimulationEngine:
                 self._apply_soul_to_newborn(child, tick)
             self.agents.append(child)
             births += 1
+            # Causal event: birth
+            self.record_event(tick, "birth", f"Agent #{child.id} born",
+                              agent_id=child.id,
+                              parent_ids=list(child.parent_ids))
             # System 6: Emotional response to birth
             parent_a = agents_by_id.get(child.parent_ids[0]) if child.parent_ids else None
             parent_b = agents_by_id.get(child.parent_ids[1]) if len(child.parent_ids) > 1 else None
@@ -627,6 +720,15 @@ class SimulationEngine:
                 self.cultural_memory.on_agent_death(a)
                 a.add_memory(tick, "Died")
                 a.add_chronicle(tick, "death", f"Died: {a.death_cause}", cause=a.death_cause, age=a.age)
+                # Causal event: death (link to killer's combat event if killed)
+                kill_cause_eid = None
+                if a.killed_by is not None:
+                    kill_cause_eid = self.get_agent_last_event(a.killed_by, "combat_kill")
+                death_eid = self.record_event(
+                    tick, "death", f"Agent #{a.id} died: {a.death_cause}",
+                    agent_id=a.id, caused_by=kill_cause_eid,
+                    cause=a.death_cause, killed_by=a.killed_by,
+                )
                 newly_dead.append(a)
 
         self.state.total_died += deaths
@@ -666,6 +768,8 @@ class SimulationEngine:
             self._create_artifact(dead, tick)
             # Revenge: mate seeks vengeance for killed partner
             if dead.killed_by is not None:
+                # Look up death event ID for causal linking
+                death_eid = self.get_agent_last_event(dead.id, "death")
                 for bond in dead.bonds:
                     if bond.bond_type == "mate":
                         mate = next(
@@ -678,6 +782,17 @@ class SimulationEngine:
                             mate.goal_ticks = 0
                             mate.emotions["anger"] = min(
                                 1.0, mate.emotions.get("anger", 0) + 0.4
+                            )
+                            # Causal: death -> trauma -> revenge
+                            trauma_eid = self.record_event(
+                                tick, "trauma", f"Agent #{mate.id} traumatized by death of mate #{dead.id}",
+                                agent_id=mate.id, caused_by=death_eid,
+                                dead_agent_id=dead.id,
+                            )
+                            self.record_event(
+                                tick, "revenge_quest", f"Agent #{mate.id} seeks vengeance for #{dead.id}",
+                                agent_id=mate.id, caused_by=trauma_eid,
+                                target_id=dead.killed_by,
                             )
 
         # ── Apply queued world events ──
@@ -710,6 +825,10 @@ class SimulationEngine:
                 bt = self.world.check_breakthroughs(cell, avg_tech, avg_social, tick, avg_logic=avg_logic)
                 if bt:
                     tick_breakthroughs.append(bt.name)
+                    self.record_event(
+                        tick, "breakthrough", f"Technology breakthrough: {bt.name}",
+                        tech=bt.name,
+                    )
                     for a in cell_agents:
                         a.add_memory(tick, f"Witnessed breakthrough: {bt.name}")
                         a.add_chronicle(tick, "breakthrough", f"Witnessed breakthrough: {bt.name}", tech=bt.name)
@@ -787,9 +906,22 @@ class SimulationEngine:
         _pre_faction_ids = {f.id for f in self.factions}
         belief_stats = process_beliefs(sim_alive, self.factions, tick, self.cfg)
         _post_faction_ids = {f.id for f in self.factions}
+        # Causal events for new factions
+        new_faction_ids = _post_faction_ids - _pre_faction_ids
+        for fid in new_faction_ids:
+            faction = next((f for f in self.factions if f.id == fid), None)
+            if faction:
+                fname = getattr(faction, 'name', f'Faction #{fid}')
+                founder_id = getattr(faction, 'founder_id', None)
+                self.record_event(
+                    tick, "faction_founded", f"Faction '{fname}' founded",
+                    agent_id=founder_id, faction_id=fid,
+                )
         # Create language artifacts for dissolved factions
         dissolved_ids = _pre_faction_ids - _post_faction_ids
         for fid in dissolved_ids:
+            self.record_event(tick, "faction_dissolved", f"Faction #{fid} dissolved",
+                              faction_id=fid)
             # Build a minimal faction-like object for the artifact creator
             class _DeadFaction:
                 def __init__(self, fid):
@@ -852,10 +984,20 @@ class SimulationEngine:
         )
 
         # ── System 10: Conflict ──
+        _pre_war_ids = {(w.faction_a_id, w.faction_b_id) for w in self.wars}
         conflict_stats = process_conflict(
             sim_alive, self.factions, self.wars, tick, self.cfg, self.world,
             propaganda_reach=getattr(self, '_prev_propaganda_reach', {})
         )
+        # Causal events for new wars
+        for w in self.wars:
+            key = (w.faction_a_id, w.faction_b_id)
+            if key not in _pre_war_ids:
+                self.record_event(
+                    tick, "war_started",
+                    f"War between Faction #{w.faction_a_id} and Faction #{w.faction_b_id}",
+                    faction_a=w.faction_a_id, faction_b=w.faction_b_id,
+                )
 
         # Wartime innovation bonus: factions at war develop tech and survival faster
         warring_faction_ids = set()
@@ -910,7 +1052,11 @@ class SimulationEngine:
         # ── Cinematic events ──
         # Anomaly emergence
         if self.matrix_state.anomaly_id and self.matrix_state.anomaly_id != _prev_anomaly_id:
-            anomaly = next((a for a in self.agents if a.id == self.matrix_state.anomaly_id), None)
+            self.record_event(
+                tick, "anomaly_emerged",
+                f"Agent #{self.matrix_state.anomaly_id} became the Anomaly",
+                agent_id=self.matrix_state.anomaly_id,
+            )
             cinematic_events.append({
                 "type": "anomaly_emergence",
                 "title": "THE ONE HAS EMERGED",
@@ -921,6 +1067,11 @@ class SimulationEngine:
 
         # Cycle reset
         if self.matrix_state.cycle_number != _prev_cycle:
+            self.record_event(
+                tick, "cycle_reset",
+                f"Matrix cycle reset: Cycle {_prev_cycle} -> {self.matrix_state.cycle_number}",
+                old_cycle=_prev_cycle, new_cycle=self.matrix_state.cycle_number,
+            )
             cinematic_events.append({
                 "type": "cycle_reset",
                 "title": "MATRIX CYCLE RESET",

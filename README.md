@@ -84,7 +84,8 @@ matrix-simulation/
 │   └── scenarios/                    <- Gameplay-tuned partial overrides
 ├── tests/                            <- Test suite (pytest)
 │   ├── conftest.py                   <- Shared fixtures
-│   └── test_systems.py              <- All 11 systems + integration tests
+│   ├── test_systems.py              <- All 11 systems + integration tests
+│   └── test_batch_and_causal.py     <- Batch research mode + causal event graph tests
 ├── output/                           <- Generated files (simulation.db, exports)
 ├── main.py                           <- CLI entry point
 ├── dashboard.py                      <- Streamlit entry point (thin wrapper)
@@ -158,6 +159,12 @@ python main.py run --ticks 500 --set environment.harshness=2.0 population.initia
 # Export simulation data
 python main.py export --format csv              # CSV to output/export_<run_id>/
 python main.py export --format json -o run.json # JSON to specific path
+
+# Batch research mode — headless multi-run analysis
+python main.py batch --runs 100 --ticks 1000 --output results/
+python main.py batch --runs 50 --ticks 500 --seed 42    # deterministic seeding
+# Outputs: results/batch_runs.csv, results/batch_aggregate.json,
+#          results/causal_events_last_run.json, results/causal_chains_last_run.json
 ```
 
 ### Launch The Nexus (Recommended)
@@ -871,7 +878,7 @@ Sources used to calibrate historically-researched era presets:
 | **1** | Deepen lore — The Haven (complete), Programs: Enforcer/Broker/Guardian/Locksmith (complete), deeper red pill mechanics, The Core |
 | **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), procedural mythology (done: chronicle, myths, faction revisionism, legends), data sonification, memetic warfare visualization |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
-| **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
+| **4** | Scale — larger worlds (16x16+), batch research mode (done), causal event graphs (done) |
 | **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles (done), free will gradient (done), Gnostic mythology layer (done), nested simulations (done), emergent agent language (done) |
 | **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
 
@@ -889,6 +896,8 @@ Sources used to calibrate historically-researched era presets:
 - Free will gradient: consciousness-gated determinism spectrum (bicameral=deterministic → recursive=full free will), predicted vs actual action tracking
 - Simulation dreams: periodic dream cycles with ghost manifestations, collective unconscious content, lucid dreaming gated by consciousness phase
 - God Mode, Architect Controls (with confirmation dialogs), Architect's Terminal, Analytics panel
+- Batch research mode: headless multi-run analysis with aggregated stats (anomaly rates, Gini, factions, consciousness phases, Haven peaks, Enforcer swarms)
+- Causal event graphs: causality chain tracking with traversal utilities and JSON export
 - Parameter sweep tooling, CSV/JSON export, CLI parameter overrides (`--set key=value`)
 - Performance optimization (spatial indexing, O(1) neighbor lookups)
 - All critical balance fixes (combat, awareness, economy, factions, bonds, wars)

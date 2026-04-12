@@ -14,6 +14,11 @@ from src.engine import SimulationEngine, RunState
 from src.narrator import Narrator
 from src.persistence import SimulationDB
 from src.agents import set_id_counter
+from src.batch import (
+    run_single as batch_run_single,
+    aggregate_results, export_results_csv, export_results_json,
+)
+from src.causal_graph import export_events_json, export_chains_json
 
 
 def color(text: str, code: str) -> str:
@@ -209,6 +214,75 @@ def cmd_scenarios(args, cfg: SimConfig, db: SimulationDB):
         print("  No scenario files found in config/scenarios/")
 
 
+def cmd_batch(args, cfg: SimConfig, db: SimulationDB):
+    """Run multiple headless simulations for research analysis."""
+    import os
+
+    runs = args.runs
+    ticks = args.ticks
+    output_dir = args.output
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Force LLM off for speed
+    cfg = cfg.override({"narrator": {"enabled": False}})
+
+    print(color(f"▶ Batch research mode: {runs} runs x {ticks} ticks", "cyan"))
+    print(f"  Output: {output_dir}/")
+    print(f"  LLM: disabled (headless)")
+    print()
+
+    results = []
+    last_engine = None
+    for i in range(runs):
+        seed = args.seed + i if args.seed is not None else None
+        print(f"  [{i + 1}/{runs}] ", end="", flush=True)
+        run_result, engine = batch_run_single(cfg, ticks, i, seed=seed)
+        results.append(run_result)
+        last_engine = engine
+        status = "survived" if run_result.survived else f"extinct@t{run_result.ticks_completed}"
+        print(f"{status}  pop={run_result.final_population}  "
+              f"factions={run_result.faction_count}  "
+              f"gini={run_result.gini:.3f}  "
+              f"events={run_result.causal_event_count}  "
+              f"t={run_result.elapsed_seconds}s")
+
+    # Aggregate
+    agg = aggregate_results(results)
+
+    # Export per-run CSV
+    csv_path = os.path.join(output_dir, "batch_runs.csv")
+    export_results_csv(results, csv_path)
+    print(color(f"\n✓ Per-run CSV: {csv_path}", "green"))
+
+    # Export aggregate JSON
+    json_path = os.path.join(output_dir, "batch_aggregate.json")
+    export_results_json(results, agg, json_path)
+    print(color(f"✓ Aggregate JSON: {json_path}", "green"))
+
+    # Export causal events from last run as example
+    if last_engine and last_engine.causal_events:
+        events_path = os.path.join(output_dir, "causal_events_last_run.json")
+        export_events_json(last_engine.causal_events, events_path)
+        chains_path = os.path.join(output_dir, "causal_chains_last_run.json")
+        chain_stats = export_chains_json(last_engine.causal_events, chains_path)
+        print(color(f"✓ Causal events: {events_path}", "green"))
+        print(color(f"✓ Causal chains: {chains_path} ({chain_stats['chains_found']} chains, longest={chain_stats['longest_chain_length']})", "green"))
+
+    # Print summary
+    print(color(f"\n═══ Aggregate Results ({runs} runs) ═══", "cyan"))
+    print(f"  Survival rate:         {agg.survival_rate:.1%}")
+    print(f"  Anomaly emergence:     {agg.anomaly_emergence_rate:.1%}")
+    print(f"  Avg lifespan:          {agg.avg_civilization_lifespan:.0f} ticks")
+    print(f"  Avg Gini:              {agg.avg_gini:.3f} (range {agg.min_gini:.3f}-{agg.max_gini:.3f})")
+    print(f"  Avg factions:          {agg.avg_faction_count:.1f} (max {agg.max_faction_count_across_runs})")
+    print(f"  Avg Haven peak:        {agg.avg_haven_peak:.1f} (max {agg.max_haven_peak})")
+    print(f"  Avg max Enforcers:     {agg.avg_max_enforcers:.1f} (max {agg.max_enforcers_across_runs})")
+    print(f"  Avg matrix cycles:     {agg.avg_matrix_cycles:.1f}")
+    print(f"  Consciousness phases:  {agg.consciousness_phase_totals}")
+    print(f"  Avg causal events:     {agg.avg_causal_events:.0f}")
+    print(f"  Avg longest chain:     {agg.avg_longest_chain:.1f}")
+
+
 def cmd_eras(args, cfg: SimConfig, db: SimulationDB):
     eras = cfg.list_eras()
     print(color("═══ Available Eras ═══", "green"))
@@ -249,6 +323,13 @@ def main():
     sub.add_parser("scenarios", help="List available scenarios")
     sub.add_parser("eras", help="List available historical eras")
 
+    p_batch = sub.add_parser("batch", help="Run headless batch simulations for research")
+    p_batch.add_argument("--runs", "-n", type=int, default=10, help="Number of simulation runs")
+    p_batch.add_argument("--ticks", "-t", type=int, default=500, help="Ticks per run")
+    p_batch.add_argument("--output", "-o", default="results/", help="Output directory")
+    p_batch.add_argument("--seed", type=int, default=None,
+                         help="Base random seed (run i uses seed+i)")
+
     p_export = sub.add_parser("export", help="Export simulation data")
     p_export.add_argument("--format", "-f", choices=["csv", "json"], default="csv",
                           help="Export format")
@@ -267,7 +348,7 @@ def main():
     commands = {
         "new": cmd_new, "run": cmd_run, "status": cmd_status,
         "list-runs": cmd_list, "scenarios": cmd_scenarios, "eras": cmd_eras,
-        "export": cmd_export,
+        "export": cmd_export, "batch": cmd_batch,
     }
     commands[args.command](args, cfg, db)
     db.close()

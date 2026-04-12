@@ -37,6 +37,8 @@
 | Programs (Enforcer/Broker/Guardian/Locksmith) | `src/programs.py` |
 | Simulation dreams & lucid dreaming | `src/dreams.py` |
 | Nested simulations & World Engines | `src/nested_sim.py` |
+| Batch research mode | `src/batch.py` |
+| Causal event graphs | `src/causal_graph.py` |
 | Master config | `config/default.yaml` |
 | Era presets | `config/eras/*.yaml` |
 | API routes | `gui/backend/api/routes/` |
