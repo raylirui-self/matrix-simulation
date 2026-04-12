@@ -873,14 +873,15 @@ Sources used to calibrate historically-researched era presets:
 
 | Phase | Focus |
 |-------|-------|
-| **0** | Polish & balance — feedback loops, agent behavior depth, UX fixes, developer experience (complete) |
-| **0.1** | Quick-start scenario cards and preset gameplay scenarios (complete) |
-| **1** | Deepen lore — The Haven (complete), Programs: Enforcer/Broker/Guardian/Locksmith (complete), deeper red pill mechanics, The Core |
-| **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), procedural mythology (done: chronicle, myths, faction revisionism, legends), data sonification, memetic warfare visualization |
-| **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
-| **4** | Scale — larger worlds (16x16+), batch research mode (done), causal event graphs (done) |
-| **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles (done), free will gradient (done), Gnostic mythology layer (done), nested simulations (done), emergent agent language (done) |
-| **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
+| **0** | Polish & balance (complete) |
+| **0.1** | Scenario UX (complete) |
+| **1** | Matrix lore — Haven, Programs, red/blue pill, Core quest (complete) |
+| **2** | Spectacle — cinematics, chronicles, obituaries, mythology, sonification, particles (complete) |
+| **3** | Multiplayer — role-based shared world, plugin API, spectator mode (deferred) |
+| **4** | Scale — batch research (done), causal graphs (done), larger worlds |
+| **5** | Consciousness frontier — all 8 sections complete (maze, archaeology, soul trap, dreams, free will, Gnostic, language, nested sims) |
+| **7** | Visual overhaul — consciousness rendering, dream visuals, Gnostic overlay, Haven PiP, program icons, observer mode, selective 3D |
+| **6** | Experimental — branching timelines, prophecy engine, hackable world, Boltzmann brains |
 
 ### What's Done
 
