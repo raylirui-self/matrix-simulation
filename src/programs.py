@@ -233,6 +233,71 @@ def broker_trade(agent: Agent, broker: Agent, trade_type: str,
         broker.wealth += price
         return f"Agent #{agent.id} bought Locksmith location for {price} wealth"
 
+    # ── Black Market trades ──
+
+    elif trade_type == "forbidden_knowledge":
+        price = getattr(bcfg, 'forbidden_knowledge_price', 4.0)
+        boost = getattr(bcfg, 'forbidden_knowledge_boost', 0.15)
+        if agent.wealth < price:
+            return None
+        agent.wealth -= price
+        broker.wealth += price
+        agent.awareness = min(1.0, agent.awareness + boost)
+        agent.add_memory(tick, "BLACK MARKET: Bought forbidden knowledge from the Broker — "
+                         "the walls of reality thin")
+        return f"Agent #{agent.id} bought forbidden knowledge for {price} wealth"
+
+    elif trade_type == "memory_sacrifice":
+        # Sacrifice a memory to gain forbidden knowledge (awareness boost)
+        boost = getattr(bcfg, 'memory_sacrifice_awareness_boost', 0.12)
+        if not agent.memory:
+            return None
+        sacrificed = agent.memory.pop(random.randint(0, len(agent.memory) - 1))
+        agent.awareness = min(1.0, agent.awareness + boost)
+        broker.wealth += 1.0  # Broker hoards information
+        agent.add_memory(tick, "BLACK MARKET: Sacrificed a memory for forbidden knowledge — "
+                         "something is gone but understanding grew")
+        return f"Agent #{agent.id} sacrificed a memory for awareness boost"
+
+    elif trade_type == "bond_sacrifice":
+        # Sacrifice a friendship for power (skill boost)
+        skill_boost = getattr(bcfg, 'bond_sacrifice_skill_boost', 0.08)
+        friend_bonds = [b for b in agent.bonds if b.bond_type == "friend"]
+        if not friend_bonds:
+            return None
+        sacrificed_bond = random.choice(friend_bonds)
+        agent.bonds.remove(sacrificed_bond)
+        broker.wealth += 2.0  # Broker profits from broken bonds
+        for skill in SKILL_NAMES:
+            agent.skills[skill] = min(1.0, agent.skills[skill] + skill_boost)
+        agent.add_memory(tick, f"BLACK MARKET: Sacrificed friendship with #{sacrificed_bond.target_id} "
+                         "for power — the Broker feeds on severed connections")
+        return f"Agent #{agent.id} sacrificed bond with #{sacrificed_bond.target_id} for skill boost"
+
+    elif trade_type == "oracle_prophecy":
+        price = getattr(bcfg, 'oracle_prophecy_price', 6.0)
+        if agent.wealth < price:
+            return None
+        agent.wealth -= price
+        broker.wealth += price
+        # Prophecy: reveal the current Anomaly or highest-awareness agent location
+        # (The effect is a memory + awareness boost — the "knowledge" is the reward)
+        agent.awareness = min(1.0, agent.awareness + 0.05)
+        agent.beliefs["spirituality"] = min(1.0, agent.beliefs.get("spirituality", 0) + 0.1)
+        agent.add_memory(tick, "BLACK MARKET: The Broker whispered a prophecy — "
+                         "fragments of the Oracle's vision, sold for profit")
+        return f"Agent #{agent.id} bought an Oracle prophecy for {price} wealth"
+
+    elif trade_type == "locksmith_rumor":
+        # Cheaper than exact location — gives approximate position
+        price = getattr(bcfg, 'locksmith_info_price', 5.0) * 0.5
+        if agent.wealth < price:
+            return None
+        agent.wealth -= price
+        broker.wealth += price
+        agent.add_memory(tick, "BLACK MARKET: The Broker hinted at the Locksmith's whereabouts")
+        return f"Agent #{agent.id} bought Locksmith rumor for {price} wealth"
+
     return None
 
 
@@ -278,6 +343,46 @@ def _process_broker(agents: list[Agent], tick: int, cfg) -> dict:
                 continue
 
         # Agent decides what to trade for based on needs
+        # High-awareness agents access the Black Market
+        fk_price = getattr(bcfg, 'forbidden_knowledge_price', 4.0)
+        prophecy_price = getattr(bcfg, 'oracle_prophecy_price', 6.0)
+        if agent.awareness > 0.5 and agent.redpilled:
+            # Black Market: forbidden knowledge (strongest awareness boost)
+            if agent.wealth >= fk_price:
+                result = broker_trade(agent, broker, "forbidden_knowledge", tick, cfg)
+                if result:
+                    stats["trades"] += 1
+                    stats.setdefault("black_market_trades", 0)
+                    stats["black_market_trades"] += 1
+                    continue
+            # Black Market: sacrifice a memory for awareness
+            if agent.memory and len(agent.memory) > 3:
+                if random.random() < 0.2:  # not every aware agent is desperate enough
+                    result = broker_trade(agent, broker, "memory_sacrifice", tick, cfg)
+                    if result:
+                        stats["trades"] += 1
+                        stats.setdefault("black_market_trades", 0)
+                        stats["black_market_trades"] += 1
+                        continue
+            # Black Market: sacrifice a bond for power
+            friend_bonds = [b for b in agent.bonds if b.bond_type == "friend"]
+            if friend_bonds and random.random() < 0.1:  # rare desperation
+                result = broker_trade(agent, broker, "bond_sacrifice", tick, cfg)
+                if result:
+                    stats["trades"] += 1
+                    stats.setdefault("black_market_trades", 0)
+                    stats["black_market_trades"] += 1
+                    continue
+            # Black Market: Oracle prophecy
+            if agent.wealth >= prophecy_price and agent.beliefs.get("spirituality", 0) > 0.3:
+                result = broker_trade(agent, broker, "oracle_prophecy", tick, cfg)
+                if result:
+                    stats["trades"] += 1
+                    stats.setdefault("black_market_trades", 0)
+                    stats["black_market_trades"] += 1
+                    continue
+
+        # Standard trades for less-aware agents
         if agent.awareness > 0.3 and agent.wealth >= bcfg.awareness_price:
             result = broker_trade(agent, broker, "awareness", tick, cfg)
             if result:

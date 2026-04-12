@@ -781,6 +781,33 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     loop_stats = process_strange_loops(non_sentinels, tick, cfg)
     stats["strange_loops"] = loop_stats["strange_loops_formed"]
 
+    # ── Phase 9d: Boltzmann Brains ──
+    # Extremely rare: random trait combination produces instant max-awareness agent.
+    # No journey, no red pill — pure statistical fluke. Bypasses all Architect control.
+    bb_cfg = getattr(mx_cfg, 'boltzmann_brain', None)
+    bb_base_inv = getattr(bb_cfg, 'base_inverse_probability', 500000) if bb_cfg else 500000
+    bb_time_factor = getattr(bb_cfg, 'time_factor', 0.001) if bb_cfg else 0.001
+    pop_count = len(non_sentinels)
+    if pop_count > 0:
+        # Probability: 1 / (pop * base_inv), increases over time
+        prob = 1.0 / (pop_count * bb_base_inv)
+        # Time scaling: probability grows with ticks since last reset
+        prob *= (1.0 + matrix_state.ticks_since_reset * bb_time_factor)
+        if random.random() < prob:
+            # Pick a random non-sentinel agent and instantly max their awareness
+            candidate = random.choice(non_sentinels)
+            candidate.awareness = 1.0
+            candidate.redpilled = True
+            candidate.consciousness_phase = "recursive"
+            candidate.recursive_depth = 1.0
+            candidate.beliefs["system_trust"] = -1.0
+            candidate.splinter_in_mind = False
+            candidate.add_memory(tick, "BOLTZMANN BRAIN: In an instant, everything became clear. "
+                                 "No red pill. No Oracle. Just... statistical inevitability.")
+            candidate.add_chronicle(tick, "boltzmann_brain",
+                                    "Spontaneous full awakening — a Boltzmann Brain event")
+            stats["boltzmann_brain"] = candidate.id
+
     # ── Phase 10: Exile management ──
     # Sentinels that survive too long become exiles
     for sentinel in sentinels:

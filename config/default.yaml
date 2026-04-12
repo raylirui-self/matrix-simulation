@@ -368,9 +368,20 @@ matrix:
   pleroma_spike_chance: 0.05             # chance during extreme awareness spike
 
   # ── Consciousness Maze (Phase 5) ──
+  # ── Boltzmann Brains (Phase 6) ──
+  boltzmann_brain:
+    base_inverse_probability: 500000     # probability = 1 / (pop * this), per tick
+    time_factor: 0.001                   # probability grows by this * ticks_since_reset
+
   strange_loop_radius: 0.15              # max distance for strange loop formation
   strange_loop_min_awareness: 0.2        # both agents need awareness above this (lowered for earlier loops)
   strange_loop_boost: 0.015              # awareness boost per strange loop per tick (bumped)
+
+# ── Observer Effect / Quantum Rendering (Phase 6) ──
+observer_effect:
+  enabled: true
+  fidelity_transition_glitch_chance: 0.3   # chance aware agents detect the fidelity shift
+  fidelity_awareness_boost: 0.02           # awareness boost from noticing fidelity transition
 
 # ── Agent Archaeology (Phase 5) ──
 archaeology:
@@ -462,6 +473,14 @@ programs:
     info_price: 1.5                     # wealth cost for secret info
     locksmith_info_price: 5.0           # wealth cost for Locksmith location
     trade_cooldown: 10                  # min ticks between trades for same agent
+    # ── Black Market (Phase 6) ──
+    forbidden_knowledge_price: 4.0       # wealth cost for awareness boost (stronger than regular)
+    forbidden_knowledge_boost: 0.15      # awareness boost from forbidden knowledge
+    memory_sacrifice_awareness_boost: 0.12  # awareness from sacrificing a memory
+    bond_sacrifice_price: 0.0            # free — the cost is the bond itself
+    bond_sacrifice_skill_boost: 0.08     # skill boost from sacrificing a bond
+    oracle_prophecy_price: 6.0           # wealth cost for Oracle prophecy
+    locksmith_rumor_radius: 0.3          # how accurately Broker knows Locksmith location
   guardian:
     enabled: true
     spawn_chance: 0.006                 # per tick, when no guardians exist (6x: was too rare)

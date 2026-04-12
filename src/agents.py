@@ -35,6 +35,7 @@ CHRONICLE_TYPES = [
     "archon_destroyed", "pleroma_glimpse", "sophia_synchronicity",
     "language_artifact_discovered",
     "world_engine_built", "nested_recursive_paradox",
+    "boltzmann_brain",
 ]
 
 _agent_id_counter = 0

@@ -881,7 +881,7 @@ Sources used to calibrate historically-researched era presets:
 | **4** | Scale — batch research (done), causal graphs (done), larger worlds |
 | **5** | Consciousness frontier — all 8 sections complete (maze, archaeology, soul trap, dreams, free will, Gnostic, language, nested sims) |
 | **7** | Visual overhaul — consciousness rendering, dream visuals, Gnostic overlay, Haven PiP, program icons, observer mode, selective 3D |
-| **6** | Experimental — branching timelines, prophecy engine, hackable world, Boltzmann brains |
+| **6** | Experimental — Boltzmann brains (done), observer effect (done), black market (done), branching timelines, prophecy engine, hackable world |
 
 ### What's Done
 
@@ -914,3 +914,6 @@ Sources used to calibrate historically-researched era presets:
 - Phase 2: Ambient soundscape (Web Audio API data sonification: drone=health, percussion=conflict, dissonance=Gini, overtones=awareness, harmonics=factions)
 - Phase 2: Belief particle overlay (colored particles flowing between agents on Grid view) + Propaganda wave visualization (expanding faction rings with interference patterns)
 - Nested simulations: Computational Theory tech breakthrough, World Engines (sub-simulations within cells), lightweight sub-sim tick (movement/health/awareness/beliefs only, <10ms), recursive awareness paradox ("Am I in the real Matrix or a nested one?")
+- Boltzmann Brains: extremely rare statistical fluke producing instant max-awareness agent, bypasses all Architect control, probability scales with time since last reset
+- Observer Effect / Quantum Rendering: cells with no agents tracked as low-fidelity, agents entering previously empty cells may detect the fidelity transition as a glitch (awareness boost)
+- Broker's Black Market: 6 underground trade types (forbidden knowledge, memory sacrifice, bond sacrifice, Oracle prophecy, Locksmith rumor), accessible only to redpilled agents, Broker hoards information for power

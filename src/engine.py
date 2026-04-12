@@ -206,6 +206,9 @@ class SimulationEngine:
         # ── Nested Simulations (World Engines) ──
         self.world_engines: list[WorldEngine] = []
 
+        # ── Observer Effect: track which cells were empty last tick ──
+        self._prev_empty_cells: set[tuple[int, int]] = set()
+
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
 
@@ -586,6 +589,38 @@ class SimulationEngine:
 
         # ── Update spatial grid ──
         self.world.update_agent_counts(self.agents)
+
+        # ── Observer Effect / Quantum Rendering ──
+        # Cells with no agents run at reduced fidelity. When agents enter,
+        # full simulation detail activates ("reality renders"). Aware agents
+        # can detect the fidelity transition.
+        oe_cfg = getattr(self.cfg, 'observer_effect', None)
+        oe_enabled = getattr(oe_cfg, 'enabled', False) if oe_cfg else False
+        newly_rendered_cells: set[tuple[int, int]] = set()
+        if oe_enabled:
+            current_empty: set[tuple[int, int]] = set()
+            for row in self.world.cells:
+                for cell in row:
+                    if cell.agent_count == 0:
+                        current_empty.add((cell.row, cell.col))
+            # Cells that were empty last tick but now have agents
+            newly_rendered_cells = self._prev_empty_cells - current_empty
+            self._prev_empty_cells = current_empty
+
+            # Aware agents in newly-rendered cells notice the fidelity transition
+            glitch_chance = getattr(oe_cfg, 'fidelity_transition_glitch_chance', 0.3)
+            awareness_boost = getattr(oe_cfg, 'fidelity_awareness_boost', 0.02)
+            grid_size = getattr(self.cfg.environment, 'grid_size', 8)
+            for a in sim_alive:
+                if not a.alive or a.is_sentinel:
+                    continue
+                a_row = min(grid_size - 1, max(0, int(a.y * grid_size)))
+                a_col = min(grid_size - 1, max(0, int(a.x * grid_size)))
+                if (a_row, a_col) in newly_rendered_cells:
+                    if a.awareness > 0.3 and random.random() < glitch_chance:
+                        a.awareness = min(1.0, a.awareness + awareness_boost)
+                        a.add_memory(tick, "Reality seemed to sharpen as I arrived — "
+                                     "as if the world only rendered when observed")
 
         # ── System 1: Social — Process bonds ──
         social_stats = process_bonds(self.agents, tick, self.cfg)
@@ -1096,6 +1131,23 @@ class SimulationEngine:
                 "tick": tick,
             })
         self._prev_enforcer_count = current_enforcer_count
+
+        # Boltzmann Brain event (from matrix_stats)
+        bb_agent_id = matrix_stats.get("boltzmann_brain")
+        if bb_agent_id is not None:
+            self.record_event(
+                tick, "boltzmann_brain",
+                f"Agent #{bb_agent_id} experienced a Boltzmann Brain event — spontaneous full awakening",
+                agent_id=bb_agent_id,
+            )
+            cinematic_events.append({
+                "type": "boltzmann_brain",
+                "title": "BOLTZMANN BRAIN",
+                "subtitle": f"Agent #{bb_agent_id} achieved instant max awareness — "
+                            "a statistical impossibility made real",
+                "agent_id": bb_agent_id,
+                "tick": tick,
+            })
 
         # ── Mythology: Era Summaries, Myths, Legends ──
         mythology_stats = {}
