@@ -171,6 +171,15 @@ environment:
         requires_social: 0.0
         capacity_bonus: 15
         description: "Industry increases capacity"
+      - name: computational_theory
+        tech_level: 0.7
+        resource_bonus: 0.0
+        terrain: null
+        requires_social: 0.0
+        requires_logic: 0.8
+        requires_population: 5
+        capacity_bonus: 0
+        description: "Agents unlock the theory of computation — can build World Engines"
 
 # ── Agency ──
 agency:
@@ -493,3 +502,17 @@ mythology:
   legend_discovery_chance: 0.005       # per-agent per-tick chance of discovering a legend
   max_myths_per_trigger: 5             # cap on myths generated per trigger event
   max_legends: 20                      # cap on total legendary figures
+
+# ── Nested Simulations (Phase 5) ──
+nested_simulation:
+  enabled: true
+  sub_grid_size: 4                     # sub-sim grid size (4x4)
+  sub_max_agents: 20                   # max agents in a sub-sim
+  sub_initial_agents: 8                # starting population per sub-sim
+  sub_ticks_per_parent_tick: 3         # N sub-ticks per parent tick
+  sub_awareness_growth_rate: 0.012     # faster awareness growth in sub-sims
+  sub_health_decay: 0.003              # base health decay in sub-sims
+  max_world_engines: 3                 # max active World Engines
+  recursive_awareness_threshold: 0.7   # sub-sim agent awareness to trigger recursive paradox
+  recursive_awareness_boost: 0.05      # awareness boost to parent observer when sub-agent becomes recursive
+  observer_radius: 0.15                # max distance from World Engine cell center to observe

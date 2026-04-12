@@ -36,6 +36,7 @@
 | Haven (real world) | `src/haven.py` |
 | Programs (Enforcer/Broker/Guardian/Locksmith) | `src/programs.py` |
 | Simulation dreams & lucid dreaming | `src/dreams.py` |
+| Nested simulations & World Engines | `src/nested_sim.py` |
 | Master config | `config/default.yaml` |
 | Era presets | `config/eras/*.yaml` |
 | API routes | `gui/backend/api/routes/` |

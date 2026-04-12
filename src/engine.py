@@ -51,6 +51,9 @@ from src.dreams import (
     DreamState, process_dreams, get_dream_movement_multiplier,
     get_dream_terrain_reduction,
 )
+from src.nested_sim import (
+    WorldEngine, create_world_engine, process_nested_simulations,
+)
 
 
 @dataclass
@@ -100,6 +103,7 @@ class TickResult:
     cinematic_events: list = field(default_factory=list)
     mythology_stats: dict = field(default_factory=dict)
     dream_stats: dict = field(default_factory=dict)
+    nested_sim_stats: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -146,6 +150,9 @@ class SimulationEngine:
 
         # ── Language artifacts (dead faction languages) ──
         self.language_artifacts: list[LanguageArtifact] = []
+
+        # ── Nested Simulations (World Engines) ──
+        self.world_engines: list[WorldEngine] = []
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
@@ -699,13 +706,67 @@ class SimulationEngine:
                     continue
                 avg_tech = sum(a.skills.get("tech", 0) for a in cell_agents) / len(cell_agents)
                 avg_social = sum(a.skills.get("social", 0) for a in cell_agents) / len(cell_agents)
-                bt = self.world.check_breakthroughs(cell, avg_tech, avg_social, tick)
+                avg_logic = sum(a.skills.get("logic", 0) for a in cell_agents) / len(cell_agents)
+                bt = self.world.check_breakthroughs(cell, avg_tech, avg_social, tick, avg_logic=avg_logic)
                 if bt:
                     tick_breakthroughs.append(bt.name)
                     for a in cell_agents:
                         a.add_memory(tick, f"Witnessed breakthrough: {bt.name}")
                         a.add_chronicle(tick, "breakthrough", f"Witnessed breakthrough: {bt.name}", tech=bt.name)
                     on_breakthrough_emotions(cell_agents, tick)
+
+        # ── Nested Simulations: World Engine creation on computational_theory ──
+        ns_cfg = getattr(self.cfg, 'nested_simulation', None)
+        ns_enabled = getattr(ns_cfg, 'enabled', False) if ns_cfg else False
+        max_engines = getattr(ns_cfg, 'max_world_engines', 3) if ns_cfg else 3
+        if ns_enabled and "computational_theory" in tick_breakthroughs:
+            if len(self.world_engines) < max_engines:
+                # Find the cell that just unlocked computational_theory
+                for row in self.world.cells:
+                    for cell in row:
+                        if any(t.name == "computational_theory" and t.unlocked_at == tick
+                               for t in cell.unlocked_techs):
+                            # Pick the highest-tech agent in the cell as builder
+                            cell_agents = [
+                                a for a in alive_now
+                                if self.world.get_cell(a.x, a.y) == cell and a.alive
+                            ]
+                            if cell_agents:
+                                builder = max(cell_agents, key=lambda a: a.skills.get("tech", 0))
+                                engine = create_world_engine(
+                                    cell.row, cell.col, tick, builder.id, self.cfg,
+                                )
+                                self.world_engines.append(engine)
+                                builder.add_memory(tick, "Built a World Engine — a simulation within the simulation")
+                                builder.add_chronicle(
+                                    tick, "world_engine_built",
+                                    f"Built World Engine #{engine.engine_id} in cell ({cell.row},{cell.col})",
+                                    engine_id=engine.engine_id,
+                                )
+                                cinematic_events.append({
+                                    "type": "world_engine_built",
+                                    "title": "WORLD ENGINE CONSTRUCTED",
+                                    "subtitle": f"Agent #{builder.id} built a simulation within the simulation",
+                                    "agent_id": builder.id,
+                                    "cell": (cell.row, cell.col),
+                                    "tick": tick,
+                                })
+
+        # ── Nested Simulations: process sub-sim ticks ──
+        nested_sim_stats = {}
+        if ns_enabled and self.world_engines:
+            nested_sim_stats = process_nested_simulations(
+                self.world_engines, sim_alive, tick, self.cfg,
+            )
+            # Cinematic events for recursive paradox
+            if nested_sim_stats.get("total_recursive_events", 0) > 0:
+                cinematic_events.append({
+                    "type": "recursive_awareness_paradox",
+                    "title": "RECURSIVE AWARENESS PARADOX",
+                    "subtitle": "A sub-simulation agent questions its reality — and no one can answer",
+                    "tick": tick,
+                    "count": nested_sim_stats["total_recursive_events"],
+                })
 
         # ── Artifact discovery (Agent Archaeology) ──
         artifact_discoveries = self._process_artifact_discovery(sim_alive, tick)
@@ -1034,6 +1095,7 @@ class SimulationEngine:
             cinematic_events=cinematic_events,
             mythology_stats=mythology_stats,
             dream_stats=dream_stats,
+            nested_sim_stats=nested_sim_stats,
         )
 
     def _apply_event(self, event: WorldEvent):

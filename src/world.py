@@ -241,7 +241,8 @@ class ResourceGrid:
 
     def check_breakthroughs(self, cell: ResourceCell,
                                 avg_tech: float, avg_social: float,
-                                tick: int) -> Optional[TechBreakthrough]:
+                                tick: int,
+                                avg_logic: float = 0.0) -> Optional[TechBreakthrough]:
             """Check if a cell qualifies for a new tech breakthrough."""
             bt_cfg = self.cfg.environment.tech_breakthroughs
             if not bt_cfg.enabled:
@@ -261,6 +262,13 @@ class ResourceGrid:
                     continue
                 # Social requirement
                 if threshold.get("requires_social") and avg_social < threshold["requires_social"]:
+                    continue
+                # Logic requirement (e.g. computational_theory)
+                if threshold.get("requires_logic") and avg_logic < threshold["requires_logic"]:
+                    continue
+                # Population requirement (e.g. computational_theory needs > 5)
+                req_pop = threshold.get("requires_population", 0)
+                if req_pop and cell.agent_count < req_pop:
                     continue
 
                 bt = TechBreakthrough(

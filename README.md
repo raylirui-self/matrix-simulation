@@ -872,7 +872,7 @@ Sources used to calibrate historically-researched era presets:
 | **2** | Spectacle — cinematic events (done), agent chronicles (done), obituary generation (done), procedural mythology (done: chronicle, myths, faction revisionism, legends), data sonification, memetic warfare visualization |
 | **3** | Multiplayer — role-based shared world (Architect/Oracle/Guide/Broker), plugin API, spectator mode |
 | **4** | Scale — larger worlds (16x16+), batch research mode, causal event graphs |
-| **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles (done), free will gradient (done), Gnostic mythology layer, nested simulations, emergent agent language |
+| **5** | Consciousness frontier — consciousness maze (done), agent archaeology (done), soul trap (done), dream cycles (done), free will gradient (done), Gnostic mythology layer (done), nested simulations (done), emergent agent language (done) |
 | **6** | Experimental — evolutionary neural nets, branching timelines, hackable world, inter-simulation communication |
 
 ### What's Done
@@ -903,3 +903,4 @@ Sources used to calibrate historically-researched era presets:
 - Phase 2: Cinematic event system (full-screen overlays for Anomaly emergence, cycle reset, Enforcer swarm), Agent chronicles (structured life events across all systems), Obituary generation (LLM + fallback template)
 - Phase 2: Ambient soundscape (Web Audio API data sonification: drone=health, percussion=conflict, dissonance=Gini, overtones=awareness, harmonics=factions)
 - Phase 2: Belief particle overlay (colored particles flowing between agents on Grid view) + Propaganda wave visualization (expanding faction rings with interference patterns)
+- Nested simulations: Computational Theory tech breakthrough, World Engines (sub-simulations within cells), lightweight sub-sim tick (movement/health/awareness/beliefs only, <10ms), recursive awareness paradox ("Am I in the real Matrix or a nested one?")
