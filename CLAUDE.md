@@ -6,9 +6,13 @@
 3. Check `config/default.yaml` before hardcoding any values
 
 ## After Completing Work
-1. Update `TODO.md`: check off completed items, add new items discovered during implementation
-2. Update `README.md` if you changed: system behavior, config parameters, API endpoints, GUI features, project structure, or the roadmap
-3. When committing, reference the TODO phase/item in the commit message (e.g., "Phase 0: fix population floor")
+1. **Run CI checks locally before committing** (CI will fail otherwise):
+   - `ruff check src/ gui/ tests/` — must be clean. Use `ruff check --fix` to auto-fix. Remaining errors must be fixed manually.
+   - `python -m pytest` — must pass, no regressions
+   - Frontend (if touched): `cd gui/frontend && npm run check && npm run build`
+2. Update `TODO.md`: check off completed items, add new items discovered during implementation
+3. Update `README.md` if you changed: system behavior, config parameters, API endpoints, GUI features, project structure, or the roadmap
+4. When committing, reference the TODO phase/item in the commit message (e.g., "Phase 0: fix population floor")
 
 ## Architecture Rules
 - **11 systems are orchestrated by `src/engine.py`** — each system is a separate module in `src/`. New systems must follow the same pattern: a function called from `engine.py`'s tick loop that takes agents/world/config and returns events
@@ -50,4 +54,5 @@
 - Don't add generic "improvements" beyond what was asked — this is a themed Matrix project, not a generic sim
 - Don't create new files when editing existing ones would work
 - Don't skip the TODO.md/README.md update step
+- Don't skip running `ruff check` and `pytest` before committing — CI will fail
 - Don't add dependencies without checking if existing stack already covers the need
