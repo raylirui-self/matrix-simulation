@@ -13,7 +13,6 @@ from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
 from src.narrator import Narrator
 from src.persistence import SimulationDB
-from src.agents import set_id_counter
 from src.batch import (
     run_single as batch_run_single,
     aggregate_results, export_results_csv, export_results_json,
@@ -228,7 +227,7 @@ def cmd_batch(args, cfg: SimConfig, db: SimulationDB):
 
     print(color(f"▶ Batch research mode: {runs} runs x {ticks} ticks", "cyan"))
     print(f"  Output: {output_dir}/")
-    print(f"  LLM: disabled (headless)")
+    print("  LLM: disabled (headless)")
     print()
 
     results = []
@@ -308,7 +307,7 @@ def main():
 
     sub = parser.add_subparsers(dest="command")
 
-    p_new = sub.add_parser("new", help="Create new simulation")
+    sub.add_parser("new", help="Create new simulation")
 
     p_run = sub.add_parser("run", help="Run batch of ticks")
     p_run.add_argument("--ticks", "-t", type=int, default=None)

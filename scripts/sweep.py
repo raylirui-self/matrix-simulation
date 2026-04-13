@@ -15,9 +15,7 @@ import argparse
 import csv
 import json
 import os
-import sys
 import time
-from dataclasses import asdict
 
 from src.config_loader import SimConfig
 from src.engine import SimulationEngine, RunState
