@@ -1,17 +1,34 @@
 """God mode action endpoints."""
 from __future__ import annotations
 
+import logging
 import random
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from gui.backend.api.auth import rate_limit, require_admin
 from gui.backend.api.state import manager
 from src.agents import create_agent
 from src.engine import WorldEvent
 
-router = APIRouter(prefix="/api/sim/{run_id}/god", tags=["god_mode"])
+logger = logging.getLogger("nexus.god_mode")
+
+router = APIRouter(
+    prefix="/api/sim/{run_id}/god",
+    tags=["god_mode"],
+    dependencies=[Depends(require_admin)],
+)
+
+# Hard cap — spawn endpoints refuse once engine population exceeds this.
+# Prevents runaway OOM even if rate-limiting is bypassed.
+POPULATION_HARD_CAP = 2000
+
+
+def _audit(request: Request, run_id: str, action: str, payload: dict) -> None:
+    ip = request.client.host if request.client else "unknown"
+    logger.warning("god_mode action=%s run_id=%s ip=%s payload=%s", action, run_id, ip, payload)
 
 
 class GodAction(BaseModel):
@@ -21,8 +38,12 @@ class GodAction(BaseModel):
 
 
 @router.post("")
-def god_mode(run_id: str, req: GodAction):
+def god_mode(run_id: str, req: GodAction, request: Request):
     """Execute a god mode action."""
+    # Rate limit: 60 god-mode calls per minute per client IP.
+    rate_limit(request, key="god_mode", max_calls=60, window_seconds=60.0)
+    _audit(request, run_id, req.action, {"target_id": req.target_id, "params": req.params})
+
     engine = manager.get_engine(run_id)
     if not engine:
         raise HTTPException(status_code=404, detail="Simulation not found")
@@ -33,6 +54,8 @@ def god_mode(run_id: str, req: GodAction):
     tick = engine.state.current_tick
 
     if req.action == "spawn":
+        if len(engine.agents) >= POPULATION_HARD_CAP:
+            raise HTTPException(status_code=429, detail="Population hard cap reached")
         a = create_agent(cfg)
         a.x = max(0.0, min(1.0, req.params.get("x", 0.5)))
         a.y = max(0.0, min(1.0, req.params.get("y", 0.5)))
@@ -41,7 +64,11 @@ def god_mode(run_id: str, req: GodAction):
         return {"status": "ok", "message": f"Spawned agent #{a.id}", "agent_id": a.id}
 
     elif req.action == "spawn_n":
-        count = min(req.params.get("count", 10), 50)
+        requested = min(int(req.params.get("count", 10)), 50)
+        remaining = POPULATION_HARD_CAP - len(engine.agents)
+        count = max(0, min(requested, remaining))
+        if count == 0:
+            raise HTTPException(status_code=429, detail="Population hard cap reached")
         ids = []
         for _ in range(count):
             a = create_agent(cfg)

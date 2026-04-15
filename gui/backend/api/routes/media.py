@@ -3,16 +3,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 
+from gui.backend.api.auth import rate_limit, require_admin_if_media
 from gui.backend.api.state import manager
 
-router = APIRouter(prefix="/api/sim/{run_id}/media", tags=["media"])
+router = APIRouter(
+    prefix="/api/sim/{run_id}/media",
+    tags=["media"],
+    dependencies=[Depends(require_admin_if_media)],
+)
+
+# Media generation calls external LLM / image providers — cap per-IP usage so
+# an unauthenticated attacker can't burn the inference budget.
+_MEDIA_RATE = (10, 60.0)  # 10 calls per 60 seconds
 
 
 @router.post("/portrait/{agent_id}")
-def generate_portrait(run_id: str, agent_id: int):
+def generate_portrait(run_id: str, agent_id: int, request: Request):
+    rate_limit(request, key="media_portrait", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     """Generate a portrait for the specified agent."""
     engine = manager.get_engine(run_id)
     if not engine:
@@ -63,8 +73,9 @@ def get_portrait_image(run_id: str, agent_id: int):
 
 
 @router.post("/landscape")
-def generate_landscape(run_id: str):
+def generate_landscape(run_id: str, request: Request):
     """Generate an era landscape for the current era."""
+    rate_limit(request, key="media_landscape", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
     if not engine:
         engine = manager.load_sim(run_id)
@@ -121,8 +132,9 @@ def get_landscape_image(run_id: str, era: str = "genesis"):
 
 
 @router.post("/narrate")
-def generate_narrative(run_id: str):
+def generate_narrative(run_id: str, request: Request):
     """Generate an LLM narrative about the current state."""
+    rate_limit(request, key="media_narrate", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
     if not engine:
         engine = manager.load_sim(run_id)
@@ -144,8 +156,9 @@ def generate_narrative(run_id: str):
 
 
 @router.post("/monologue/{agent_id}")
-def generate_monologue(run_id: str, agent_id: int):
+def generate_monologue(run_id: str, agent_id: int, request: Request):
     """Generate an inner monologue for a protagonist."""
+    rate_limit(request, key="media_monologue", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
     if not engine:
         engine = manager.load_sim(run_id)

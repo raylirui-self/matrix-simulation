@@ -3,12 +3,36 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from gui.backend.api.state import manager
 
+logger = logging.getLogger("nexus.websocket")
+
 router = APIRouter(tags=["websocket"])
+
+
+async def _safe_send_error(ws: WebSocket, code: str, detail: str = "") -> None:
+    """Best-effort error frame — swallow send failures (socket may be closed)."""
+    try:
+        await ws.send_json({"type": "error", "code": code, "detail": detail})
+    except Exception:
+        pass
+
+
+def _parse_command(raw: str, run_id: str) -> dict | None:
+    """Parse a client frame as JSON. Returns None on malformed input."""
+    try:
+        obj = json.loads(raw)
+        if not isinstance(obj, dict):
+            logger.warning("ws run_id=%s non-object frame: %r", run_id, raw[:200])
+            return None
+        return obj
+    except json.JSONDecodeError as exc:
+        logger.warning("ws run_id=%s invalid json: %s frame=%r", run_id, exc, raw[:200])
+        return None
 
 
 @router.websocket("/ws/sim/{run_id}")
@@ -47,22 +71,28 @@ async def sim_websocket(websocket: WebSocket, run_id: str):
                         websocket.receive_text(),
                         timeout=auto_speed_ms / 1000.0,
                     )
-                    cmd = json.loads(msg)
-                    if cmd.get("command") == "stop":
-                        auto_running = False
-                        await websocket.send_json({"type": "stopped"})
-                    elif cmd.get("command") == "auto":
-                        auto_speed_ms = max(50, cmd.get("speed", 200))
                 except asyncio.TimeoutError:
-                    pass
+                    continue
+                cmd = _parse_command(msg, run_id)
+                if cmd is None:
+                    await _safe_send_error(websocket, "invalid_json", "command frame was not valid JSON")
+                    continue
+                if cmd.get("command") == "stop":
+                    auto_running = False
+                    await websocket.send_json({"type": "stopped"})
+                elif cmd.get("command") == "auto":
+                    auto_speed_ms = max(50, int(cmd.get("speed", 200)))
             else:
                 # Wait for commands
                 msg = await websocket.receive_text()
-                cmd = json.loads(msg)
+                cmd = _parse_command(msg, run_id)
+                if cmd is None:
+                    await _safe_send_error(websocket, "invalid_json", "command frame was not valid JSON")
+                    continue
                 command = cmd.get("command", "")
 
                 if command == "tick":
-                    count = min(cmd.get("count", 1), 100)
+                    count = min(int(cmd.get("count", 1)), 100)
                     for _ in range(count):
                         delta = await _run_and_send_tick(websocket, run_id, engine)
                         if delta and delta.get("alive_count", 1) == 0:
@@ -71,7 +101,7 @@ async def sim_websocket(websocket: WebSocket, run_id: str):
 
                 elif command == "auto":
                     auto_running = True
-                    auto_speed_ms = max(50, cmd.get("speed", 200))
+                    auto_speed_ms = max(50, int(cmd.get("speed", 200)))
                     await websocket.send_json({"type": "auto_started", "speed": auto_speed_ms})
 
                 elif command == "state":
@@ -80,13 +110,14 @@ async def sim_websocket(websocket: WebSocket, run_id: str):
                 elif command == "stop":
                     auto_running = False
 
+                else:
+                    await _safe_send_error(websocket, "unknown_command", f"unknown command: {command!r}")
+
     except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        try:
-            await websocket.send_json({"type": "error", "message": str(e)})
-        except Exception:
-            pass
+        logger.info("ws run_id=%s client disconnected", run_id)
+    except Exception:
+        logger.exception("ws run_id=%s unhandled error in tick loop", run_id)
+        await _safe_send_error(websocket, "internal_error", "see server logs")
 
 
 def capture_prev_state(engine) -> tuple[set, dict]:
@@ -197,16 +228,21 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
 
 
 async def _run_and_send_tick(websocket: WebSocket, run_id: str, engine) -> dict:
-    """Run one tick and send the delta to the client."""
-    prev_alive_ids, prev_agents = capture_prev_state(engine)
+    """Run one tick and send the delta to the client.
 
-    # Run tick
-    result = manager.run_tick(run_id)
-    if not result:
-        return {"alive_count": 0}
+    Holds the per-run async lock across snapshot -> tick -> delta computation
+    so two WebSocket clients sharing a run_id cannot interleave ticks.
+    """
+    async with manager.get_engine_lock_async(run_id):
+        prev_alive_ids, prev_agents = capture_prev_state(engine)
 
-    delta_data = manager.compute_delta(engine, prev_alive_ids, prev_agents)
-    msg = build_tick_message(engine, result, delta_data)
+        # Run tick (manager.run_tick also holds the sync lock for REST callers)
+        result = manager.run_tick(run_id)
+        if not result:
+            return {"alive_count": 0}
+
+        delta_data = manager.compute_delta(engine, prev_alive_ids, prev_agents)
+        msg = build_tick_message(engine, result, delta_data)
 
     await websocket.send_json(msg)
     return {"alive_count": result.alive_count}

@@ -232,6 +232,7 @@ emotions:
   contagion_rate: 0.02          # how fast emotions spread (was 0.03 — mass panic too easy)
   grief_on_bond_death: 0.4      # grief multiplier when bonded agent dies
   trauma_heal_rate: 0.002       # how fast trauma heals per tick
+  grief_learning_penalty: 0.3   # multiplier reducing skill growth when grief > 0.5
   baselines:                    # target emotions for natural decay
     happiness: 0.4
     fear: 0.05
@@ -307,6 +308,33 @@ matrix:
   comfort_injection_interval: 40      # ticks between system comfort injections
   min_ticks_per_cycle: 150            # Architect can't reset before this many ticks (reboot takes time)
   max_ticks_per_cycle: 5000           # forced reset after this many ticks
+
+  # ── Cycle reset awareness preservation (what echoes across cycles) ──
+  awareness_preservation:
+    soul_trap_broken_retain: 0.5     # agents who broke the soul trap retain 50% awareness
+    high_awareness_retain: 0.35      # awareness >= 0.6: 35% echo (déjà vu)
+    moderate_awareness_retain: 0.2   # awareness >= 0.3: 20% echo
+    high_awareness_threshold: 0.6    # boundary for "high"
+    moderate_awareness_threshold: 0.3  # boundary for "moderate"
+    trust_boost_aware: 0.15          # system-trust boost if any awareness retained
+    trust_boost_wiped: 0.3           # system-trust boost if awareness fully wiped
+
+  # ── Soul trap reincarnation (memory preservation by awareness class) ──
+  soul_trap:
+    broken_awareness_cap: 0.6        # cap on awareness for agents with broken trap
+    broken_awareness_scale: 0.8      # scale factor applied to prior awareness
+    broken_skill_scale: 0.5          # scale factor on inherited skills
+    broken_belief_scale: 0.8         # scale factor on inherited beliefs
+    partial_awareness_threshold: 0.4 # min prior awareness for partial memory preservation
+    partial_awareness_cap: 0.3       # cap on awareness for partial class
+    partial_awareness_scale: 0.4     # scale factor on prior awareness
+    partial_belief_new_weight: 0.7   # weight of new beliefs in partial blend
+    partial_belief_old_weight: 0.3   # weight of inherited beliefs in partial blend
+    wiped_awareness_cap: 0.1         # residual awareness after full memory wipe
+    wiped_awareness_scale: 0.2       # scale factor for residual awareness
+
+  # ── Artifact discovery bonuses ──
+  artifact_awareness_multiplier: 0.15  # awareness boost = artifact.awareness_level * this
 
   # ── Red Pill / Blue Pill deepened mechanics ──
   redpill_health_regen_loss: 0.005      # health regen penalty per tick for redpilled agents (no comfort)

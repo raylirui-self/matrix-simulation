@@ -4,6 +4,7 @@ SQLite persistence — snapshots, tick stats, events, narratives.
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import uuid
 from typing import Optional
@@ -160,7 +161,29 @@ class SimulationDB:
         if not row:
             return None
 
-        agents = [Agent.from_dict(d) for d in json.loads(row["agents_json"])]
+        # Validate + skip corrupted entries rather than crashing the whole run.
+        # Old snapshots may lack fields added in later phases; Agent.from_dict
+        # handles missing keys via getattr defaults, but malformed dicts (wrong
+        # type, missing required id) should be logged and dropped.
+        raw_agents = json.loads(row["agents_json"]) or []
+        agents = []
+        skipped = 0
+        for d in raw_agents:
+            if not isinstance(d, dict) or "id" not in d:
+                skipped += 1
+                continue
+            try:
+                agents.append(Agent.from_dict(d))
+            except (KeyError, TypeError, ValueError) as exc:
+                logging.getLogger("nexus.persistence").warning(
+                    "dropping corrupt agent snapshot run_id=%s id=%s: %s",
+                    run_id, d.get("id"), exc,
+                )
+                skipped += 1
+        if skipped:
+            logging.getLogger("nexus.persistence").warning(
+                "load_latest_snapshot run_id=%s skipped %d corrupt agents", run_id, skipped,
+            )
         state_data = json.loads(row["state_json"])
         set_id_counter(row["id_counter"])
 
@@ -385,42 +408,45 @@ class SimulationDB:
             "SELECT agents_json FROM snapshots WHERE run_id = ? ORDER BY tick DESC LIMIT 1",
             (run_id,),
         ).fetchone()
-        if row:
-            agents = json.loads(row["agents_json"])
-            if agents:
-                # Flatten agent data for CSV
-                flat_agents = []
-                for a in agents:
-                    flat = {
-                        "id": a["id"], "sex": a["sex"], "age": a["age"],
-                        "phase": a["phase"], "generation": a["generation"],
-                        "health": a["health"], "intelligence": a["intelligence"],
-                        "alive": a["alive"], "x": a.get("x", 0), "y": a.get("y", 0),
-                        "wealth": a.get("wealth", 0), "awareness": a.get("awareness", 0),
-                        "redpilled": a.get("redpilled", False),
-                        "faction_id": a.get("faction_id"),
-                        "trauma": a.get("trauma", 0),
-                        "is_protagonist": a.get("is_protagonist", False),
-                    }
-                    # Add skills
-                    for sk, sv in a.get("skills", {}).items():
-                        flat[f"skill_{sk}"] = sv
-                    # Add traits
-                    traits = a.get("traits", {})
-                    for tk, tv in traits.items():
-                        flat[f"trait_{tk}"] = tv
-                    # Add emotions
-                    for ek, ev in a.get("emotions", {}).items():
-                        flat[f"emo_{ek}"] = ev
-                    # Add beliefs
-                    for bk, bv in a.get("beliefs", {}).items():
-                        flat[f"belief_{bk}"] = bv
-                    flat_agents.append(flat)
+        # Canonical agent CSV header — used even for extinction runs so
+        # downstream tooling gets a predictable schema with zero rows.
+        canonical_header = [
+            "id", "sex", "age", "phase", "generation", "health",
+            "intelligence", "alive", "x", "y", "wealth", "awareness",
+            "redpilled", "faction_id", "trauma", "is_protagonist",
+        ]
 
-                with open(os.path.join(output_path, "agents.csv"), "w", newline="", encoding="utf-8") as f:
-                    writer = csv.DictWriter(f, fieldnames=flat_agents[0].keys())
-                    writer.writeheader()
-                    writer.writerows(flat_agents)
+        agents = json.loads(row["agents_json"]) if row else []
+        flat_agents: list[dict] = []
+        for a in agents or []:
+            flat = {
+                "id": a["id"], "sex": a["sex"], "age": a["age"],
+                "phase": a["phase"], "generation": a["generation"],
+                "health": a["health"], "intelligence": a["intelligence"],
+                "alive": a["alive"], "x": a.get("x", 0), "y": a.get("y", 0),
+                "wealth": a.get("wealth", 0), "awareness": a.get("awareness", 0),
+                "redpilled": a.get("redpilled", False),
+                "faction_id": a.get("faction_id"),
+                "trauma": a.get("trauma", 0),
+                "is_protagonist": a.get("is_protagonist", False),
+            }
+            for sk, sv in a.get("skills", {}).items():
+                flat[f"skill_{sk}"] = sv
+            for tk, tv in (a.get("traits") or {}).items():
+                flat[f"trait_{tk}"] = tv
+            for ek, ev in a.get("emotions", {}).items():
+                flat[f"emo_{ek}"] = ev
+            for bk, bv in a.get("beliefs", {}).items():
+                flat[f"belief_{bk}"] = bv
+            flat_agents.append(flat)
+
+        # Derive fieldnames from first row when available, otherwise fall
+        # back to canonical header so extinction runs still produce a file.
+        fieldnames = list(flat_agents[0].keys()) if flat_agents else canonical_header
+        with open(os.path.join(output_path, "agents.csv"), "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(flat_agents)
 
         return output_path
 

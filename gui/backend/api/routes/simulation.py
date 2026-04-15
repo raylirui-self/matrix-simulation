@@ -132,9 +132,30 @@ def get_tick_history(run_id: str, offset: int = 0, limit: int = 500):
     return {"history": history[offset:offset + limit], "total": len(history)}
 
 
+# Keys that are safe to mutate mid-run. Anything touching population floors,
+# phase-age thresholds, or tech breakthrough tables must go through a fresh
+# engine creation because those values are cached at engine construction.
+RUNTIME_CONFIG_WHITELIST = {
+    "narrator",       # narration cadence / provider
+    "emotions",       # decay & contagion tuning
+    "beliefs",        # memetic drift rates
+    "environment",    # harshness slider (read per-tick)
+    "matrix",         # awareness growth / glitch rates (read per-tick)
+    "dreams",         # dream cadence
+    "observer_effect",
+    "archaeology",
+}
+
+
 @router.put("/{run_id}/config")
 def update_config(run_id: str, overrides: dict):
-    """Update simulation config with runtime overrides."""
+    """Update simulation config with runtime overrides.
+
+    Only a whitelisted set of top-level sections may be tweaked mid-run.
+    Other sections (population, lifecycle, skills, agency) feed into state
+    that is cached at engine construction and cannot be safely mutated
+    without a full re-initialization.
+    """
     engine = manager.get_engine(run_id)
     if not engine:
         raise HTTPException(status_code=404, detail="Simulation not found")
@@ -143,36 +164,51 @@ def update_config(run_id: str, overrides: dict):
     if not cfg:
         raise HTTPException(status_code=500, detail="Config not found")
 
+    if not isinstance(overrides, dict):
+        raise HTTPException(status_code=400, detail="overrides must be a JSON object")
+
+    rejected = sorted(k for k in overrides if k not in RUNTIME_CONFIG_WHITELIST)
+    if rejected:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update config keys mid-run: {rejected}. "
+                   f"Allowed: {sorted(RUNTIME_CONFIG_WHITELIST)}",
+        )
+
     new_cfg = cfg.override(overrides)
     with manager._lock:
         engine.cfg = new_cfg
         manager._configs[run_id] = new_cfg
 
-    return {"status": "ok", "message": "Config updated"}
+    return {"status": "ok", "message": "Config updated", "updated_sections": sorted(overrides.keys())}
 
 
 def _agent_summary(a) -> dict:
-    """Lightweight agent representation for the state endpoint."""
+    """Lightweight agent representation for the state endpoint.
+
+    Uses ``getattr`` defaults so agents loaded from older snapshots (missing
+    Phase 6/7 fields like ``trauma`` or ``dominant_emotion``) still serialize.
+    """
     return {
         "id": a.id,
-        "x": round(a.x, 4),
-        "y": round(a.y, 4),
-        "sex": a.sex,
-        "age": a.age,
-        "phase": a.phase,
-        "health": round(a.health, 4),
-        "intelligence": round(a.intelligence, 4),
-        "generation": a.generation,
-        "emotion": a.dominant_emotion,
-        "awareness": round(a.awareness, 4),
-        "redpilled": a.redpilled,
-        "is_anomaly": a.is_anomaly,
-        "is_sentinel": a.is_sentinel,
-        "is_exile": a.is_exile,
-        "is_protagonist": a.is_protagonist,
-        "protagonist_name": a.protagonist_name,
-        "faction_id": a.faction_id,
-        "wealth": round(a.wealth, 3),
-        "trauma": round(a.trauma, 3),
-        "bonds_count": len(a.bonds),
+        "x": round(getattr(a, "x", 0.0), 4),
+        "y": round(getattr(a, "y", 0.0), 4),
+        "sex": getattr(a, "sex", "f"),
+        "age": getattr(a, "age", 0),
+        "phase": getattr(a, "phase", "adult"),
+        "health": round(getattr(a, "health", 0.0), 4),
+        "intelligence": round(getattr(a, "intelligence", 0.0), 4),
+        "generation": getattr(a, "generation", 0),
+        "emotion": getattr(a, "dominant_emotion", "neutral"),
+        "awareness": round(getattr(a, "awareness", 0.0), 4),
+        "redpilled": getattr(a, "redpilled", False),
+        "is_anomaly": getattr(a, "is_anomaly", False),
+        "is_sentinel": getattr(a, "is_sentinel", False),
+        "is_exile": getattr(a, "is_exile", False),
+        "is_protagonist": getattr(a, "is_protagonist", False),
+        "protagonist_name": getattr(a, "protagonist_name", None),
+        "faction_id": getattr(a, "faction_id", None),
+        "wealth": round(getattr(a, "wealth", 0.0), 3),
+        "trauma": round(getattr(a, "trauma", 0.0), 3),
+        "bonds_count": len(getattr(a, "bonds", []) or []),
     }

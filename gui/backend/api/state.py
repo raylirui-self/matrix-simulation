@@ -1,6 +1,7 @@
 """In-memory simulation engine management for the API server."""
 from __future__ import annotations
 
+import asyncio
 import threading
 from typing import Optional
 
@@ -30,6 +31,29 @@ class EngineManager:
         self._configs: dict[str, SimConfig] = {}
         self._lock = threading.Lock()
         self._tick_listeners: dict[str, list] = {}  # run_id -> list of queues
+        # Per-run serialization locks. Any caller mutating or ticking an
+        # engine should hold the run's lock so two WebSocket clients (or a
+        # WebSocket + REST tick) cannot re-enter engine.tick() concurrently.
+        self._engine_locks_sync: dict[str, threading.Lock] = {}
+        self._engine_locks_async: dict[str, asyncio.Lock] = {}
+
+    def get_engine_lock_sync(self, run_id: str) -> threading.Lock:
+        """Return (creating on demand) the synchronous per-run engine lock."""
+        with self._lock:
+            lock = self._engine_locks_sync.get(run_id)
+            if lock is None:
+                lock = threading.Lock()
+                self._engine_locks_sync[run_id] = lock
+            return lock
+
+    def get_engine_lock_async(self, run_id: str) -> asyncio.Lock:
+        """Return (creating on demand) the async per-run engine lock."""
+        with self._lock:
+            lock = self._engine_locks_async.get(run_id)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._engine_locks_async[run_id] = lock
+            return lock
 
     def create_sim(self, era: Optional[str] = None,
                    scenario: Optional[str] = None) -> tuple[str, SimulationEngine]:
@@ -98,18 +122,21 @@ class EngineManager:
         if not engine:
             return None
 
-        self._sync_id_counters(engine)
+        # Serialize ticks for this run across threads/coroutines to prevent
+        # concurrent engine.tick() mutating shared collections.
+        with self.get_engine_lock_sync(run_id):
+            self._sync_id_counters(engine)
 
-        result = engine.tick()
-        self.db.save_tick_stats(run_id, result)
+            result = engine.tick()
+            self.db.save_tick_stats(run_id, result)
 
-        # Snapshot periodically
-        cfg = self.get_config(run_id)
-        if cfg and result.tick % cfg.persistence.snapshot_interval == 0:
-            self.db.save_snapshot(run_id, engine)
-            self.db.flush()
+            # Snapshot periodically
+            cfg = self.get_config(run_id)
+            if cfg and result.tick % cfg.persistence.snapshot_interval == 0:
+                self.db.save_snapshot(run_id, engine)
+                self.db.flush()
 
-        return result
+            return result
 
     def compute_delta(self, engine: SimulationEngine,
                       prev_alive_ids: set, prev_agents: dict) -> dict:

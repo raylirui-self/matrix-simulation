@@ -283,19 +283,24 @@ class SimulationEngine:
         })
 
         # ── Partial awareness wipe — high-awareness agents retain echoes ──
+        ap = getattr(self.cfg.matrix, "awareness_preservation", None)
+        broken_retain = getattr(ap, "soul_trap_broken_retain", 0.5) if ap else 0.5
+        high_retain = getattr(ap, "high_awareness_retain", 0.35) if ap else 0.35
+        moderate_retain = getattr(ap, "moderate_awareness_retain", 0.2) if ap else 0.2
+        high_threshold = getattr(ap, "high_awareness_threshold", 0.6) if ap else 0.6
+        moderate_threshold = getattr(ap, "moderate_awareness_threshold", 0.3) if ap else 0.3
+        trust_boost_aware = getattr(ap, "trust_boost_aware", 0.15) if ap else 0.15
+        trust_boost_wiped = getattr(ap, "trust_boost_wiped", 0.3) if ap else 0.3
+
         for a in non_sentinels:
             old_awareness = a.awareness
             if a.soul_trap_broken:
-                # Broke the soul trap: retain 50% awareness
-                a.awareness = old_awareness * 0.5
-            elif old_awareness >= 0.6:
-                # High awareness: retain 35% — déjà vu of awakening
-                a.awareness = old_awareness * 0.35
-            elif old_awareness >= 0.3:
-                # Moderate awareness: retain 20%
-                a.awareness = old_awareness * 0.2
+                a.awareness = old_awareness * broken_retain
+            elif old_awareness >= high_threshold:
+                a.awareness = old_awareness * high_retain
+            elif old_awareness >= moderate_threshold:
+                a.awareness = old_awareness * moderate_retain
             else:
-                # Low awareness: full wipe
                 a.awareness = 0.0
             a.redpilled = False
             a.is_anomaly = False
@@ -306,7 +311,7 @@ class SimulationEngine:
             a.add_chronicle(tick, "cycle_reset", f"Survived cycle reset into Cycle {self.matrix_state.cycle_number + 1}",
                             cycle=self.matrix_state.cycle_number + 1)
             # System trust gets boosted (fresh start) — but less for those who remember
-            trust_boost = 0.15 if old_awareness >= 0.3 else 0.3
+            trust_boost = trust_boost_aware if old_awareness >= moderate_threshold else trust_boost_wiped
             a.beliefs["system_trust"] = min(1.0, a.beliefs.get("system_trust", 0) + trust_boost)
             # Emotions stabilize
             a.emotions["fear"] = max(0.0, a.emotions.get("fear", 0) - 0.3)
@@ -381,28 +386,41 @@ class SimulationEngine:
         awareness = soul["awareness"]
         was_broken = soul["soul_trap_broken"]
 
+        st = getattr(self.cfg.matrix, "soul_trap", None)
+        broken_cap = getattr(st, "broken_awareness_cap", 0.6) if st else 0.6
+        broken_scale = getattr(st, "broken_awareness_scale", 0.8) if st else 0.8
+        broken_skill_scale = getattr(st, "broken_skill_scale", 0.5) if st else 0.5
+        broken_belief_scale = getattr(st, "broken_belief_scale", 0.8) if st else 0.8
+        partial_threshold = getattr(st, "partial_awareness_threshold", 0.4) if st else 0.4
+        partial_cap = getattr(st, "partial_awareness_cap", 0.3) if st else 0.3
+        partial_scale = getattr(st, "partial_awareness_scale", 0.4) if st else 0.4
+        partial_new_w = getattr(st, "partial_belief_new_weight", 0.7) if st else 0.7
+        partial_old_w = getattr(st, "partial_belief_old_weight", 0.3) if st else 0.3
+        wiped_cap = getattr(st, "wiped_awareness_cap", 0.1) if st else 0.1
+        wiped_scale = getattr(st, "wiped_awareness_scale", 0.2) if st else 0.2
+
         if was_broken:
             # Broke the trap: full memory preservation
             agent.past_life_memories = soul["memories"]
-            agent.awareness = min(0.6, awareness * 0.8)
+            agent.awareness = min(broken_cap, awareness * broken_scale)
             agent.soul_trap_broken = True
-            agent.beliefs = {k: v * 0.8 for k, v in soul["beliefs"].items()}
+            agent.beliefs = {k: v * broken_belief_scale for k, v in soul["beliefs"].items()}
             for skill, val in soul["skills"].items():
                 if skill in agent.skills:
-                    agent.skills[skill] = max(agent.skills[skill], val * 0.5)
+                    agent.skills[skill] = max(agent.skills[skill], val * broken_skill_scale)
             agent.add_memory(tick, f"INCARNATION #{agent.incarnation_count}: I remember everything. I have lived before.")
             agent.add_chronicle(tick, "soul_recycled",
                                 f"Reincarnated with full memories (incarnation #{agent.incarnation_count})",
                                 source_id=soul["source_id"], memories_preserved="full")
-        elif awareness >= 0.4:
+        elif awareness >= partial_threshold:
             # Moderate-to-high awareness: partial memory preservation
             kept = soul["memories"][-3:]
             agent.past_life_memories = kept
-            agent.awareness = min(0.3, awareness * 0.4)
+            agent.awareness = min(partial_cap, awareness * partial_scale)
             # Faint echoes of beliefs
             for axis in agent.beliefs:
                 if axis in soul["beliefs"]:
-                    agent.beliefs[axis] = agent.beliefs[axis] * 0.7 + soul["beliefs"][axis] * 0.3
+                    agent.beliefs[axis] = agent.beliefs[axis] * partial_new_w + soul["beliefs"][axis] * partial_old_w
             agent.add_memory(tick, f"INCARNATION #{agent.incarnation_count}: Faint echoes of a past life linger...")
             agent.add_chronicle(tick, "soul_recycled",
                                 f"Reincarnated with partial memories (incarnation #{agent.incarnation_count})",
@@ -412,7 +430,7 @@ class SimulationEngine:
             agent.past_life_memories = []
             agent.incarnation_count = soul["incarnation_count"] + 1
             # Residual awareness — something feels off
-            agent.awareness = min(0.1, awareness * 0.2)
+            agent.awareness = min(wiped_cap, awareness * wiped_scale)
             agent.add_chronicle(tick, "soul_recycled",
                                 f"Reincarnated with wiped memories (incarnation #{agent.incarnation_count})",
                                 source_id=soul["source_id"], memories_preserved="none")
@@ -491,7 +509,8 @@ class SimulationEngine:
 
             # Awareness clue from artifacts — any artifact with awareness echoes
             if artifact.awareness_level > 0.1:
-                awareness_boost = artifact.awareness_level * 0.15
+                artifact_mult = getattr(self.cfg.matrix, "artifact_awareness_multiplier", 0.15)
+                awareness_boost = artifact.awareness_level * artifact_mult
                 a.awareness = min(1.0, a.awareness + awareness_boost)
 
             a.add_memory(tick,
@@ -701,7 +720,8 @@ class SimulationEngine:
 
                 # Grief slows learning
                 if a.emotions.get("grief", 0) > 0.5:
-                    base *= (1.0 - a.emotions["grief"] * 0.3)
+                    grief_penalty = getattr(self.cfg.emotions, "grief_learning_penalty", 0.3)
+                    base *= (1.0 - a.emotions["grief"] * grief_penalty)
 
                 a.skills[skill] = min(1.0, a.skills[skill] + max(0, base))
 
@@ -1373,6 +1393,10 @@ class SimulationEngine:
                 avg_traits[t] += getattr(a.traits, t, 0)
 
         n = len(non_sentinels)
+        # Guarded above by the `if not non_sentinels` early return — if this
+        # ever fires it means someone removed that guard and we would silently
+        # divide by zero on the averages below.
+        assert n > 0, "get_population_summary main branch requires non-empty non_sentinels"
         avg_skills = {k: round(v / n, 4) for k, v in avg_skills.items()}
         avg_traits = {k: round(v / n, 4) for k, v in avg_traits.items()}
 

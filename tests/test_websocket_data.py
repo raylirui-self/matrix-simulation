@@ -89,6 +89,42 @@ def test_capture_prev_state_tracks_consciousness_and_program_flags():
     assert len(snap["program_flags"]) == 4
 
 
+def test_world_route_exposes_artifact_flag():
+    """Cells returned by /world must carry has_artifact + artifact_count for
+    the cycle-reset cinematic overlay to highlight artifact locations."""
+    from gui.backend.api.routes import world as world_route
+
+    engine = _bootstrap_engine()
+    # Seed an artifact onto a cell so the flag has something to report
+    from src.world import Artifact, next_artifact_id
+    cell = engine.world.cells[0][0]
+    cell.artifacts.append(
+        Artifact(
+            artifact_id=next_artifact_id(),
+            faction_name="test",
+            era_tick=0,
+            cycle_number=1,
+            awareness_level=0.0,
+            tech_level=0.0,
+            artifact_type="ruin",
+        )
+    )
+
+    # Register engine so the route can find it
+    mgr = world_route.manager
+    mgr._engines["test-run"] = engine
+    try:
+        data = world_route.get_world("test-run")
+    finally:
+        mgr._engines.pop("test-run", None)
+
+    cells = data["cells"]
+    assert any("has_artifact" in c and "artifact_count" in c for c in cells)
+    seeded = next(c for c in cells if c["row"] == 0 and c["col"] == 0)
+    assert seeded["has_artifact"] is True
+    assert seeded["artifact_count"] >= 1
+
+
 def test_delta_emission_on_consciousness_phase_change():
     """If an agent's consciousness_phase changes with zero movement, a
     delta should still be emitted."""
