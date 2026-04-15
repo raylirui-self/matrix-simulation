@@ -5,6 +5,7 @@
 		tick,
 		matrixState,
 		phasePulses,
+		cycleResetAnimation,
 		type Agent
 	} from '$lib/stores/simulation';
 	import { zoomLevel, focusCell, focusAgentId, overlays, bondConstellationMode } from '$lib/stores/ui';
@@ -268,6 +269,119 @@
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === 'l' || e.key === 'L') {
 			showLifePhaseOverlay = !showLifePhaseOverlay;
+		}
+	}
+
+	// ── Faction territory borders (overlay, key 'F') ──
+	// A compact hand-picked palette matched by index = faction.id % N.
+	const FACTION_BORDER_COLORS = [
+		'#ff4466',
+		'#4488ff',
+		'#ffd700',
+		'#44ff88',
+		'#aa66ff',
+		'#ff8844',
+		'#66eecc',
+		'#ff66cc'
+	];
+	function factionColor(factionId: number): string {
+		return FACTION_BORDER_COLORS[((factionId % FACTION_BORDER_COLORS.length) + FACTION_BORDER_COLORS.length) % FACTION_BORDER_COLORS.length];
+	}
+
+	// Jarvis-march (gift wrapping) convex hull. O(n*h), zero dependencies.
+	// Returns hull points in counter-clockwise order.
+	function convexHull(points: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
+		const n = points.length;
+		if (n < 3) return points.slice();
+		// Find leftmost
+		let leftmost = 0;
+		for (let i = 1; i < n; i++) {
+			if (points[i].x < points[leftmost].x) leftmost = i;
+		}
+		const hull: Array<{ x: number; y: number }> = [];
+		let p = leftmost;
+		do {
+			hull.push(points[p]);
+			let q = (p + 1) % n;
+			for (let i = 0; i < n; i++) {
+				// Orientation: cross product sign
+				const cross =
+					(points[q].y - points[p].y) * (points[i].x - points[q].x) -
+					(points[q].x - points[p].x) * (points[i].y - points[q].y);
+				if (cross < 0) q = i;
+			}
+			p = q;
+			if (hull.length > n) break; // safety
+		} while (p !== leftmost);
+		return hull;
+	}
+
+	function drawFactionBorders(ctx: CanvasRenderingContext2D, agentList: Agent[]) {
+		// Group live, non-sentinel members by faction_id
+		const groups = new Map<number, Array<{ x: number; y: number }>>();
+		for (const a of agentList) {
+			if (a.faction_id == null || a.is_sentinel) continue;
+			const ax = gridLeft + a.x * gridSize * cellSize;
+			const ay = gridTop + a.y * gridSize * cellSize;
+			let arr = groups.get(a.faction_id);
+			if (!arr) {
+				arr = [];
+				groups.set(a.faction_id, arr);
+			}
+			arr.push({ x: ax, y: ay });
+		}
+		for (const [fid, pts] of groups) {
+			if (pts.length < 3) continue;
+			const hull = convexHull(pts);
+			if (hull.length < 3) continue;
+			const color = factionColor(fid);
+			// Thin border
+			ctx.save();
+			ctx.strokeStyle = color;
+			ctx.lineWidth = 1.5;
+			ctx.globalAlpha = 0.75;
+			ctx.beginPath();
+			ctx.moveTo(hull[0].x, hull[0].y);
+			for (let i = 1; i < hull.length; i++) ctx.lineTo(hull[i].x, hull[i].y);
+			ctx.closePath();
+			ctx.stroke();
+			// Very faint fill for legibility
+			ctx.globalAlpha = 0.05;
+			ctx.fillStyle = color;
+			ctx.fill();
+			ctx.restore();
+		}
+	}
+
+	// ── Cycle reset canvas effect: glow artifact cells during the whiteout ──
+	function drawCycleResetGlow(ctx: CanvasRenderingContext2D) {
+		const anim = $cycleResetAnimation;
+		if (!anim.active || !worldData?.cells) return;
+		const elapsed = Date.now() - anim.started_at;
+		// Ramp in over 400ms, hold, fade out after 3000ms over ~1s
+		let strength = 0;
+		if (elapsed < 400) strength = elapsed / 400;
+		else if (elapsed < 3000) strength = 1;
+		else if (elapsed < 4000) strength = Math.max(0, 1 - (elapsed - 3000) / 1000);
+		else strength = 0;
+		if (strength <= 0) return;
+
+		for (const cell of worldData.cells) {
+			if (!cell.has_artifact) continue;
+			const cx = gridLeft + cell.col * cellSize + cellSize / 2;
+			const cy = gridTop + cell.row * cellSize + cellSize / 2;
+			const r = cellSize * 0.85;
+			const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+			grad.addColorStop(0, `rgba(255, 255, 220, ${0.85 * strength})`);
+			grad.addColorStop(0.4, `rgba(255, 215, 140, ${0.55 * strength})`);
+			grad.addColorStop(1, 'rgba(255, 200, 100, 0)');
+			ctx.save();
+			ctx.globalCompositeOperation = 'lighter';
+			ctx.fillStyle = grad;
+			ctx.beginPath();
+			ctx.arc(cx, cy, r, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
 		}
 	}
 
@@ -823,6 +937,14 @@
 				}
 			}
 		}
+
+		// ── Faction territory borders overlay (toggle with F) ──
+		if ($overlays.has('faction_borders')) {
+			drawFactionBorders(ctx, agentList);
+		}
+
+		// ── Cycle-reset artifact glow ── (self-gated by store state)
+		drawCycleResetGlow(ctx);
 
 		// Hover agent tooltip
 		if (hoverAgent) {

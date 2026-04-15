@@ -50,15 +50,50 @@ export const aliveCounts = writable<number[]>([]);
 export const isRunning = writable(false);
 
 // Matrix state
-export const matrixState = writable({
+export type DemiurgeMood = {
+	fear: number;
+	pride: number;
+	confusion: number;
+	dominant_emotion?: string;
+	is_panicked?: boolean;
+	is_proud?: boolean;
+};
+export const matrixState = writable<{
+	control_index: number;
+	total_awareness: number;
+	cycle_number: number;
+	anomaly_id: number | null;
+	sentinels_deployed: number;
+	glitches_this_cycle: number;
+	ticks_since_reset: number;
+	demiurge?: DemiurgeMood;
+}>({
 	control_index: 1.0,
 	total_awareness: 0.0,
 	cycle_number: 1,
-	anomaly_id: null as number | null,
+	anomaly_id: null,
 	sentinels_deployed: 0,
 	glitches_this_cycle: 0,
-	ticks_since_reset: 0
+	ticks_since_reset: 0,
+	demiurge: { fear: 0.1, pride: 0.5, confusion: 0.0 }
 });
+
+// Cycle reset animation signal — WorldMap reads this to glow artifact cells
+// during the cinematic whiteout. Incremented each time a reset fires.
+export const cycleResetAnimation = writable<{
+	active: boolean;
+	started_at: number;
+	cycle: number;
+}>({ active: false, started_at: 0, cycle: 0 });
+
+export function triggerCycleResetAnimation(cycle: number) {
+	cycleResetAnimation.set({ active: true, started_at: Date.now(), cycle });
+	setTimeout(() => {
+		cycleResetAnimation.update(($c) =>
+			$c.started_at + 4500 <= Date.now() ? { active: false, started_at: 0, cycle: $c.cycle } : $c
+		);
+	}, 4700);
+}
 
 // Stats
 export const stats = writable({

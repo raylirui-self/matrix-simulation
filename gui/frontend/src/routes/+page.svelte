@@ -11,7 +11,9 @@
 		wars as warsStore,
 		loadFullState,
 		applyTickMessage,
-		isRunning
+		isRunning,
+		dreamState,
+		triggerCycleResetAnimation
 	} from '$lib/stores/simulation';
 	import {
 		zoomLevel,
@@ -35,6 +37,7 @@
 	import EraBanner from '$lib/panels/EraBanner.svelte';
 	import ScenarioCards from '$lib/panels/ScenarioCards.svelte';
 	import CinematicOverlay from '$lib/panels/CinematicOverlay.svelte';
+	import DemiurgeHUD from '$lib/panels/DemiurgeHUD.svelte';
 
 	let ws: SimWebSocket | null = null;
 	let showLanding = $state(true);
@@ -98,9 +101,18 @@
 		ws.requestState();
 	}
 
+	let lastSeenCycle = 1;
+
 	function handleWSMessage(msg: WSMessage) {
 		if (msg.type === 'tick') {
 			applyTickMessage(msg as TickMessage);
+			// Detect cycle reset from the matrix payload and fire the animation
+			const tm = msg as TickMessage;
+			const newCycle = (tm as any).matrix?.cycle_number;
+			if (typeof newCycle === 'number' && newCycle > lastSeenCycle) {
+				triggerCycleResetAnimation(lastSeenCycle);
+				lastSeenCycle = newCycle;
+			}
 		} else if (msg.type === 'state_sync') {
 			// Full state sync
 			const agentMap = new Map();
@@ -111,6 +123,9 @@
 			tick.set(msg.tick);
 			if (msg.matrix) {
 				matrixState.set(msg.matrix);
+				if (typeof msg.matrix.cycle_number === 'number') {
+					lastSeenCycle = msg.matrix.cycle_number;
+				}
 			}
 			if (msg.factions) {
 				factionsStore.set(msg.factions);
@@ -220,7 +235,9 @@
 			'7': 'combat',
 			'8': 'resources',
 			'9': 'bond_density',
-			'p': 'propaganda'
+			'p': 'propaganda',
+			'f': 'faction_borders',
+			'F': 'faction_borders'
 		};
 		if (e.key in overlayKeys) {
 			toggleOverlay(overlayKeys[e.key]);
@@ -303,10 +320,15 @@
 {:else}
 	<!-- Main Simulation View -->
 	<CodeRain />
-	<WorldMap />
+	<div class="world-stage" class:dreaming={$dreamState.is_dreaming}>
+		<WorldMap />
+		<!-- Dream-state visual fog: indigo/teal animated gradient over the canvas only -->
+		<div class="dream-fog" class:active={$dreamState.is_dreaming} aria-hidden="true"></div>
+	</div>
 	<CellView />
 	<SoulView />
 	<EdgePanels />
+	<DemiurgeHUD />
 	<Terminal />
 	<ControlDrawer bind:open={controlDrawerOpen} />
 	<ChartsPanel bind:open={chartsPanelOpen} />
@@ -368,6 +390,43 @@
 {/if}
 
 <style>
+	/* World stage + dream filter */
+	.world-stage {
+		position: fixed;
+		inset: 0;
+		z-index: 1;
+		transition: filter 1.2s ease;
+	}
+	.world-stage.dreaming {
+		filter: hue-rotate(60deg) saturate(1.3) blur(0.5px);
+	}
+	.dream-fog {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		pointer-events: none;
+		mix-blend-mode: screen;
+		background:
+			radial-gradient(ellipse at 30% 40%, rgba(70, 30, 180, 0.35), transparent 60%),
+			radial-gradient(ellipse at 70% 70%, rgba(20, 160, 180, 0.3), transparent 65%),
+			linear-gradient(120deg, rgba(40, 20, 120, 0.15), rgba(10, 80, 120, 0.15));
+		transition: opacity 1.2s ease;
+		animation: dream-drift 18s ease-in-out infinite alternate;
+	}
+	.dream-fog.active {
+		opacity: 1;
+	}
+	@keyframes dream-drift {
+		0% {
+			background-position: 0% 0%, 100% 100%, 0 0;
+			filter: hue-rotate(0deg);
+		}
+		100% {
+			background-position: 20% 30%, 80% 60%, 0 0;
+			filter: hue-rotate(40deg);
+		}
+	}
+
 	/* Landing */
 	.landing {
 		position: fixed;

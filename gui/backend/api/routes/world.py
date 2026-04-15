@@ -35,6 +35,8 @@ def get_world(run_id: str):
                 "harshness_modifier": round(cell.harshness_modifier, 3),
                 "skill_bonus": cell.skill_bonus,
                 "unlocked_techs": [t.name for t in cell.unlocked_techs],
+                "has_artifact": bool(cell.artifacts),
+                "artifact_count": len(cell.artifacts),
             })
 
     # Agents grouped by cell

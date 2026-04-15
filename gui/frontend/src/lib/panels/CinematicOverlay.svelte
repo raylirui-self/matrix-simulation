@@ -5,15 +5,25 @@
 -->
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { cinematicEventQueue, type CinematicEvent } from '$lib/stores/simulation';
+	import {
+		cinematicEventQueue,
+		triggerCycleResetAnimation,
+		type CinematicEvent
+	} from '$lib/stores/simulation';
 
-	let currentEvent: CinematicEvent | null = null;
-	let visible = false;
-	let fadeClass = '';
+	let currentEvent = $state<CinematicEvent | null>(null);
+	let visible = $state(false);
+	let fadeClass = $state('');
+	let cycleResetStage = $state<'idle' | 'pause' | 'whiteout' | 'hold' | 'fadeback'>('idle');
 	let timer: ReturnType<typeof setTimeout> | null = null;
 
 	const DISPLAY_MS = 4000;
 	const FADE_MS = 600;
+	// Cycle-reset timings (ms): pause → expanding whiteout → hold → fade-back → done
+	const RESET_PAUSE = 400;
+	const RESET_WHITEOUT = 900;
+	const RESET_HOLD = 1300;
+	const RESET_FADEBACK = 1100;
 
 	const unsub = cinematicEventQueue.subscribe(($q) => {
 		if ($q.length > 0 && !currentEvent) {
@@ -28,9 +38,33 @@
 			return $q.slice(1);
 		});
 		if (!currentEvent) return;
+		if (currentEvent.type === 'cycle_reset') {
+			startCycleReset();
+			return;
+		}
 		fadeClass = 'fade-in';
 		visible = true;
 		timer = setTimeout(() => dismiss(), DISPLAY_MS);
+	}
+
+	function startCycleReset() {
+		triggerCycleResetAnimation(currentEvent?.cycle ?? 0);
+		visible = true;
+		fadeClass = 'fade-in';
+		cycleResetStage = 'pause';
+		timer = setTimeout(() => {
+			cycleResetStage = 'whiteout';
+			timer = setTimeout(() => {
+				cycleResetStage = 'hold';
+				timer = setTimeout(() => {
+					cycleResetStage = 'fadeback';
+					timer = setTimeout(() => {
+						cycleResetStage = 'idle';
+						dismiss();
+					}, RESET_FADEBACK);
+				}, RESET_HOLD);
+			}, RESET_WHITEOUT);
+		}, RESET_PAUSE);
 	}
 
 	function dismiss() {
@@ -41,6 +75,7 @@
 			visible = false;
 			currentEvent = null;
 			fadeClass = '';
+			cycleResetStage = 'idle';
 			// Check if more events queued
 			cinematicEventQueue.update(($q) => {
 				if ($q.length > 0) {
@@ -71,16 +106,38 @@
 </script>
 
 {#if visible && currentEvent}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="cinematic-overlay {fadeClass}" on:click={dismiss}>
-		<div class="scan-line"></div>
-		<div class="content" style="--accent: {typeColor(currentEvent.type)}">
-			<div class="glitch-text title">{currentEvent.title}</div>
-			<div class="subtitle">{currentEvent.subtitle}</div>
-			<div class="tick-stamp">TICK {currentEvent.tick}</div>
-		</div>
-	</div>
+	{#if currentEvent.type === 'cycle_reset'}
+		<!-- Cycle reset: multi-stage dramatic sequence.
+		     A radial whiteout grows from center, text appears mid-sequence,
+		     then the whiteout fades away revealing the new cycle. -->
+		<button
+			type="button"
+			class="cinematic-overlay reset-overlay stage-{cycleResetStage}"
+			onclick={dismiss}
+			aria-label="Dismiss cycle reset cinematic"
+		>
+			<div class="reset-whiteout"></div>
+			<div class="reset-content">
+				<div class="reset-label">CYCLE</div>
+				<div class="reset-number">{currentEvent.cycle ?? '—'}</div>
+				<div class="reset-label">ENDED</div>
+			</div>
+		</button>
+	{:else}
+		<button
+			type="button"
+			class="cinematic-overlay {fadeClass}"
+			onclick={dismiss}
+			aria-label="Dismiss cinematic"
+		>
+			<div class="scan-line"></div>
+			<div class="content" style="--accent: {typeColor(currentEvent.type)}">
+				<div class="glitch-text title">{currentEvent.title}</div>
+				<div class="subtitle">{currentEvent.subtitle}</div>
+				<div class="tick-stamp">TICK {currentEvent.tick}</div>
+			</div>
+		</button>
+	{/if}
 {/if}
 
 <style>
@@ -94,6 +151,12 @@
 		background: rgba(0, 0, 0, 0.85);
 		cursor: pointer;
 		pointer-events: all;
+		border: none;
+		padding: 0;
+		font: inherit;
+		color: inherit;
+		width: 100%;
+		height: 100%;
 	}
 
 	.cinematic-overlay.fade-in {
@@ -150,39 +213,99 @@
 		letter-spacing: 0.2em;
 	}
 
+	/* ── Cycle reset cinematic ── */
+	.reset-overlay {
+		background: transparent;
+		overflow: hidden;
+	}
+	.reset-whiteout {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: radial-gradient(
+			circle,
+			rgba(255, 255, 255, 0.98) 0%,
+			rgba(255, 255, 255, 0.92) 55%,
+			rgba(255, 255, 255, 0.0) 100%
+		);
+		transform: translate(-50%, -50%) scale(0);
+		pointer-events: none;
+		will-change: transform, opacity;
+	}
+	.reset-content {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
+		opacity: 0;
+		transform: scale(0.92);
+		font-family: 'Courier New', monospace;
+		color: #222;
+		text-align: center;
+	}
+	.reset-label {
+		font-size: clamp(1.2rem, 3vw, 2.2rem);
+		letter-spacing: 0.6em;
+		font-weight: 600;
+		color: rgba(20, 20, 30, 0.85);
+	}
+	.reset-number {
+		font-size: clamp(4rem, 12vw, 10rem);
+		font-weight: 900;
+		line-height: 1;
+		color: #0a0a14;
+		text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+		letter-spacing: 0.1em;
+	}
+
+	.stage-pause .reset-whiteout {
+		transform: translate(-50%, -50%) scale(0);
+		opacity: 0;
+	}
+	.stage-whiteout .reset-whiteout {
+		transform: translate(-50%, -50%) scale(400);
+		opacity: 1;
+		transition: transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1), opacity 0.3s ease;
+	}
+	.stage-hold .reset-whiteout {
+		transform: translate(-50%, -50%) scale(400);
+		opacity: 1;
+	}
+	.stage-hold .reset-content {
+		opacity: 1;
+		transform: scale(1);
+		transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+	}
+	.stage-fadeback .reset-whiteout {
+		transform: translate(-50%, -50%) scale(400);
+		opacity: 0;
+		transition: opacity 1.05s ease;
+	}
+	.stage-fadeback .reset-content {
+		opacity: 0;
+		transition: opacity 0.9s ease;
+	}
+
 	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+		from { opacity: 0; }
+		to { opacity: 1; }
 	}
 
 	@keyframes fadeOut {
-		from {
-			opacity: 1;
-		}
-		to {
-			opacity: 0;
-		}
+		from { opacity: 1; }
+		to { opacity: 0; }
 	}
 
 	@keyframes glitch {
-		0% {
-			transform: translate(0);
-		}
-		25% {
-			transform: translate(-3px, 2px);
-		}
-		50% {
-			transform: translate(3px, -1px);
-		}
-		75% {
-			transform: translate(-1px, -2px);
-		}
-		100% {
-			transform: translate(0);
-		}
+		0% { transform: translate(0); }
+		25% { transform: translate(-3px, 2px); }
+		50% { transform: translate(3px, -1px); }
+		75% { transform: translate(-1px, -2px); }
+		100% { transform: translate(0); }
 	}
 </style>
