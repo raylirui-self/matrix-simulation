@@ -58,6 +58,29 @@ export const api = {
 			`/api/sim/${runId}/world/bonds?min_strength=${minStrength}&limit=${limit}`
 		),
 
+	// Language evolution tree (Phase 7C)
+	getLanguageTree: (runId: string) =>
+		request<{
+			branches: Array<{
+				faction_id: number;
+				name: string;
+				dialect_offset: number;
+				concept_usage: Record<string, number>;
+				speaker_count: number;
+				extinct: boolean;
+				language_artifacts: Array<{
+					faction_name: string;
+					cycle_number: number;
+					concept_count: number;
+					contains_awareness_clues: boolean;
+				}>;
+			}>;
+			encryption_level: number;
+			decryption_level: number;
+			current_tick: number;
+			cycle_number: number;
+		}>(`/api/sim/${runId}/world/language`),
+
 	// Causal event timeline (Phase 7B)
 	getCausalEvents: (runId: string, sinceTick = 0, limit = 200, types?: string) => {
 		const typesQs = types ? `&types=${encodeURIComponent(types)}` : '';

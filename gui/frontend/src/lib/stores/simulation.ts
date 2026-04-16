@@ -207,11 +207,42 @@ export const havenSummary = writable<{
 	stats?: Record<string, any>;
 } | null>(null);
 
-// Nested simulation count
-export const nestedSims = writable<{ count: number; stats?: Record<string, any> }>({ count: 0 });
+// Nested simulation count + per-engine detail for miniature windows
+export type NestedEngineDetail = {
+	engine_id: number;
+	builder_id: number;
+	builder_x: number;
+	builder_y: number;
+	cell_row: number;
+	cell_col: number;
+	sub_grid_size: number;
+	alive_count: number;
+	max_awareness: number;
+	has_paradox: boolean;
+	sub_agents: Array<{ x: number; y: number; aw: number }>;
+};
+export const nestedSims = writable<{
+	count: number;
+	stats?: Record<string, any>;
+	engines?: NestedEngineDetail[];
+}>({ count: 0 });
 
 // Boltzmann brain event ticker
 export const boltzmannEvents = writable<Array<{ agent_id: number; tick: number }>>([]);
+
+// Reincarnation arcs (Phase 7C) — ghost trails from death to birth location
+export type ReincarnationArc = {
+	new_agent_id: number;
+	source_id: number;
+	death_x: number;
+	death_y: number;
+	birth_x: number;
+	birth_y: number;
+	incarnation_count: number;
+	soul_trap_broken: boolean;
+	created_at: number; // Date.now() — used for fade timing
+};
+export const reincarnationArcs = writable<ReincarnationArc[]>([]);
 
 // Phase-transition pulses (for animating consciousness phase crossings)
 export type PhasePulse = { agent_id: number; tick: number; to_phase: string };
@@ -495,6 +526,20 @@ export function applyTickMessage(msg: TickMessage) {
 	// Cinematic events
 	if ((msg as any).cinematic_events?.length) {
 		cinematicEventQueue.update(($q) => [...$q, ...(msg as any).cinematic_events]);
+	}
+
+	// Reincarnation arcs (Phase 7C)
+	if ((msg as any).reincarnation_events?.length) {
+		const now = Date.now();
+		const newArcs = (msg as any).reincarnation_events.map((e: any) => ({
+			...e,
+			created_at: now
+		}));
+		reincarnationArcs.update(($a) => {
+			const combined = [...$a, ...newArcs];
+			// Prune arcs older than 4s
+			return combined.filter((a) => now - a.created_at < 4000);
+		});
 	}
 
 	// Soundscape update — map tick stats to audio parameters

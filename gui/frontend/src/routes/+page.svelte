@@ -42,8 +42,10 @@
 	import DemiurgeHUD from '$lib/panels/DemiurgeHUD.svelte';
 	import HavenPiP from '$lib/panels/HavenPiP.svelte';
 	import CausalTimeline from '$lib/panels/CausalTimeline.svelte';
+	import LanguageTree from '$lib/panels/LanguageTree.svelte';
 
 	let ws: SimWebSocket | null = null;
+	let languageTreeOpen = $state(false);
 	let showLanding = $state(true);
 	let eras = $state<any[]>([]);
 	let scenarios = $state<any[]>([]);
@@ -239,6 +241,12 @@
 			return;
 		}
 
+		// Y = Language evolution tree toggle (Phase 7C)
+		if (e.key === 'y' || e.key === 'Y') {
+			languageTreeOpen = !languageTreeOpen;
+			return;
+		}
+
 		// Number keys for overlays
 		const overlayKeys: Record<string, string> = {
 			'0': 'contagion',
@@ -347,6 +355,7 @@
 	<DemiurgeHUD />
 	<HavenPiP />
 	<CausalTimeline />
+	<LanguageTree bind:open={languageTreeOpen} />
 	<Terminal />
 	<ControlDrawer bind:open={controlDrawerOpen} />
 	<ChartsPanel bind:open={chartsPanelOpen} />

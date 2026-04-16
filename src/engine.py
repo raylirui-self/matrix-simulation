@@ -156,6 +156,7 @@ class TickResult:
     mythology_stats: dict = field(default_factory=dict)
     dream_stats: dict = field(default_factory=dict)
     nested_sim_stats: dict = field(default_factory=dict)
+    reincarnation_events: list = field(default_factory=list)
 
 
 @dataclass
@@ -208,6 +209,9 @@ class SimulationEngine:
 
         # ── Observer Effect: track which cells were empty last tick ──
         self._prev_empty_cells: set[tuple[int, int]] = set()
+
+        # ── Reincarnation arcs (per-tick, cleared each tick) ──
+        self._reincarnation_events: list[dict] = []
 
         # ── Cinematic tracking (persists across ticks) ──
         self._prev_enforcer_count: int = 0
@@ -368,6 +372,8 @@ class SimulationEngine:
             "incarnation_count": dead_agent.incarnation_count,
             "tick_captured": tick,
             "source_id": dead_agent.id,
+            "death_x": round(dead_agent.x, 4),
+            "death_y": round(dead_agent.y, 4),
         }
         self._soul_pool.append(soul)
         # Cap pool size
@@ -382,6 +388,18 @@ class SimulationEngine:
 
         soul = self._soul_pool.pop(0)  # FIFO — oldest soul first
         agent.incarnation_count = soul["incarnation_count"] + 1
+
+        # Phase 7C: record reincarnation arc (death pos → birth pos)
+        self._reincarnation_events.append({
+            "new_agent_id": agent.id,
+            "source_id": soul["source_id"],
+            "death_x": soul.get("death_x", 0.5),
+            "death_y": soul.get("death_y", 0.5),
+            "birth_x": round(agent.x, 4),
+            "birth_y": round(agent.y, 4),
+            "incarnation_count": agent.incarnation_count,
+            "soul_trap_broken": soul["soul_trap_broken"],
+        })
 
         awareness = soul["awareness"]
         was_broken = soul["soul_trap_broken"]
@@ -566,6 +584,7 @@ class SimulationEngine:
         """Process one simulation tick — all eleven systems."""
         self.state.current_tick += 1
         tick = self.state.current_tick
+        self._reincarnation_events.clear()  # Phase 7C: reset per-tick
         alive = self.get_alive_agents()
         # Simulation systems only process agents inside the simulation
         sim_alive = [a for a in alive if a.location == "simulation"]
@@ -1319,6 +1338,7 @@ class SimulationEngine:
             mythology_stats=mythology_stats,
             dream_stats=dream_stats,
             nested_sim_stats=nested_sim_stats,
+            reincarnation_events=list(self._reincarnation_events),
         )
 
     def _apply_event(self, event: WorldEvent):

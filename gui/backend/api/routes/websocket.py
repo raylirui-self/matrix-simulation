@@ -240,10 +240,50 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
             "stats": result.haven_stats or {},
         }
 
-    # Nested simulations
+    # Nested simulations — Phase 7C: include per-engine detail for miniature
+    # window rendering.  Only the top-3 by max sub-agent awareness are sent.
+    world_engines = getattr(engine, 'world_engines', []) or []
+    engine_details: list[dict] = []
+    grid_size = engine.world.size if hasattr(engine, 'world') else 8
+    for we in world_engines:
+        ss = we.sub_sim
+        if ss is None:
+            continue
+        alive_sub = ss.get_alive()
+        max_aw = max((a.awareness for a in alive_sub), default=0.0)
+        has_paradox = any(a.recursive_detected for a in alive_sub)
+        # Look up builder agent position (may be dead)
+        builder = next(
+            (a for a in engine.agents if a.id == we.builder_id), None
+        )
+        bx = round(builder.x, 4) if builder else (we.cell_col + 0.5) / grid_size
+        by = round(builder.y, 4) if builder else (we.cell_row + 0.5) / grid_size
+        # Lightweight sub-agent grid (positions + awareness only)
+        sub_agents = [
+            {"x": round(a.x, 3), "y": round(a.y, 3), "aw": round(a.awareness, 3)}
+            for a in alive_sub[:20]
+        ]
+        engine_details.append({
+            "engine_id": we.engine_id,
+            "builder_id": we.builder_id,
+            "builder_x": bx,
+            "builder_y": by,
+            "cell_row": we.cell_row,
+            "cell_col": we.cell_col,
+            "sub_grid_size": ss.grid_size,
+            "alive_count": len(alive_sub),
+            "max_awareness": round(max_aw, 4),
+            "has_paradox": has_paradox,
+            "sub_agents": sub_agents,
+        })
+    # Sort by max_awareness desc, keep top 3
+    engine_details.sort(key=lambda e: -e["max_awareness"])
+    engine_details = engine_details[:3]
+
     nested_payload = {
-        "count": len(getattr(engine, 'world_engines', []) or []),
+        "count": len(world_engines),
         "stats": result.nested_sim_stats or {},
+        "engines": engine_details,
     }
 
     # Boltzmann brain events (pulled out of matrix_stats)
@@ -282,6 +322,7 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
         "haven": haven_payload,
         "nested_sims": nested_payload,
         "boltzmann_events": boltzmann_events,
+        "reincarnation_events": result.reincarnation_events or [],
     }
 
 

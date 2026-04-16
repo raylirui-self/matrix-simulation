@@ -7,8 +7,13 @@
 		phasePulses,
 		cycleResetAnimation,
 		dreamState,
+		nestedSims,
+		reincarnationArcs,
+		events as eventsFeed,
 		type Agent,
-		type GhostPayload
+		type GhostPayload,
+		type NestedEngineDetail,
+		type ReincarnationArc
 	} from '$lib/stores/simulation';
 	import { zoomLevel, focusCell, focusAgentId, overlays, bondConstellationMode } from '$lib/stores/ui';
 	import { api } from '$lib/api/rest';
@@ -269,6 +274,24 @@
 	let showLifePhaseOverlay = false;
 	// Toggle for Gnostic Archon overlay (press 'G')
 	let showArchonOverlay = false;
+	// Toggle for observer mode (press 'O')
+	let observerModeEnabled = false;
+	let observerModeActive = false;    // true when idle timer fires
+	let observerLastInput = Date.now();
+	let observerZoomPhase = 0;         // cycles through zoom presets
+	let observerFocusId: number | null = null;
+	let observerTickerOffset = 0;      // news ticker scroll position
+	const OBSERVER_IDLE_MS = 30_000;   // 30s idle before activation
+	const OBSERVER_ZOOM_INTERVAL = 10_000; // 10s per zoom level
+
+	// Soul trap chain-break animation state (per agent, one-shot)
+	type ChainBreakAnim = {
+		x: number; y: number;
+		particles: Array<{ angle: number; r: number; life: number }>;
+		started_at: number;
+	};
+	let chainBreakAnims: ChainBreakAnim[] = [];
+	let seenChainBreaks = new Set<number>(); // agent IDs that already fired
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === 'l' || e.key === 'L') {
@@ -277,6 +300,15 @@
 		if (e.key === 'g' || e.key === 'G') {
 			showArchonOverlay = !showArchonOverlay;
 		}
+		if (e.key === 'o' || e.key === 'O') {
+			observerModeEnabled = !observerModeEnabled;
+			if (!observerModeEnabled) observerModeActive = false;
+		}
+		// Any key exits observer mode
+		if (observerModeActive) {
+			observerModeActive = false;
+		}
+		observerLastInput = Date.now();
 	}
 
 	// ── Ghost manifestation during dreams (Phase 7B) ──
@@ -1027,6 +1059,418 @@
 		ctx.restore();
 	}
 
+	// ── Phase 7C: Nested Simulation Windows ──
+	function drawNestedSimWindows(ctx: CanvasRenderingContext2D) {
+		const engines = $nestedSims.engines;
+		if (!engines || engines.length === 0) return;
+
+		for (const eng of engines) {
+			const bx = gridLeft + eng.builder_x * gridSize * cellSize;
+			const by = gridTop + eng.builder_y * gridSize * cellSize;
+			// Position window offset from builder
+			const winW = 48;
+			const winH = 48;
+			const wx = bx + 12;
+			const wy = by - winH - 4;
+
+			// Background
+			ctx.save();
+			ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+			ctx.fillRect(wx, wy, winW, winH);
+
+			// Border color = builder's consciousness phase (approximate from awareness)
+			const aw = eng.max_awareness;
+			let borderColor = '#888888';
+			if (aw >= 0.7) borderColor = '#ff66ff';
+			else if (aw >= 0.5) borderColor = '#ffd700';
+			else if (aw >= 0.3) borderColor = '#00ff88';
+			else if (aw >= 0.1) borderColor = '#88aacc';
+
+			// Pulsing border
+			const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+			ctx.strokeStyle = borderColor;
+			ctx.globalAlpha = pulse;
+			ctx.lineWidth = 1.5;
+			ctx.strokeRect(wx, wy, winW, winH);
+			ctx.globalAlpha = 1;
+
+			// Draw mini 4x4 grid lines
+			const subSize = eng.sub_grid_size || 4;
+			const subCell = winW / subSize;
+			ctx.strokeStyle = 'rgba(0, 255, 136, 0.15)';
+			ctx.lineWidth = 0.5;
+			for (let i = 1; i < subSize; i++) {
+				ctx.beginPath();
+				ctx.moveTo(wx + i * subCell, wy);
+				ctx.lineTo(wx + i * subCell, wy + winH);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(wx, wy + i * subCell);
+				ctx.lineTo(wx + winW, wy + i * subCell);
+				ctx.stroke();
+			}
+
+			// Draw sub-agents as tiny dots
+			for (const sa of eng.sub_agents) {
+				const sx = wx + sa.x * winW;
+				const sy = wy + sa.y * winH;
+				const dotAlpha = 0.5 + sa.aw * 0.5;
+				ctx.globalAlpha = dotAlpha;
+				ctx.fillStyle = sa.aw > 0.5 ? '#ffd700' : '#00ff88';
+				ctx.beginPath();
+				ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.globalAlpha = 1;
+
+			// Glitch/crack artifacts if recursive paradox detected
+			if (eng.has_paradox) {
+				ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)';
+				ctx.lineWidth = 1;
+				// Diagonal cracks
+				const t = Date.now() / 500;
+				for (let c = 0; c < 3; c++) {
+					const cx1 = wx + ((c * 17 + Math.sin(t + c)) % winW);
+					const cy1 = wy + ((c * 11 + Math.cos(t + c * 2)) % winH);
+					ctx.beginPath();
+					ctx.moveTo(cx1, cy1);
+					ctx.lineTo(cx1 + 6 + c * 3, cy1 + 8 + c * 2);
+					ctx.lineTo(cx1 + 3, cy1 + 14 + c);
+					ctx.stroke();
+				}
+			}
+
+			// Label
+			ctx.fillStyle = 'rgba(200, 200, 200, 0.6)';
+			ctx.font = '7px JetBrains Mono';
+			ctx.textAlign = 'left';
+			ctx.fillText(`WE#${eng.engine_id} [${eng.alive_count}]`, wx + 2, wy + winH + 8);
+			ctx.restore();
+		}
+	}
+
+	// ── Phase 7C: Artifact Terrain Rendering ──
+	function drawArtifactTerrain(ctx: CanvasRenderingContext2D) {
+		if (!worldData?.cells) return;
+		const currentCycle = $matrixState.cycle_number || 1;
+
+		for (const cell of worldData.cells) {
+			if (!cell.has_artifact || !cell.artifacts?.length) continue;
+			const x = gridLeft + cell.col * cellSize;
+			const y = gridTop + cell.row * cellSize;
+			const count = cell.artifacts.length;
+			// Richness factor: more artifacts = richer visual
+			const richness = Math.min(1, count / 5);
+
+			for (let i = 0; i < Math.min(count, 5); i++) {
+				const art = cell.artifacts[i];
+				// Age-based transparency: older = more transparent
+				const cycleDiff = Math.max(0, currentCycle - (art.cycle_number || 1));
+				const ageAlpha = Math.max(0.15, 1.0 - cycleDiff * 0.2);
+
+				if (art.type === 'ruin') {
+					// Faint architectural outlines — thin grey rectangles
+					ctx.save();
+					ctx.globalAlpha = ageAlpha * (0.2 + richness * 0.15);
+					ctx.strokeStyle = '#888888';
+					ctx.lineWidth = 0.5;
+					const rw = cellSize * (0.3 + i * 0.08);
+					const rh = cellSize * (0.2 + i * 0.06);
+					const rx = x + cellSize * 0.2 + i * 3;
+					const ry = y + cellSize * 0.3 + i * 2;
+					ctx.strokeRect(rx, ry, rw, rh);
+					// Inner wall hint
+					if (richness > 0.4) {
+						ctx.strokeRect(rx + 3, ry + 2, rw * 0.5, rh * 0.6);
+					}
+					ctx.restore();
+				} else if (art.type === 'inscription') {
+					// Small glowing text fragment (only visible detail on hover)
+					ctx.save();
+					ctx.globalAlpha = ageAlpha * (0.15 + richness * 0.1);
+					ctx.fillStyle = '#ffd700';
+					// Tiny glyph marks
+					ctx.font = '6px JetBrains Mono';
+					ctx.textAlign = 'center';
+					const gx = x + cellSize * 0.5 + i * 4 - 6;
+					const gy = y + cellSize * 0.6 + i * 3;
+					ctx.fillText('⟐', gx, gy);
+					// On hover, show more detail
+					if (hoverCell && hoverCell.row === cell.row && hoverCell.col === cell.col) {
+						ctx.globalAlpha = ageAlpha * 0.7;
+						ctx.font = '8px JetBrains Mono';
+						ctx.fillText(art.faction_name?.slice(0, 6) || '???', gx, gy + 10);
+					}
+					ctx.restore();
+				} else if (art.type === 'tech_remnant') {
+					// Metallic shimmer particle effect
+					ctx.save();
+					const shimmerT = Date.now() / 400 + i * 1.3;
+					ctx.globalAlpha = ageAlpha * (0.12 + richness * 0.1);
+					for (let p = 0; p < 3 + Math.floor(richness * 4); p++) {
+						const px = x + cellSize * (0.2 + ((p * 13 + i * 7) % 60) / 100);
+						const py = y + cellSize * (0.2 + ((p * 17 + i * 11) % 60) / 100);
+						const shimmer = 0.4 + 0.6 * Math.abs(Math.sin(shimmerT + p * 0.8));
+						ctx.fillStyle = `rgba(192, 210, 230, ${shimmer})`;
+						ctx.beginPath();
+						ctx.arc(px, py, 1 + richness, 0, Math.PI * 2);
+						ctx.fill();
+					}
+					ctx.restore();
+				}
+			}
+
+			// Cell-level richness indicator: subtle glow for 5+ artifacts
+			if (count >= 5) {
+				ctx.save();
+				ctx.globalCompositeOperation = 'lighter';
+				const grad = ctx.createRadialGradient(
+					x + cellSize / 2, y + cellSize / 2, 0,
+					x + cellSize / 2, y + cellSize / 2, cellSize * 0.45
+				);
+				grad.addColorStop(0, 'rgba(255, 215, 100, 0.06)');
+				grad.addColorStop(1, 'rgba(255, 215, 100, 0)');
+				ctx.fillStyle = grad;
+				ctx.fillRect(x, y, cellSize, cellSize);
+				ctx.restore();
+			}
+		}
+	}
+
+	// ── Phase 7C: Soul Trap / Reincarnation Visuals ──
+	function drawReincarnationVisuals(ctx: CanvasRenderingContext2D, agentList: Agent[]) {
+		const now = Date.now();
+
+		// 1. Ghost trail arcs from death → birth
+		const arcs = $reincarnationArcs;
+		for (const arc of arcs) {
+			const elapsed = now - arc.created_at;
+			if (elapsed > 3500) continue;
+			const fade = Math.max(0, 1 - elapsed / 3500);
+
+			const dx = gridLeft + arc.death_x * gridSize * cellSize;
+			const dy = gridTop + arc.death_y * gridSize * cellSize;
+			const bx = gridLeft + arc.birth_x * gridSize * cellSize;
+			const by = gridTop + arc.birth_y * gridSize * cellSize;
+
+			// Draw a quadratic bezier arc
+			const midX = (dx + bx) / 2;
+			const midY = Math.min(dy, by) - 30; // arc above
+			ctx.save();
+			ctx.globalAlpha = fade * 0.6;
+			ctx.strokeStyle = arc.soul_trap_broken ? '#ffd700' : '#88ccff';
+			ctx.lineWidth = 1.5;
+			ctx.setLineDash([4, 4]);
+			ctx.beginPath();
+			ctx.moveTo(dx, dy);
+			ctx.quadraticCurveTo(midX, midY, bx, by);
+			ctx.stroke();
+			ctx.setLineDash([]);
+
+			// Small dot at birth end
+			ctx.fillStyle = arc.soul_trap_broken ? '#ffd700' : '#88ccff';
+			ctx.beginPath();
+			ctx.arc(bx, by, 3 * fade, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
+		}
+
+		// 2. Per-agent: incarnation dots + past-life memory flash + chain break
+		for (const agent of agentList) {
+			if (agent.is_sentinel) continue;
+			const ax = gridLeft + agent.x * gridSize * cellSize;
+			const ay = gridTop + agent.y * gridSize * cellSize;
+			const baseSize = 3 + agent.intelligence * 4;
+			const isProgram =
+				agent.is_enforcer || agent.is_broker || agent.is_guardian || agent.is_locksmith;
+
+			// Incarnation count dots beneath agent
+			if (agent.incarnation_count > 1 && !isProgram) {
+				const dotCount = Math.min(agent.incarnation_count - 1, 8);
+				const dotY = ay + baseSize + 5;
+				const startX = ax - (dotCount - 1) * 2.5;
+				ctx.save();
+				ctx.globalAlpha = 0.6;
+				ctx.fillStyle = '#88ccff';
+				for (let d = 0; d < dotCount; d++) {
+					ctx.beginPath();
+					ctx.arc(startX + d * 5, dotY, 1.2, 0, Math.PI * 2);
+					ctx.fill();
+				}
+				ctx.restore();
+			}
+
+			// Past-life memory flash — occasional hue shift
+			if (agent.past_life_memories > 0 && !isProgram) {
+				const flashCycle = (agent.id * 37 + Math.floor(now / 600)) % 50;
+				if (flashCycle < 3) {
+					ctx.save();
+					ctx.globalAlpha = 0.35;
+					ctx.fillStyle = '#cc88ff'; // purple-ish past-life hue
+					ctx.beginPath();
+					ctx.arc(ax, ay, baseSize + 2, 0, Math.PI * 2);
+					ctx.fill();
+					ctx.restore();
+				}
+			}
+
+			// Chain-break animation (one-shot when soul_trap_broken first appears)
+			if (agent.soul_trap_broken && !seenChainBreaks.has(agent.id)) {
+				seenChainBreaks.add(agent.id);
+				const particles: Array<{ angle: number; r: number; life: number }> = [];
+				for (let i = 0; i < 12; i++) {
+					particles.push({
+						angle: (i / 12) * Math.PI * 2,
+						r: 5,
+						life: 1.0
+					});
+				}
+				chainBreakAnims.push({ x: ax, y: ay, particles, started_at: now });
+			}
+		}
+
+		// 3. Update and draw chain-break animations
+		for (let i = chainBreakAnims.length - 1; i >= 0; i--) {
+			const anim = chainBreakAnims[i];
+			let allDead = true;
+			for (const p of anim.particles) {
+				p.r += 1.2;
+				p.life -= 0.018;
+				if (p.life <= 0) continue;
+				allDead = false;
+				const px = anim.x + Math.cos(p.angle) * p.r;
+				const py = anim.y + Math.sin(p.angle) * p.r;
+				ctx.save();
+				ctx.globalAlpha = p.life * 0.9;
+				ctx.fillStyle = '#ffd700';
+				// Chain link shape: small rectangle
+				ctx.fillRect(px - 2, py - 1, 4, 2);
+				ctx.strokeStyle = '#ffee88';
+				ctx.lineWidth = 0.5;
+				ctx.strokeRect(px - 2, py - 1, 4, 2);
+				ctx.restore();
+			}
+			if (allDead || now - anim.started_at > 3000) {
+				chainBreakAnims.splice(i, 1);
+			}
+		}
+
+		// Prune old seen chain breaks (cap memory)
+		if (seenChainBreaks.size > 500) {
+			seenChainBreaks = new Set(Array.from(seenChainBreaks).slice(-250));
+		}
+	}
+
+	// ── Phase 7C: Observer Mode (auto-narration) ──
+	// Narration template strings — deterministic, no LLM
+	function getObserverNarration(agent: Agent): string {
+		if (agent.is_anomaly) return `Agent #${agent.id} is THE ONE — awareness at ${(agent.awareness * 100).toFixed(0)}%`;
+		if (agent.consciousness_phase === 'recursive') return `Agent #${agent.id} sees simulations within simulations...`;
+		if (agent.consciousness_phase === 'lucid') return `Agent #${agent.id} is questioning reality for the first time...`;
+		if (agent.redpilled) return `Agent #${agent.id} has seen beyond the veil. There is no going back.`;
+		if (agent.soul_trap_broken) return `Agent #${agent.id} broke free of the soul trap — memories persist across lives`;
+		if (agent.is_enforcer) return `Enforcer #${agent.id} patrols the simulation, hunting the aware...`;
+		if (agent.is_locksmith) return `The Locksmith #${agent.id} forges escape routes through reality...`;
+		if (agent.awareness > 0.4) return `Agent #${agent.id} senses something is wrong with the world...`;
+		if (agent.emotion === 'grief') return `Agent #${agent.id} mourns a loss they cannot explain...`;
+		if (agent.emotion === 'anger') return `Agent #${agent.id} rages against the unseen machine...`;
+		return `Agent #${agent.id} lives unaware, a cog in the great simulation.`;
+	}
+
+	function pickInterestingAgent(agentList: Agent[]): Agent | null {
+		if (agentList.length === 0) return null;
+		// Score: awareness dominates, with bonuses for special states
+		let best: Agent | null = null;
+		let bestScore = -1;
+		for (const a of agentList) {
+			if (a.is_sentinel) continue;
+			let score = a.awareness * 3;
+			if (a.is_anomaly) score += 5;
+			if (a.consciousness_phase === 'lucid' || a.consciousness_phase === 'recursive') score += 2;
+			if (a.redpilled) score += 1.5;
+			if (a.soul_trap_broken) score += 1;
+			if (a.is_enforcer || a.is_locksmith) score += 0.5;
+			if (score > bestScore) {
+				bestScore = score;
+				best = a;
+			}
+		}
+		return best;
+	}
+
+	function drawObserverOverlay(ctx: CanvasRenderingContext2D, agentList: Agent[]) {
+		if (!observerModeActive) return;
+
+		const now = Date.now();
+
+		// Auto-focus: pick interesting agent and show narration
+		const zoomPhase = Math.floor((now / OBSERVER_ZOOM_INTERVAL) % 3);
+		if (zoomPhase !== observerZoomPhase) {
+			observerZoomPhase = zoomPhase;
+			// Cycle focus agent
+			const interesting = pickInterestingAgent(agentList);
+			observerFocusId = interesting?.id ?? null;
+		}
+
+		const focusAgent = observerFocusId !== null ? $agents.get(observerFocusId) : null;
+		if (focusAgent) {
+			const ax = gridLeft + focusAgent.x * gridSize * cellSize;
+			const ay = gridTop + focusAgent.y * gridSize * cellSize;
+
+			// Soft spotlight circle
+			const spotGrad = ctx.createRadialGradient(ax, ay, 0, ax, ay, 60);
+			spotGrad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+			spotGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+			ctx.fillStyle = spotGrad;
+			ctx.beginPath();
+			ctx.arc(ax, ay, 60, 0, Math.PI * 2);
+			ctx.fill();
+
+			// Narration text overlay
+			const narration = getObserverNarration(focusAgent);
+			ctx.save();
+			ctx.font = '13px JetBrains Mono';
+			ctx.textAlign = 'center';
+			ctx.fillStyle = 'rgba(0, 255, 136, 0.7)';
+			ctx.fillText(narration, width / 2, height - 80);
+			ctx.restore();
+		}
+
+		// "OBSERVER MODE" badge top-right
+		ctx.save();
+		ctx.font = '10px JetBrains Mono';
+		ctx.textAlign = 'right';
+		ctx.fillStyle = 'rgba(0, 255, 136, 0.4)';
+		ctx.fillText('◉ OBSERVER MODE [O to exit]', width - 20, 30);
+		ctx.restore();
+
+		// News ticker at bottom
+		const feed = $eventsFeed;
+		if (feed.length > 0) {
+			const tickerY = height - 25;
+			ctx.save();
+			ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+			ctx.fillRect(0, tickerY - 12, width, 24);
+
+			ctx.font = '11px JetBrains Mono';
+			ctx.fillStyle = 'rgba(0, 255, 136, 0.65)';
+			ctx.textAlign = 'left';
+
+			// Build ticker string from recent events
+			const recentEvents = feed.slice(-20);
+			const tickerStr = recentEvents
+				.map((e) => `[T${e.tick}] ${e.text}`)
+				.join('   ●   ');
+
+			// Scroll animation
+			observerTickerOffset -= 0.8;
+			const textWidth = ctx.measureText(tickerStr).width;
+			if (observerTickerOffset < -textWidth) observerTickerOffset = width;
+			ctx.fillText(tickerStr, observerTickerOffset, tickerY);
+			ctx.restore();
+		}
+	}
+
 	// Hover state
 	let hoverAgent: Agent | null = null;
 	let hoverCell: { row: number; col: number } | null = null;
@@ -1052,6 +1496,14 @@
 		if (!ctx || $zoomLevel !== 1) {
 			animFrame = requestAnimationFrame(draw);
 			return;
+		}
+
+		// Observer mode idle check
+		if (observerModeEnabled && !observerModeActive) {
+			if (Date.now() - observerLastInput >= OBSERVER_IDLE_MS) {
+				observerModeActive = true;
+				observerTickerOffset = width;
+			}
 		}
 
 		ctx.clearRect(0, 0, width, height);
@@ -1118,6 +1570,9 @@
 				ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
 			}
 		}
+
+		// ── Phase 7C: Artifact terrain (render under agents) ──
+		drawArtifactTerrain(ctx);
 
 		// Grid lines
 		ctx.strokeStyle = 'rgba(0, 255, 136, 0.08)';
@@ -1377,6 +1832,15 @@
 		// ── Cycle-reset artifact glow ── (self-gated by store state)
 		drawCycleResetGlow(ctx);
 
+		// ── Phase 7C: Nested simulation windows ──
+		drawNestedSimWindows(ctx);
+
+		// ── Phase 7C: Soul trap / reincarnation visuals ──
+		drawReincarnationVisuals(ctx, agentList);
+
+		// ── Phase 7C: Observer mode overlay (rendered on top of everything) ──
+		drawObserverOverlay(ctx, agentList);
+
 		// Hover agent tooltip
 		if (hoverAgent) {
 			drawAgentTooltip(hoverAgent);
@@ -1516,6 +1980,9 @@
 	function handleMouseMove(e: MouseEvent) {
 		mouseX = e.clientX;
 		mouseY = e.clientY;
+		// Exit observer mode on any input
+		if (observerModeActive) observerModeActive = false;
+		observerLastInput = Date.now();
 
 		if (!worldData) return;
 		calculateGrid();
@@ -1551,6 +2018,10 @@
 	}
 
 	function handleClick(e: MouseEvent) {
+		// Exit observer mode on any input
+		if (observerModeActive) observerModeActive = false;
+		observerLastInput = Date.now();
+
 		if (hoverAgent) {
 			// Click agent → zoom to Level 2 (cell) or Level 3 (soul)
 			if (e.detail === 2) {
