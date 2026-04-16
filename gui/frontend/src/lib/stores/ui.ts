@@ -37,6 +37,10 @@ export const autoSpeed = writable(200);
 // Show parameter tuner
 export const showParameterTuner = writable(false);
 
+// Phase 7B panel/overlay toggles
+export const havenPipOpen = writable(false);
+export const causalTimelineOpen = writable(false);
+
 // Mouse position for edge panel proximity detection
 export const mousePosition = writable({ x: 0, y: 0 });
 

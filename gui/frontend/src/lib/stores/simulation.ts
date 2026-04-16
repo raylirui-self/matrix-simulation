@@ -58,6 +58,15 @@ export type DemiurgeMood = {
 	is_panicked?: boolean;
 	is_proud?: boolean;
 };
+// Phase 7B: Gnostic Archons flow through matrix.archons; frontend reads these
+// for the Archon overlay sigils + health bars + shatter animation.
+export type ArchonSnapshot = {
+	system_name: string; // "emotion" | "economy" | "belief" | "communication"
+	health: number;
+	alive: boolean;
+	x: number;
+	y: number;
+};
 export const matrixState = writable<{
 	control_index: number;
 	total_awareness: number;
@@ -67,6 +76,8 @@ export const matrixState = writable<{
 	glitches_this_cycle: number;
 	ticks_since_reset: number;
 	demiurge?: DemiurgeMood;
+	archons?: ArchonSnapshot[];
+	released_systems?: string[];
 }>({
 	control_index: 1.0,
 	total_awareness: 0.0,
@@ -75,7 +86,9 @@ export const matrixState = writable<{
 	sentinels_deployed: 0,
 	glitches_this_cycle: 0,
 	ticks_since_reset: 0,
-	demiurge: { fear: 0.1, pride: 0.5, confusion: 0.0 }
+	demiurge: { fear: 0.1, pride: 0.5, confusion: 0.0 },
+	archons: [],
+	released_systems: []
 });
 
 // Cycle reset animation signal — WorldMap reads this to glow artifact cells
@@ -145,19 +158,52 @@ export type War = {
 export const wars = writable<War[]>([]);
 
 // Dream state (simulation-wide dream cycle)
+// Phase 7B: each ghost dict now carries `bonded_living_ids` (server-side
+// enrichment in build_tick_message) so the ghost renderer can draw golden
+// memory-transfer threads to living bonded agents.
+export type GhostPayload = {
+	source_agent_id: number;
+	x: number;
+	y: number;
+	name: string;
+	memories: string[];
+	tick_manifested: number;
+	bonded_living_ids?: number[];
+};
 export const dreamState = writable<{
 	is_dreaming: boolean;
 	dream_start_tick: number;
-	ghosts: any[];
+	ghosts: GhostPayload[];
 	lucid_agent_ids: number[];
 	stats?: Record<string, any>;
 }>({ is_dreaming: false, dream_start_tick: 0, ghosts: [], lucid_agent_ids: [] });
 
 // Haven summary
+// Phase 7B: extended with grid cells + last_vote_outcome so the Haven PiP
+// renders without needing a separate REST call.
+export type HavenCellSnapshot = {
+	row: number;
+	col: number;
+	resources: number;
+	base_resources: number;
+	harshness: number;
+	agent_count: number;
+};
+export type HavenAgentSnapshot = {
+	id: number;
+	x: number;
+	y: number;
+	emotion: string;
+	health: number;
+};
 export const havenSummary = writable<{
 	population: number;
 	active_missions: number;
 	last_vote_tick: number;
+	last_vote_outcome?: string | null;
+	grid_size?: number;
+	grid_cells?: HavenCellSnapshot[];
+	agents?: HavenAgentSnapshot[];
 	stats?: Record<string, any>;
 } | null>(null);
 

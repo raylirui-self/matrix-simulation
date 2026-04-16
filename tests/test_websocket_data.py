@@ -125,6 +125,68 @@ def test_world_route_exposes_artifact_flag():
     assert seeded["artifact_count"] >= 1
 
 
+def test_haven_payload_exposes_grid_and_last_vote_outcome():
+    """Phase 7B Haven PiP needs the grid cells + size + last vote outcome."""
+    engine = _bootstrap_engine()
+    result, delta_data = _run_one_tick(engine)
+    msg = build_tick_message(engine, result, delta_data)
+
+    # Haven is enabled by default in config, so the payload must be present.
+    haven = msg["haven"]
+    assert haven is not None
+    assert "grid_size" in haven
+    assert "grid_cells" in haven
+    assert "last_vote_outcome" in haven
+    assert "agents" in haven
+    # Grid should be size*size cells
+    size = haven["grid_size"]
+    assert size > 0
+    assert len(haven["grid_cells"]) == size * size
+    sample = haven["grid_cells"][0]
+    for key in ("row", "col", "resources", "harshness", "agent_count"):
+        assert key in sample
+
+
+def test_ghosts_expose_bonded_living_ids_during_dream():
+    """Ghost dicts must carry `bonded_living_ids` so the frontend can draw
+    the memory-transfer threads. We force-spawn a ghost from a dead agent
+    that has a bonded living counterpart."""
+    from src.agents import Bond
+    from src.dreams import GhostManifestation
+
+    engine = _bootstrap_engine()
+    # Run a tick first so we have a TickResult to reuse (the dream system
+    # runs during tick and may clear ghosts, so we inject ghosts afterwards
+    # and call build_tick_message directly).
+    result, delta_data = _run_one_tick(engine)
+
+    alive = [a for a in engine.agents if a.alive]
+    assert len(alive) >= 2
+    dead, survivor = alive[0], alive[1]
+    dead.alive = False
+    survivor.bonds.append(
+        Bond(target_id=dead.id, bond_type="family", strength=0.8, formed_at=0)
+    )
+
+    engine.dream_state.is_dreaming = True
+    engine.dream_state.ghosts.append(
+        GhostManifestation(
+            source_agent_id=dead.id, x=dead.x, y=dead.y,
+            name=f"Ghost of #{dead.id}",
+            memories=[],
+            tick_manifested=engine.state.current_tick,
+        )
+    )
+
+    msg = build_tick_message(engine, result, delta_data)
+    ghosts = msg["dream"]["ghosts"]
+    assert ghosts, "expected at least one ghost in the payload"
+    target = next((g for g in ghosts if g["source_agent_id"] == dead.id), None)
+    assert target is not None, "injected ghost missing from payload"
+    assert "bonded_living_ids" in target
+    assert survivor.id in target["bonded_living_ids"]
+
+
 def test_delta_emission_on_consciousness_phase_change():
     """If an agent's consciousness_phase changes with zero movement, a
     delta should still be emitted."""

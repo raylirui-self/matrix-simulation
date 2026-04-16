@@ -6,7 +6,9 @@
 		matrixState,
 		phasePulses,
 		cycleResetAnimation,
-		type Agent
+		dreamState,
+		type Agent,
+		type GhostPayload
 	} from '$lib/stores/simulation';
 	import { zoomLevel, focusCell, focusAgentId, overlays, bondConstellationMode } from '$lib/stores/ui';
 	import { api } from '$lib/api/rest';
@@ -265,12 +267,49 @@
 
 	// Toggle for secondary life-phase overlay (press 'L')
 	let showLifePhaseOverlay = false;
+	// Toggle for Gnostic Archon overlay (press 'G')
+	let showArchonOverlay = false;
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === 'l' || e.key === 'L') {
 			showLifePhaseOverlay = !showLifePhaseOverlay;
 		}
+		if (e.key === 'g' || e.key === 'G') {
+			showArchonOverlay = !showArchonOverlay;
+		}
 	}
+
+	// ── Ghost manifestation during dreams (Phase 7B) ──
+	// Per-ghost client-side state so drift + motes + thread flashes persist
+	// across frames. Keyed by source_agent_id. Pruned when ghost disappears
+	// from the backend payload.
+	type GhostClientState = {
+		driftX: number; // pixel offset from base x
+		driftY: number;
+		vx: number;
+		vy: number;
+		motes: Array<{ ox: number; oy: number; life: number; size: number }>;
+		threads: Map<number, { life: number }>; // living_agent_id -> thread state
+	};
+	const ghostClientState = new Map<number, GhostClientState>();
+
+	// Shatter animation state for each destroyed Archon, keyed by system name.
+	type ShatterParticle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
+	type ShatterAnim = { started_at: number; particles: ShatterParticle[] };
+	const archonShatterAnims = new Map<string, ShatterAnim>();
+	// Track which systems were alive last frame so we can detect the
+	// destruction edge and spawn the shatter burst.
+	const prevArchonAlive = new Map<string, boolean>();
+
+	// Archon system metadata — spec-fixed quadrants + sigil colors.
+	// Backend x/y fields are ignored in favor of these visual quadrants
+	// because TODO.md dictates the layout directly.
+	const ARCHON_LAYOUT: Record<string, { quadrant: 'tl' | 'tr' | 'bl' | 'br'; color: string }> = {
+		emotion:        { quadrant: 'tl', color: '#ff4466' },
+		economy:        { quadrant: 'tr', color: '#ffd700' },
+		belief:         { quadrant: 'bl', color: '#aa66ff' },
+		communication: { quadrant: 'br', color: '#00ddff' }
+	};
 
 	// ── Faction territory borders (overlay, key 'F') ──
 	// A compact hand-picked palette matched by index = faction.id % N.
@@ -351,6 +390,365 @@
 			ctx.fill();
 			ctx.restore();
 		}
+	}
+
+	// ── Ghost + Archon rendering (Phase 7B) ──
+	function ensureGhostState(ghostId: number): GhostClientState {
+		let st = ghostClientState.get(ghostId);
+		if (!st) {
+			st = {
+				driftX: 0,
+				driftY: 0,
+				vx: (Math.random() - 0.5) * 0.35,
+				vy: (Math.random() - 0.5) * 0.35,
+				motes: [],
+				threads: new Map()
+			};
+			ghostClientState.set(ghostId, st);
+		}
+		return st;
+	}
+
+	function pruneGhostState(activeIds: Set<number>) {
+		for (const id of Array.from(ghostClientState.keys())) {
+			if (!activeIds.has(id)) ghostClientState.delete(id);
+		}
+	}
+
+	function updateAndDrawGhosts(
+		ctx: CanvasRenderingContext2D,
+		ghosts: GhostPayload[],
+		lucidIds: Set<number>
+	) {
+		const activeIds = new Set<number>();
+		for (const g of ghosts) activeIds.add(g.source_agent_id);
+		pruneGhostState(activeIds);
+
+		for (const ghost of ghosts) {
+			const st = ensureGhostState(ghost.source_agent_id);
+
+			// Slow random walk drift — ignore terrain
+			st.vx += (Math.random() - 0.5) * 0.08;
+			st.vy += (Math.random() - 0.5) * 0.08;
+			st.vx *= 0.96;
+			st.vy *= 0.96;
+			// Soft cap on drift magnitude
+			const maxDrift = cellSize * 0.9;
+			st.driftX = Math.max(-maxDrift, Math.min(maxDrift, st.driftX + st.vx));
+			st.driftY = Math.max(-maxDrift, Math.min(maxDrift, st.driftY + st.vy));
+
+			const baseX = gridLeft + ghost.x * gridSize * cellSize;
+			const baseY = gridTop + ghost.y * gridSize * cellSize;
+			const gx = baseX + st.driftX;
+			const gy = baseY + st.driftY;
+
+			// Silhouette — translucent cyan-white glow + inner core
+			const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, 14);
+			grad.addColorStop(0, 'rgba(230, 255, 255, 0.85)');
+			grad.addColorStop(0.4, 'rgba(160, 220, 255, 0.45)');
+			grad.addColorStop(1, 'rgba(120, 200, 255, 0)');
+			ctx.fillStyle = grad;
+			ctx.beginPath();
+			ctx.arc(gx, gy, 14, 0, Math.PI * 2);
+			ctx.fill();
+
+			// Ghostly body
+			ctx.globalAlpha = 0.55;
+			ctx.fillStyle = 'rgba(220, 245, 255, 0.9)';
+			ctx.beginPath();
+			ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.globalAlpha = 1;
+
+			// Mote particles — spawn occasionally, then update
+			if (st.motes.length < 8 && Math.random() < 0.35) {
+				const angle = Math.random() * Math.PI * 2;
+				const r = 4 + Math.random() * 6;
+				st.motes.push({
+					ox: Math.cos(angle) * r,
+					oy: Math.sin(angle) * r,
+					life: 0.9 + Math.random() * 0.1,
+					size: 0.8 + Math.random() * 1.2
+				});
+			}
+			for (let i = st.motes.length - 1; i >= 0; i--) {
+				const m = st.motes[i];
+				m.ox *= 1.015;
+				m.oy *= 1.015;
+				m.life -= 0.018;
+				if (m.life <= 0) {
+					st.motes.splice(i, 1);
+					continue;
+				}
+				ctx.globalAlpha = m.life;
+				ctx.fillStyle = '#ffffff';
+				ctx.beginPath();
+				ctx.arc(gx + m.ox, gy + m.oy, m.size, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			ctx.globalAlpha = 1;
+
+			// Golden memory-transfer threads to nearby living bonded agents
+			const bondedIds = ghost.bonded_living_ids || [];
+			const proxThreshold = cellSize * 1.8;
+			for (const bid of bondedIds) {
+				const living = $agents.get(bid);
+				if (!living) continue;
+				const lx = gridLeft + living.x * gridSize * cellSize;
+				const ly = gridTop + living.y * gridSize * cellSize;
+				const dist = Math.hypot(lx - gx, ly - gy);
+				if (dist > proxThreshold) {
+					// Out of range — decay existing thread
+					const existing = st.threads.get(bid);
+					if (existing) {
+						existing.life -= 0.04;
+						if (existing.life <= 0) st.threads.delete(bid);
+					}
+					continue;
+				}
+				// In range — establish or refresh thread (life ~ 1-2s at 60fps)
+				let thread = st.threads.get(bid);
+				if (!thread) {
+					thread = { life: 1.0 };
+					st.threads.set(bid, thread);
+				} else if (thread.life < 0.6) {
+					thread.life = Math.min(1.0, thread.life + 0.5);
+				}
+				thread.life -= 0.008;
+				if (thread.life <= 0) {
+					st.threads.delete(bid);
+					continue;
+				}
+				ctx.strokeStyle = `rgba(255, 215, 120, ${thread.life * 0.85})`;
+				ctx.lineWidth = 1.2;
+				ctx.beginPath();
+				ctx.moveTo(gx, gy);
+				ctx.lineTo(lx, ly);
+				ctx.stroke();
+			}
+
+			// Lucid dreamer core + sky beam (only if this ghost's agent is lucid;
+			// lucid-living-agent rendering below handles the living variant too)
+			if (lucidIds.has(ghost.source_agent_id)) {
+				drawLucidBeam(ctx, gx, gy);
+			}
+		}
+	}
+
+	function drawLucidBeam(ctx: CanvasRenderingContext2D, ax: number, ay: number) {
+		// Bright pulsing core
+		const pulse = 0.6 + 0.4 * Math.sin(Date.now() / 220);
+		const coreGrad = ctx.createRadialGradient(ax, ay, 0, ax, ay, 12);
+		coreGrad.addColorStop(0, `rgba(255, 255, 255, ${0.9 * pulse})`);
+		coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+		ctx.fillStyle = coreGrad;
+		ctx.beginPath();
+		ctx.arc(ax, ay, 12, 0, Math.PI * 2);
+		ctx.fill();
+		// Vertical beam to the top of the canvas
+		const beamGrad = ctx.createLinearGradient(ax, 0, ax, ay);
+		beamGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+		beamGrad.addColorStop(1, `rgba(255, 255, 255, ${0.35 * pulse})`);
+		ctx.fillStyle = beamGrad;
+		ctx.fillRect(ax - 2, 0, 4, ay);
+		// Thin core line for emphasis
+		ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 * pulse})`;
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.moveTo(ax, 0);
+		ctx.lineTo(ax, ay);
+		ctx.stroke();
+	}
+
+	// ── Archon overlay ──
+	function archonQuadrantCenter(quadrant: 'tl' | 'tr' | 'bl' | 'br'): { x: number; y: number } {
+		const span = gridSize * cellSize;
+		const qx = quadrant === 'tl' || quadrant === 'bl' ? gridLeft + span * 0.25 : gridLeft + span * 0.75;
+		const qy = quadrant === 'tl' || quadrant === 'tr' ? gridTop + span * 0.25 : gridTop + span * 0.75;
+		return { x: qx, y: qy };
+	}
+
+	function drawArchonSigil(
+		ctx: CanvasRenderingContext2D,
+		systemName: string,
+		cx: number,
+		cy: number,
+		color: string,
+		health: number,
+		alive: boolean
+	) {
+		const size = 22;
+		const alpha = alive ? 0.6 + health * 0.4 : 0.15;
+		ctx.save();
+		ctx.globalAlpha = alpha;
+		ctx.strokeStyle = color;
+		ctx.fillStyle = color;
+		ctx.lineWidth = 2;
+
+		// Gentle idle rotation / pulse
+		const t = Date.now() / 1400;
+
+		if (systemName === 'emotion') {
+			// Triangle (pointing up)
+			ctx.beginPath();
+			ctx.moveTo(cx, cy - size);
+			ctx.lineTo(cx + size * 0.92, cy + size * 0.7);
+			ctx.lineTo(cx - size * 0.92, cy + size * 0.7);
+			ctx.closePath();
+			ctx.stroke();
+			// Inner smaller triangle
+			ctx.globalAlpha = alpha * 0.35;
+			ctx.beginPath();
+			ctx.moveTo(cx, cy - size * 0.5);
+			ctx.lineTo(cx + size * 0.46, cy + size * 0.35);
+			ctx.lineTo(cx - size * 0.46, cy + size * 0.35);
+			ctx.closePath();
+			ctx.fill();
+		} else if (systemName === 'economy') {
+			// Cube (square with isometric back-face hint)
+			ctx.beginPath();
+			ctx.rect(cx - size * 0.8, cy - size * 0.8, size * 1.6, size * 1.6);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(cx - size * 0.8, cy - size * 0.8);
+			ctx.lineTo(cx - size * 0.4, cy - size * 1.2);
+			ctx.lineTo(cx + size * 1.2, cy - size * 1.2);
+			ctx.lineTo(cx + size * 0.8, cy - size * 0.8);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(cx + size * 0.8, cy - size * 0.8);
+			ctx.lineTo(cx + size * 1.2, cy - size * 1.2);
+			ctx.lineTo(cx + size * 1.2, cy + size * 0.4);
+			ctx.lineTo(cx + size * 0.8, cy + size * 0.8);
+			ctx.stroke();
+		} else if (systemName === 'belief') {
+			// Pentagram (5-pointed star connecting every other vertex)
+			const pts: Array<[number, number]> = [];
+			for (let i = 0; i < 5; i++) {
+				const a = -Math.PI / 2 + (i * Math.PI * 2) / 5 + Math.sin(t) * 0.03;
+				pts.push([cx + Math.cos(a) * size, cy + Math.sin(a) * size]);
+			}
+			ctx.beginPath();
+			for (let i = 0; i < 5; i++) {
+				const p = pts[(i * 2) % 5];
+				if (i === 0) ctx.moveTo(p[0], p[1]);
+				else ctx.lineTo(p[0], p[1]);
+			}
+			ctx.closePath();
+			ctx.stroke();
+		} else if (systemName === 'communication') {
+			// Double helix (two interleaved sine waves)
+			ctx.beginPath();
+			for (let i = 0; i <= 24; i++) {
+				const p = i / 24;
+				const x = cx + (p - 0.5) * size * 2.0;
+				const y = cy + Math.sin(p * Math.PI * 4 + t) * size * 0.55;
+				if (i === 0) ctx.moveTo(x, y);
+				else ctx.lineTo(x, y);
+			}
+			ctx.stroke();
+			ctx.beginPath();
+			for (let i = 0; i <= 24; i++) {
+				const p = i / 24;
+				const x = cx + (p - 0.5) * size * 2.0;
+				const y = cy + Math.sin(p * Math.PI * 4 + t + Math.PI) * size * 0.55;
+				if (i === 0) ctx.moveTo(x, y);
+				else ctx.lineTo(x, y);
+			}
+			ctx.stroke();
+		}
+
+		// Health bar beneath sigil
+		ctx.globalAlpha = alive ? 0.85 : 0.3;
+		const barW = size * 2;
+		const barH = 3;
+		const barX = cx - barW / 2;
+		const barY = cy + size + 10;
+		ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+		ctx.fillRect(barX, barY, barW, barH);
+		ctx.fillStyle = color;
+		ctx.fillRect(barX, barY, barW * Math.max(0, Math.min(1, health)), barH);
+		ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+		ctx.lineWidth = 0.5;
+		ctx.strokeRect(barX, barY, barW, barH);
+
+		// Label
+		ctx.globalAlpha = alive ? 0.7 : 0.25;
+		ctx.fillStyle = color;
+		ctx.font = '9px JetBrains Mono';
+		ctx.textAlign = 'center';
+		ctx.fillText(systemName.toUpperCase(), cx, barY + 14);
+		ctx.restore();
+	}
+
+	function spawnArchonShatter(systemName: string, cx: number, cy: number, color: string) {
+		const particles: ShatterParticle[] = [];
+		const count = 32;
+		for (let i = 0; i < count; i++) {
+			const angle = Math.random() * Math.PI * 2;
+			const speed = 0.6 + Math.random() * 2.2;
+			particles.push({
+				x: cx,
+				y: cy,
+				vx: Math.cos(angle) * speed,
+				vy: Math.sin(angle) * speed - 0.8,
+				life: 1.0,
+				color
+			});
+		}
+		archonShatterAnims.set(systemName, { started_at: Date.now(), particles });
+	}
+
+	function updateAndDrawShatterAnims(ctx: CanvasRenderingContext2D) {
+		for (const [name, anim] of archonShatterAnims) {
+			let allDead = true;
+			for (const p of anim.particles) {
+				p.vy += 0.12; // gravity — rain down
+				p.x += p.vx;
+				p.y += p.vy;
+				p.life -= 0.012;
+				if (p.life > 0) {
+					allDead = false;
+					ctx.globalAlpha = p.life;
+					ctx.fillStyle = p.color;
+					ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+				}
+			}
+			ctx.globalAlpha = 1;
+			if (allDead) archonShatterAnims.delete(name);
+		}
+	}
+
+	function drawArchonOverlay(ctx: CanvasRenderingContext2D) {
+		const mx = $matrixState;
+		const archons = (mx.archons || []) as Array<{
+			system_name: string;
+			health: number;
+			alive: boolean;
+		}>;
+		// If no data has arrived yet, show empty placeholders so users still
+		// see the spec layout rather than an invisible overlay.
+		const layoutNames = Object.keys(ARCHON_LAYOUT);
+		const byName = new Map<string, { system_name: string; health: number; alive: boolean }>();
+		for (const a of archons) byName.set(a.system_name, a);
+
+		for (const name of layoutNames) {
+			const layout = ARCHON_LAYOUT[name];
+			const { x: cx, y: cy } = archonQuadrantCenter(layout.quadrant);
+			const snap = byName.get(name);
+			const alive = snap ? snap.alive : true;
+			const health = snap ? snap.health : 1;
+
+			// Edge-trigger shatter: was alive, now destroyed
+			const wasAlive = prevArchonAlive.get(name);
+			if (wasAlive === true && !alive) {
+				spawnArchonShatter(name, cx, cy, layout.color);
+			}
+			prevArchonAlive.set(name, alive);
+
+			drawArchonSigil(ctx, name, cx, cy, layout.color, health, alive);
+		}
+		updateAndDrawShatterAnims(ctx);
 	}
 
 	// ── Cycle reset canvas effect: glow artifact cells during the whiteout ──
@@ -941,6 +1339,39 @@
 		// ── Faction territory borders overlay (toggle with F) ──
 		if ($overlays.has('faction_borders')) {
 			drawFactionBorders(ctx, agentList);
+		}
+
+		// ── Lucid dreamer beams for *living* agents (ghosts handled below) ──
+		// Rendered during the dream cycle only. Keeps the beam tied to the
+		// actual agent's current position rather than a stale ghost record.
+		const ds = $dreamState;
+		const lucidIds = new Set<number>(ds.lucid_agent_ids || []);
+		if (ds.is_dreaming && lucidIds.size > 0) {
+			for (const id of lucidIds) {
+				const a = $agents.get(id);
+				if (!a) continue;
+				const lx = gridLeft + a.x * gridSize * cellSize;
+				const ly = gridTop + a.y * gridSize * cellSize;
+				drawLucidBeam(ctx, lx, ly);
+			}
+		}
+
+		// ── Ghost manifestations (dream cycle only) ──
+		// Dead agents only appear here — they are NOT leaked into the normal
+		// agent loop above, so non-dream rendering stays clean.
+		if (ds.is_dreaming && ds.ghosts && ds.ghosts.length > 0) {
+			updateAndDrawGhosts(ctx, ds.ghosts, lucidIds);
+		} else if (ghostClientState.size > 0) {
+			// Drop any stale drift/mote/thread state when the dream ends
+			ghostClientState.clear();
+		}
+
+		// ── Archon overlay (toggle with 'G') ──
+		if (showArchonOverlay) {
+			drawArchonOverlay(ctx);
+		} else if (archonShatterAnims.size > 0) {
+			// Keep any mid-flight shatter animation visible across toggles
+			updateAndDrawShatterAnims(ctx);
 		}
 
 		// ── Cycle-reset artifact glow ── (self-gated by store state)

@@ -299,6 +299,68 @@ def test_media_narrate_rate_limit(app_with_god_mode, monkeypatch):
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Causal event timeline endpoints (Phase 7B)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def test_causal_events_endpoint_returns_recent_events(app_with_god_mode):
+    """The /causal/events endpoint powers the Phase 7B timeline panel.
+    Running a few ticks generates at least a few birth/death events from
+    the engine's `record_event` calls."""
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    app_with_god_mode.post(f"/api/sim/{run_id}/tick", json={"count": 20})
+
+    r = app_with_god_mode.get(f"/api/sim/{run_id}/causal/events?limit=50")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "events" in body
+    assert "current_tick" in body
+    assert isinstance(body["events"], list)
+    # Each event must expose the fields the frontend panel renders/walks
+    for evt in body["events"]:
+        for key in ("event_id", "tick", "event_type", "description"):
+            assert key in evt, f"causal event missing {key}: {evt}"
+
+
+def test_causal_events_filter_by_type(app_with_god_mode):
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    app_with_god_mode.post(f"/api/sim/{run_id}/tick", json={"count": 10})
+
+    r = app_with_god_mode.get(
+        f"/api/sim/{run_id}/causal/events?types=birth&limit=500"
+    )
+    assert r.status_code == 200
+    for evt in r.json()["events"]:
+        assert evt["event_type"] == "birth"
+
+
+def test_causal_chain_endpoint_returns_ancestors_and_descendants(app_with_god_mode):
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    app_with_god_mode.post(f"/api/sim/{run_id}/tick", json={"count": 15})
+
+    # Grab any existing event
+    r = app_with_god_mode.get(f"/api/sim/{run_id}/causal/events?limit=50")
+    events = r.json()["events"]
+    assert events, "expected at least one causal event after 15 ticks"
+    event_id = events[0]["event_id"]
+
+    r2 = app_with_god_mode.get(
+        f"/api/sim/{run_id}/causal/events/{event_id}/chain"
+    )
+    assert r2.status_code == 200, r2.text
+    chain = r2.json()
+    assert chain["event"]["event_id"] == event_id
+    assert isinstance(chain["ancestors"], list)
+    assert isinstance(chain["descendants"], list)
+
+
+def test_causal_chain_missing_event_returns_404(app_with_god_mode):
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    r = app_with_god_mode.get(f"/api/sim/{run_id}/causal/events/999999/chain")
+    assert r.status_code == 404
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Population summary guard (M-5) — still produces a summary after extinction
 # ──────────────────────────────────────────────────────────────────────────
 

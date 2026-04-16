@@ -58,6 +58,31 @@ export const api = {
 			`/api/sim/${runId}/world/bonds?min_strength=${minStrength}&limit=${limit}`
 		),
 
+	// Causal event timeline (Phase 7B)
+	getCausalEvents: (runId: string, sinceTick = 0, limit = 200, types?: string) => {
+		const typesQs = types ? `&types=${encodeURIComponent(types)}` : '';
+		return request<{
+			events: Array<{
+				event_id: number;
+				tick: number;
+				event_type: string;
+				description: string;
+				agent_id: number | null;
+				caused_by: number | null;
+				details: Record<string, any>;
+			}>;
+			total: number;
+			current_tick: number;
+		}>(`/api/sim/${runId}/causal/events?since_tick=${sinceTick}&limit=${limit}${typesQs}`);
+	},
+
+	getCausalChain: (runId: string, eventId: number) =>
+		request<{
+			event: any;
+			ancestors: any[];
+			descendants: any[];
+		}>(`/api/sim/${runId}/causal/events/${eventId}/chain`),
+
 	// God mode
 	godAction: (runId: string, action: string, targetId?: number, params?: Record<string, any>) =>
 		request<any>(`/api/sim/${runId}/god`, {

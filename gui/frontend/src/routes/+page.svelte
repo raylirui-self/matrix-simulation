@@ -23,7 +23,9 @@
 		toggleOverlay,
 		focusCell,
 		focusAgentId,
-		autoSpeed
+		autoSpeed,
+		havenPipOpen,
+		causalTimelineOpen
 	} from '$lib/stores/ui';
 
 	import CodeRain from '$lib/canvas/CodeRain.svelte';
@@ -38,6 +40,8 @@
 	import ScenarioCards from '$lib/panels/ScenarioCards.svelte';
 	import CinematicOverlay from '$lib/panels/CinematicOverlay.svelte';
 	import DemiurgeHUD from '$lib/panels/DemiurgeHUD.svelte';
+	import HavenPiP from '$lib/panels/HavenPiP.svelte';
+	import CausalTimeline from '$lib/panels/CausalTimeline.svelte';
 
 	let ws: SimWebSocket | null = null;
 	let showLanding = $state(true);
@@ -223,6 +227,18 @@
 			return;
 		}
 
+		// H = Haven PiP toggle (Phase 7B)
+		if (e.key === 'h' || e.key === 'H') {
+			havenPipOpen.update((v) => !v);
+			return;
+		}
+
+		// T = Causal event timeline toggle (Phase 7B)
+		if (e.key === 't' || e.key === 'T') {
+			causalTimelineOpen.update((v) => !v);
+			return;
+		}
+
 		// Number keys for overlays
 		const overlayKeys: Record<string, string> = {
 			'0': 'contagion',
@@ -313,7 +329,7 @@
 			</div>
 
 			<div class="landing-hint">
-				Press <kbd>`</kbd> for terminal | <kbd>SPACE</kbd> to tick | <kbd>P</kbd> play/pause | Scroll to zoom
+				Press <kbd>`</kbd> for terminal | <kbd>SPACE</kbd> to tick | <kbd>P</kbd> play/pause | <kbd>H</kbd> Haven | <kbd>G</kbd> Archons | <kbd>T</kbd> Timeline | Scroll to zoom
 			</div>
 		</div>
 	</div>
@@ -329,6 +345,8 @@
 	<SoulView />
 	<EdgePanels />
 	<DemiurgeHUD />
+	<HavenPiP />
+	<CausalTimeline />
 	<Terminal />
 	<ControlDrawer bind:open={controlDrawerOpen} />
 	<ChartsPanel bind:open={chartsPanelOpen} />

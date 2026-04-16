@@ -150,19 +150,41 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
     }
 
     # Dream state (from engine.dream_state + result.dream_stats)
+    # Phase 7B: enrich each ghost dict with `bonded_living_ids` so the frontend
+    # can draw the memory-transfer threads to living bonded agents without
+    # doing a second round-trip for bond data. Only computed when ghosts are
+    # present (cheap O(N) index over living agents).
     ds = getattr(engine, 'dream_state', None)
     dream_payload = {}
     if ds is not None:
+        ghost_list = getattr(ds, 'ghosts', []) or []
+        ghost_dicts = [g.to_dict() for g in ghost_list]
+        if ghost_dicts:
+            bonded_to: dict[int, list[int]] = {}
+            for a in engine.agents:
+                if not getattr(a, 'alive', False):
+                    continue
+                seen: set = set()
+                for b in getattr(a, 'bonds', []) or []:
+                    tgt = getattr(b, 'target_id', None)
+                    if tgt is None or tgt in seen:
+                        continue
+                    seen.add(tgt)
+                    bonded_to.setdefault(tgt, []).append(a.id)
+            for gd in ghost_dicts:
+                gd["bonded_living_ids"] = bonded_to.get(gd["source_agent_id"], [])
         dream_payload = {
             "is_dreaming": bool(ds.is_dreaming),
             "dream_start_tick": ds.dream_start_tick,
-            "ghosts": [g.to_dict() for g in getattr(ds, 'ghosts', []) or []],
+            "ghosts": ghost_dicts,
             "lucid_agent_ids": list(getattr(ds, 'lucid_agent_ids', []) or []),
         }
     if result.dream_stats:
         dream_payload["stats"] = result.dream_stats
 
     # Haven state summary
+    # Phase 7B: also emit a simplified grid (cells + size + agent counts) and
+    # `last_vote_outcome` so the Haven PiP can render without extra REST calls.
     haven_payload = None
     hs = getattr(engine, 'haven_state', None)
     if hs is not None:
@@ -175,10 +197,46 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
             m for m in getattr(hs, 'missions', []) or []
             if not getattr(m, 'completed', False) and not getattr(m, 'failed', False)
         ]
+        grid = getattr(hs, 'grid', None)
+        grid_size = getattr(grid, 'size', 0) if grid is not None else 0
+        # Live per-cell agent count keyed by (row, col)
+        cell_counts: dict[tuple[int, int], int] = {}
+        if grid_size > 0:
+            for a in haven_agents:
+                r = min(grid_size - 1, max(0, int(a.y * grid_size)))
+                c = min(grid_size - 1, max(0, int(a.x * grid_size)))
+                cell_counts[(r, c)] = cell_counts.get((r, c), 0) + 1
+        grid_cells: list[dict] = []
+        if grid is not None:
+            for row in grid.cells:
+                for cell in row:
+                    grid_cells.append({
+                        "row": cell.row,
+                        "col": cell.col,
+                        "resources": round(cell.current_resources, 3),
+                        "base_resources": round(cell.base_resources, 3),
+                        "harshness": cell.harshness,
+                        "agent_count": cell_counts.get((cell.row, cell.col), 0),
+                    })
+        cv = getattr(hs, 'council_votes', []) or []
+        last_vote_outcome = cv[-1].outcome if cv else None
         haven_payload = {
             "population": len(haven_agents),
             "active_missions": len(active_missions),
             "last_vote_tick": getattr(hs, 'last_vote_tick', 0),
+            "last_vote_outcome": last_vote_outcome,
+            "grid_size": grid_size,
+            "grid_cells": grid_cells,
+            "agents": [
+                {
+                    "id": a.id,
+                    "x": round(a.x, 4),
+                    "y": round(a.y, 4),
+                    "emotion": getattr(a, 'dominant_emotion', 'happiness'),
+                    "health": round(a.health, 4),
+                }
+                for a in haven_agents
+            ],
             "stats": result.haven_stats or {},
         }
 

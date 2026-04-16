@@ -16,7 +16,15 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from gui.backend.api.auth import god_mode_enabled  # noqa: E402
-from gui.backend.api.routes import simulation, agents, world, god_mode, websocket, media  # noqa: E402
+from gui.backend.api.routes import (  # noqa: E402
+    agents,
+    causal,
+    god_mode,
+    media,
+    simulation,
+    websocket,
+    world,
+)
 from gui.backend.api.state import manager  # noqa: E402
 
 logger = logging.getLogger("nexus.api")
@@ -54,6 +62,7 @@ else:
     logger.info("God mode disabled (set GOD_MODE_ENABLED=1 to enable).")
 app.include_router(websocket.router)
 app.include_router(media.router)
+app.include_router(causal.router)
 
 
 @app.get("/api/runs")
