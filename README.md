@@ -8,6 +8,20 @@ Inspired by simulation theory, Sugarscape, and multi-agent social simulation res
 
 ---
 
+## Documentation
+
+| Doc | What's in it |
+|-----|--------------|
+| [docs/systems.md](docs/systems.md) | Deep dive on all 11 tick systems + The Haven |
+| [docs/configuration.md](docs/configuration.md) | Tiered override model, scenarios, eras, key parameters |
+| [docs/emergent_behaviors.md](docs/emergent_behaviors.md) | Phenomena that arise from system interactions |
+| [docs/dashboard_legacy.md](docs/dashboard_legacy.md) | Streamlit dashboard reference (15 tabs) |
+| [docs/references.md](docs/references.md) | Related work, academic sources, feature comparison matrix |
+| [docs/tuning_evidence.md](docs/tuning_evidence.md) | Research-to-config mapping: framework decisions + per-knob tuning recommendations |
+| [docs/code_review.md](docs/code_review.md) | Code review notes |
+
+---
+
 ## Overview
 
 Cognitive Matrix models civilization through **11 interconnected systems** that run each tick:
@@ -25,6 +39,8 @@ Cognitive Matrix models civilization through **11 interconnected systems** that 
 | 9 | **The Matrix** | Awareness, glitches, red pills, The Anomaly, Sentinels, the Oracle, cycle resets |
 | 10 | **Conflict** | Individual combat, faction wars, territorial claims, peace negotiations |
 | 11 | **Communication** | Information propagation, mutation (telephone game), propaganda, system narratives |
+
+For mechanics of each system, see [docs/systems.md](docs/systems.md). For what emerges from their interactions, see [docs/emergent_behaviors.md](docs/emergent_behaviors.md).
 
 ---
 
@@ -87,6 +103,7 @@ matrix-simulation/
 │   ├── test_systems.py              <- All 11 systems + integration tests
 │   └── test_batch_and_causal.py     <- Batch research mode + causal event graph tests
 ├── output/                           <- Generated files (simulation.db, exports)
+├── docs/                             <- Extended documentation (see Documentation index above)
 ├── main.py                           <- CLI entry point
 ├── dashboard.py                      <- Streamlit entry point (thin wrapper)
 ├── pyproject.toml                    <- Project config & dependencies
@@ -167,6 +184,8 @@ python main.py batch --runs 50 --ticks 500 --seed 42    # deterministic seeding
 #          results/causal_events_last_run.json, results/causal_chains_last_run.json
 ```
 
+For scenario/era parameters and how the config layering works, see [docs/configuration.md](docs/configuration.md).
+
 ### Launch The Nexus (Recommended)
 
 The Nexus is the primary frontend — a spatial, immersive interface where the world IS the UI. Navigate by zooming into a living civilization across 4 depth levels.
@@ -220,6 +239,8 @@ cd gui/frontend && npm run dev
 streamlit run dashboard.py
 # To stop: press Ctrl+C
 ```
+
+Full tab/controls reference: [docs/dashboard_legacy.md](docs/dashboard_legacy.md).
 
 ### Run Tests
 
@@ -312,46 +333,6 @@ Casual users stay at Level 0-1 with play/pause and the Analytics panel. Power us
 
 ---
 
-## Streamlit Dashboard (Legacy)
-
-The Streamlit dashboard provides 15 tabs for monitoring and interacting with the simulation. Launch with `streamlit run dashboard.py`.
-
-**Controls:**
-- Quick step buttons (+1, +10, +50, +100 ticks) with descriptive tooltips
-- **Live Mode** — Auto-run with configurable speed (1-50 ticks/cycle), intervene while running
-- Custom batch runner for long simulations
-- **God Mode**: Plague, Famine, Meteor, Blessing, Bounty, Spawn — with immediate DB persistence
-- **Agent Actions**: Select any agent and Heal, Smite, Red Pill, Gift Wealth, Make Prophet, Make Protagonist, or Whisper (inject memories)
-- **Cell Actions**: Enrich, Deplete, or Terraform any grid cell in real time
-- **Event Injector**: Create custom world events with configurable targets and health impact
-- Scenario selection, 12 parameter sliders (all with detailed help text), fork & compare
-- Compact status bar showing tick/population/factions/wars/control at a glance
-
-**Visualization Tabs (15 tabs with emoji icons):**
-- **Live Feed** — Real-time activity ticker + drama feed (births, deaths, romances, wars, glitches)
-- **Charts** — Population, intelligence, health, phase distribution, births/deaths, bonds, generations
-- **World** — Agents overlaid on terrain grid with bond lines and cell hover info
-- **Agents** — Scatter plot, inspector with skill radar, trait bars, bonds, family tree (3 generations), dynasty size
-- **Social** — Bond distribution pie chart, strength histogram, network graph colored by generation
-- **Emotions** — Population emotion radar, dominant emotion pie, trauma tracking with most-traumatized list
-- **Factions** — Faction cards with core beliefs, leadership, wars, belief-space scatter plot
-- **Economy** — Wealth distribution, Gini index, leaderboard, wealth-by-faction breakdown
-- **Matrix** — Control index, awareness distribution, system trust, awareness heatmap, Anomaly banner, Sentinel tracking
-- **Culture** — Cultural memory floors, knowledge pool, population vs floor radar
-- **Events** — LLM-generated world events with health/skill effects
-- **Narratives** — LLM-generated civilization narratives
-- **Protagonists** — Visual character cards with HP bars, emotion bars, trait bars, status tags, skill radars, inner monologue, portrait prompts
-- **Records** — Hall of records, all-time records, skill leaderboards, tiered achievement system, civilization summary
-- **Compare** — Overlay population/intelligence trajectories from multiple runs with config diff
-
-**Header Metrics:**
-Two rows of at-a-glance metrics with trend deltas: Population (with +/- change), Born, Deaths, Max Gen, Avg Health, Avg IQ, Techs, plus Mood, Factions, Avg Wealth, Matrix Control, Redpilled, Active Wars.
-
-**Civilization Era System:**
-The dashboard tracks the current era based on progress: Genesis, Dawn of Tribes, Tribal Expansion, Age of Awakening, Agricultural Age, Bronze Age, Trade Era, Industrial Age.
-
----
-
 ## Architecture
 
 ```
@@ -414,247 +395,7 @@ The dashboard tracks the current era based on progress: Genesis, Dawn of Tribes,
 - Matrix awareness spreads through Communication bonds, countered by Sentinels from Conflict
 - Knowledge floors from dead agents raise newborn skills across generations
 
----
-
-## The 11 Systems in Depth
-
-### System 1: Social Fabric
-
-Agents form bonds based on proximity and sociability. Bond types: `family`, `friend`, `rival`, `mate`, `ally`, `enemy`, `resistance`. Each agent has an 8-slot Dunbar limit — when full, only stronger bonds can displace weak ones. Family bonds never decay. All others decay over time, faster when agents are far apart.
-
-### System 2: Reproduction
-
-Females and males aged 20-50 with health > 0.4 compete for mates. Scoring blends: fitness competition (50%), trait compatibility (25%), proximity (10%), existing bonds (15%). Stochastic top-3 selection prevents genetic convergence. Children inherit blended + mutated traits, parents' beliefs (with drift), 5% of parental wealth, and faction membership.
-
-### System 3: Knowledge Transfer
-
-Parent teaching: parents near children teach their top 2 skills. Cultural memory: when agents die, their skills above the civilization floor contribute to a knowledge pool. The pool slowly raises floors that newborns inherit. If population crashes, floors decay — creating dark ages. Social amplifier: agents with friends learn faster.
-
-### System 4: Environment
-
-An 8x8 grid with terrain types (plains, forest, mountains, coast), each with different resource levels, harshness, and skill bonuses. Resources deplete under population pressure and regenerate when abandoned. Tech breakthroughs (agriculture, mining, trade networks, industrialization) permanently improve cells.
-
-### System 5: Agency
-
-Each agent evaluates 9 directions per tick using a utility function weighted by resource pull (35%), social pull (20%), curiosity (20%), safety (15%), and inertia (10%). Children stay near parents. Emotional states modify these weights. Agents pursue persistent multi-tick goals (FIND_MATE, REACH_RESOURCE, JOIN_FACTION, FLEE, HUNT_ENEMY, PROTECT) that override utility weights until completed or abandoned. Boldness trait adds stochastic risk-taking. Spatial memory avoids danger zones and gravitates toward positive locations. Up to 3 protagonist agents get LLM-generated inner monologue.
-
-### System 6: Emotions & Psychology
-
-Five emotions (happiness, fear, anger, grief, hope) fluctuate every tick based on:
-- **Situational triggers**: Low health causes fear, overcrowding causes anger, isolation causes grief, friends cause happiness
-- **Emotional contagion**: Emotions spread through proximity, amplified by bond strength and charisma
-- **Trauma**: Witnessing death of bonded agents causes persistent trauma that amplifies fear/grief and suppresses happiness; heals slowly, faster with friends
-- **Decision distortion**: Fear increases safety-seeking, anger makes agents reckless, grief causes paralysis, hope encourages exploration
-
-### System 7: Beliefs, Ideology & Factions
-
-Each agent holds beliefs on 4 axes: individualism (-1 collectivist to +1 individualist), tradition (-1 progressive to +1 traditional), system trust (-1 skeptic to +1 trusting), spirituality (-1 materialist to +1 spiritual).
-
-Beliefs drift from experience (scarcity breeds collectivism, wealth breeds individualism, trauma breeds skepticism) and spread through bonds (memetic transmission with mutation). When nearby agents share similar beliefs, **factions emerge** spontaneously. Factions elect leaders, claim territory, develop bonuses, and can splinter via **schisms** when internal belief variance grows. Rare **prophets** with extreme beliefs + high charisma can found factions instantly and convert nearby agents.
-
-### System 8: Economy
-
-Agents gather wealth from their environment cell (efficiency scales with survival skill). Wealth decays via consumption. Bonded agents in proximity **trade** (wealth flows from rich to poor, benefiting both). Aggressive, angry agents with no bonds nearby **steal**. Factions **tax** members and redistribute. When agents die, 70% of wealth passes to family as **inheritance**. Wealth affects health (rich = slower decay, poor = faster decay). The system tracks Gini coefficient, top 10% vs bottom 50% wealth share, and total economic output.
-
-### System 9: The Matrix Meta-Layer
-
-The simulation IS the Matrix. Most agents are asleep inside it.
-
-- **Awareness** (0.0-1.0): Grows naturally from curiosity + intelligence. System trust suppresses it. Trauma and spirituality accelerate it.
-- **Glitches**: Random events (deja vu, memory leaks from dead agents, terrain flickers, ghost sightings) that boost awareness in perceptive agents.
-- **Red Pill**: When awareness exceeds 0.5, agents face a choice. Costs: lose Matrix comfort health regen, emotional instability (fear/anger baseline shifts up), happiness drops. Gains: 2.5x awareness growth, detect Sentinels at distance, warn resistance allies, form resistance bonds.
-- **Blue Pill — Splinter in the Mind**: Agents who reject the red pill get awareness reset to 0.3 (not 0), a trust/happiness boost, and a `splinter_in_mind` flag. Splinter agents grow awareness 1.5x faster than normal despite suppression — they keep almost waking up but pulling back, until they eventually take the red pill.
-- **Guide-Type Recruiters**: Redpilled agents with high charisma become active recruiters. They seek nearby high-awareness non-redpilled agents and attempt persuasion (charisma vs system_trust). Success: target takes red pill, resistance bond formed. Failure: target's trust increases, recruiter becomes a higher Sentinel target.
-- **The Anomaly (The One)**: When a redpilled agent's awareness exceeds 0.8, they become The Anomaly — stat boosts, health regeneration, and radiation of awareness to nearby agents.
-- **The Path of The One**: The Anomaly follows a 3-stage quest: (1) Oracle contact — Oracle must be guiding them. (2) Find the Locksmith — be near a living Locksmith to receive a teleport key to the Core. (3) Reach the Core — arrive at map center (0.5, 0.5).
-- **The Architect's Choice**: At the Core, the Anomaly's beliefs, bonds, and trauma determine the outcome. High fight score (low trust, resistance bonds, high awareness) = FIGHT — risk system failure (awareness wipe) or achieve freedom (global awareness boost). Low score = RESET — cycle resets but the Haven is preserved. Both outcomes trigger cycle reset with different consequences.
-- **Sentinels**: System-deployed enforcer agents with maxed combat stats that hunt high-awareness agents. They suppress awareness and damage health. The Anomaly can destroy them.
-- **The Oracle**: A hidden system process that identifies promising candidates and subtly guides them toward awakening.
-- **The Architect / Demiurge**: Monitors total awareness via a control index. The Demiurge has psychology — fear (of losing control), pride (in creation), confusion (when agents behave unexpectedly). A panicked Demiurge deploys 2x Sentinels; a proud one relaxes to 0.5x. Confused Demiurge increases glitch probability. Tracked in `MatrixState.demiurge`.
-- **Archons**: Four specialized Sentinels (Emotion, Economy, Belief, Communication), each governing one system. Positioned in map quadrants. The Anomaly or coordinated resistance agents can damage and destroy Archons. Destroying an Archon releases that system from Architect control — released systems become chaotic (1.5x multiplier). Destroying the Communication Archon accelerates language divergence and boosts resistance encryption.
-- **Sophia**: A hidden process creating meaningful coincidences that cannot be detected or destroyed by the Architect. Manifests as: shared dreams (two unrelated agents receive the same dream), dead knowledge (a dead agent's memories/skills appear in a living agent), and terrain patterns (glitch patterns noticed by high-awareness agents). All synchronicities boost awareness.
-- **The Pleroma**: A hidden layer of pure information accessible only to recursive-phase agents with awareness >= 0.9. Brief glimpses during lucid dreams or extreme awareness spikes. Visualization data (`PleromGlimpse`) emitted each tick for frontend rendering.
-- **Exiles**: Sentinels that survive too long refuse deletion and become independent agents with unique abilities.
-- **Cycles**: The simulation resets when average awareness exceeds 0.6, The Anomaly completes the quest and makes a choice at the Core, or too many ticks pass. Minimum cycle length is 150 ticks (Architect reboot time). High-awareness agents retain partial awareness across resets (35% at 0.6+, 50% if soul trap broken). Cultural memory partially persists. Archons and Demiurge state reset.
-
-### System 10: Conflict & Warfare
-
-Individual combat: agents with high effective aggression (trait + anger + rival bonds) fight nearby enemies, dealing damage based on aggression + resilience + health + survival skill. Faction wars trigger when two factions have high ideological distance + mutual enemy bonds + territorial overlap. Wars destroy resources in contested zones, escalate through casualties, and end through peace negotiations (leaders with high social + intelligence) or war weariness.
-
-### System 11: Communication & Information
-
-Information objects (knowledge, rumors, warnings, propaganda, system narratives) propagate hop-by-hop through bond networks. Each transmission has a mutation chance — truth degrades like a telephone game. Knowledge boosts skills. Propaganda shifts beliefs. System narratives (injected by the Matrix) suppress awareness. Secrets only travel through resistance bonds. Information expires after a configurable lifetime.
-
-- **Emergent Language**: Info objects carry `encoding_complexity` (1.0 default). Frequently-communicated concepts compress over generations (floor 0.2). Factions develop divergent encodings (dialects) tracked in `_faction_dialects`. `get_dialect_distance()` measures encoding gap.
-- **Resistance Encryption**: Redpilled agents' secret communications are automatically encrypted. An arms race mechanic: resistance encryption strength grows each tick, Sentinels' decryption capability grows slower. `attempt_sentinel_interception()`: Sentinels always intercept but only decode if decryption > encryption.
-- **Language Archaeology**: When factions dissolve, their language persists as `LanguageArtifact` in cells. Future agents can discover these artifacts for knowledge boosts and (if the faction had redpilled members) awareness clues from pre-reset data.
-
-### The Haven — The Real World
-
-A second world layer running in parallel with the Matrix simulation. The Haven is smaller (4x4 grid vs 8x8), harsher (2x harshness), and resource-scarce — but it is *real*. Managed by `src/haven.py`.
-
-- **Jack-out**: Redpilled agents with awareness above threshold (default 0.6) can leave the simulation and enter the Haven. The transition costs health and causes emotional upheaval.
-- **Jack-in missions**: Haven agents can jack back into the simulation for timed missions: `rescue` (find and awaken candidates), `fight_sentinels` (combat system enforcers), `contact_oracle` (seek guidance). Missions have a goal duration, a risk-per-tick failure chance, and a hard deadline. Jacked-in agents get a temporary skill boost but must complete or fail before the time limit.
-- **Haven council**: Hawks (high aggression) vs doves (low aggression) vote periodically on resource allocation (concentrate vs distribute) and mission approval (offensive vs defensive missions). Council votes shape Haven resource distribution and which mission types are prioritized.
-- **Engine integration**: The tick loop runs: Simulation systems (1-11) → Haven tick → cross-world events. Agents in the Haven are excluded from simulation agency, economy, conflict, and other Matrix-specific systems.
-
-Config: `haven.*` in `config/default.yaml`.
-
----
-
-## Configuration
-
-### Tiered Override System
-
-1. `config/default.yaml` — Full defaults (every parameter)
-2. `config/eras/*.yaml` — Historically-researched era presets
-3. `config/scenarios/*.yaml` — Gameplay-tuned partial overrides
-4. CLI flags — `--era`, `--scenario`, `--ticks`, `--set key=value`
-5. Dashboard sliders — Runtime only
-
-### Preset Scenarios
-
-One-click scenario cards on the landing screen let you jump into curated experiences. Each scenario YAML includes `preview` text and `highlights` tags displayed on the card.
-
-| Scenario | Theme | Key Tuning |
-|----------|-------|------------|
-| `awakening` | Mass red-pilling | 3x awareness growth, 4x glitch frequency, low redpill threshold |
-| `warworld` | Endless conflict | Low combat threshold, scarce resources, fast faction formation |
-| `dark_ages` | Knowledge collapse | 0.4x learning, 8x cultural memory decay, harsh environment |
-| `prophet_era` | Ideological chaos | Frequent prophets, extreme beliefs, rapid faction churn |
-
-### Creating a Custom Scenario
-
-```yaml
-# config/scenarios/my_experiment.yaml
-description: "High awareness, fast factions"
-preview: "Factions form by tick 100, wars by tick 200"
-highlights:
-  - "Fast factions"
-  - "High awareness"
-environment:
-  harshness: 0.5
-matrix:
-  awareness_growth_rate: 0.002
-  glitch_probability: 0.05
-beliefs:
-  faction_formation_similarity: 0.5
-  min_faction_size: 3
-economy:
-  gather_rate: 0.08
-```
-
-### Historical Eras
-
-Eras are historically-researched presets that configure the simulation to model a specific time period and civilization. Unlike scenarios (which tune gameplay knobs like "more conflict" or "abundant resources"), eras set demographically and sociologically accurate parameters: population dynamics, lifespans, fertility, social structures, economic inequality, belief systems, and available technology.
-
-Each era file can also include era-specific features that scenarios cannot:
-- **`pre_unlocked_tech`** — Technologies available from tick 0 (e.g., medieval Europe starts with agriculture and mining)
-- **`starting_beliefs`** — Population-wide belief axis biases (e.g., hunter-gatherers start collectivist and spiritual)
-- **`narrator_hints`** — Context strings passed to the LLM narrator for era-appropriate storytelling
-
-Eras and scenarios can be combined: `--era medieval_europe --scenario harsh_world` layers harsh gameplay tuning on top of a medieval demographic baseline.
-
-**Available Eras:**
-
-| Era | Period | Population | Lifespan | Key Characteristics |
-|-----|--------|------------|----------|---------------------|
-| `hunter_gatherer` | ~50,000 BCE | Small nomadic bands | ~35 years | Egalitarian, high mobility, oral knowledge transfer |
-| `ancient_egypt` | ~1500 BCE | River valley settlements | ~40 years | Hierarchical, spiritual, monument-building economy |
-| `roman_republic` | ~100 BCE | Urban + rural mix | ~45 years | Legal systems, military culture, trade networks |
-| `tang_dynasty` | ~700 CE | Cosmopolitan cities | ~50 years | Meritocratic, high cultural exchange, silk road trade |
-| `medieval_europe` | ~1200 CE | Feudal villages | ~40 years | Rigid hierarchy, guild economy, religious factions |
-| `industrial_revolution` | ~1850 CE | Factory cities | ~55 years | Rapid tech, wealth inequality, urbanization pressure |
-| `america_1980s` | ~1980s CE | Suburban sprawl | ~75 years | The Matrix's chosen era. Consumerism, individualism, media influence |
-| `near_future` | ~2040 CE | Hyper-connected megacities | ~82 years | AI disruption, digital tribalism, surveillance, polarization |
-
-**Creating a Custom Era:**
-
-```yaml
-# config/eras/my_era.yaml
-name: "My Custom Era"
-period: "~500 CE"
-description: "A brief description of the historical context"
-
-population:
-  initial: 40
-  carrying_capacity: 120
-
-demographics:
-  base_lifespan: 45
-  fertility_rate: 0.06
-
-environment:
-  harshness: 1.2
-
-economy:
-  gather_rate: 0.08
-  gini_target: 0.35
-
-era_specific:
-  pre_unlocked_tech:
-    - agriculture
-  starting_beliefs:
-    tradition: 0.3
-    spirituality: 0.4
-  narrator_hints:
-    - "This is an era of early kingdoms and oral tradition"
-```
-
-### Key Parameters
-
-| Parameter | YAML Path | Effect |
-|-----------|-----------|--------|
-| Harshness | `environment.harshness` | Above 2.0 causes population collapse |
-| Population floor | `population.min_floor` | Spawn immigrants when pop drops below this |
-| Mutation rate | `genetics.mutation_rate` | High = genetic drift, low = convergence |
-| Competition weight | `mate_selection.weights.competition` | High = premature convergence risk |
-| Cultural floor cap | `knowledge.cultural_memory.floor_cap` | Higher = faster compound growth |
-| Emotion baselines | `emotions.baselines.*` | Target emotions for natural decay |
-| Emotional contagion | `emotions.contagion_rate` | Higher = mass panics, collective joy |
-| Faction similarity | `beliefs.faction_formation_similarity` | Lower = more factions, more fragmented |
-| Awareness growth | `matrix.awareness_growth_rate` | Higher = faster awakening, more system resistance (tuned to 0.008 so agents reach lucid within ~80-tick lifespan) |
-| Glitch probability | `matrix.glitch_probability` | Higher = more Matrix instability |
-| Sentinel traits | `matrix.sentinel_traits.*` | Customize Sentinel stats (resilience, aggression, speed) |
-| Comfort injection | `matrix.comfort_injection.*` | System comfort values (happiness, trust, awareness) |
-| Anomaly bonuses | `matrix.anomaly_bonuses.*` | The One's skill/health boosts |
-| Red pill costs | `matrix.redpill_health_regen_loss`, `redpill_emotion_shift_*` | Health drain & emotional instability |
-| Blue pill splinter | `matrix.bluepill_awareness_floor`, `splinter_awareness_multiplier` | Splinter-in-mind awareness growth |
-| Recruiter settings | `matrix.recruiter_charisma_threshold`, `recruiter_check_interval` | Guide-type recruiter persuasion |
-| Anomaly quest | `matrix.quest_oracle_contact_awareness`, `quest_locksmith_radius`, `quest_core_radius` | Path of The One stages |
-| Core choice | `matrix.core_choice_fight_threshold`, `core_fight_failure_chance` | Architect's Choice outcomes |
-| Combat damage | `conflict.combat_damage` | Higher = deadlier wars |
-| War threshold | `conflict.war_threshold` | Lower = wars start more easily |
-| Wartime innovation | `conflict.wartime_innovation_bonus` | Tech/survival skill bonus during wars |
-| Trade rate | `economy.trade_rate` | Higher = faster wealth equalization |
-| Faction tax | `economy.faction_tax_rate` | Higher = more redistributive factions |
-| Narrative richness | `narrator.richness` | Off/Low/Medium/High LLM call frequency |
-
----
-
-## Emergent Behaviors
-
-Phenomena that arise from system interactions without being explicitly coded:
-
-- **Dark Ages**: Population crash leads to cultural floor decay and knowledge loss across generations
-- **Mass Panics**: Fear contagion spreads through dense communities, causing migration waves
-- **Ideological Crusades**: Factions with extreme belief differences + territorial overlap trigger wars
-- **Prophet-Led Revolutions**: Charismatic agents with extreme beliefs found factions that rapidly convert nearby agents
-- **Schisms**: Large factions splinter when internal belief variance grows — the narcissism of small differences
-- **Wealth Dynasties**: Multi-generational inheritance creates persistent inequality; tracked by Gini coefficient
-- **The Resistance**: Redpilled agents form hidden bond networks, sharing awareness through resistance bonds
-- **Sentinel Hunts**: The system deploys enforcers to suppress high-awareness agents — cat and mouse
-- **Phoenix Cycles**: Near-extinction followed by recovery, with cultural memory partially preserved
-- **Grief Cascades**: Death of a central agent triggers trauma in bonded agents, suppressing happiness and productivity
-- **Trade Routes**: Agents in resource-rich terrain trade with agents in skill-bonus terrain, creating economic interdependence
-- **Information Decay**: Knowledge degrades as it spreads through long bond chains — misinformation emerges naturally
-- **Revenge Vendettas**: Robbery and combat losers pursue attackers across the map; mates avenge killed partners
-- **Cultural Protectionism**: Collectivist factions restrict trade to members only; warrior cultures gain combat bonuses
-- **Wartime Innovation**: Factions at war develop technology and survival skills faster than peacetime
-- **Propaganda Wars**: Cross-faction propaganda erodes loyalty and raises war likelihood
-- **Spatial Memory**: Agents avoid places where they were attacked, congregate near positive experiences
-- **Bold Gambits**: High-boldness agents override utility-optimal choices — exploring unknown areas, fighting stronger enemies, approaching rivals
-- **Cultural Protectionism**: Collectivist factions tax higher and redistribute; individualist factions free-trade with lower taxes
+For per-system mechanics, see [docs/systems.md](docs/systems.md).
 
 ---
 
@@ -679,193 +420,6 @@ Set `narrator.provider: huggingface` in config.
 ### No LLM
 
 Set `narrator.enabled: false` in config. All mechanics work identically with deterministic fallback events.
-
----
-
-## Related Work & References
-
-Projects and research that inform this simulation's design:
-
-### Closest Comparisons
-
-| Project | What It Does | Similarity | Key Difference |
-|---------|-------------|------------|----------------|
-| [**Project Sid**](https://github.com/altera-al/project-sid) (Altera AI, 2024) | 1,000+ LLM agents in Minecraft spontaneously developed government, economy, and religion | Emergent factions, belief systems, economy, social bonds | Full LLM (expensive), no generational dynamics, no Matrix meta-layer |
-| [**Generative Agents**](https://github.com/joonspk-research/generative_agents) (Stanford/Google, 2023) | 25 LLM agents in "Smallville" forming relationships and spreading information | Memory systems, social bonds, emergent behavior | No economy, factions, reproduction, or conflict. Full LLM for all agents |
-| **Sugarscape** (Epstein & Axtell, 1996) | The foundational ABM: grid resources, trade, reproduction, cultural transmission | Grid-based resources, wealth inequality, cultural zones, combat | Much simpler agents, no emotions/beliefs/LLM/Matrix layer |
-| [**AgentSociety**](https://github.com/tsinghua-fib-lab/AgentSociety) (Tsinghua, 2025) | 10,000+ LLM agents simulating employment, consumption, and social interactions; reproduces polarization and UBI effects | Large-scale social simulation with emergent macro phenomena from agent interactions | Urban social science focus, no civilization-building or awareness mechanics |
-| [**Concordia**](https://github.com/google-deepmind/concordia) (Google DeepMind, 2023) | Library for generative agent-based modeling; agents interact in natural language to study cooperation and social dilemmas | LLM agents in social dilemma scenarios; cooperation/competition emergence | Research framework focused on cooperation, not full civilization |
-| [**OASIS**](https://github.com/camel-ai/oasis) (CAMEL-AI, 2024) | Social media simulator supporting up to 1 million LLM agents; simulates X/Reddit dynamics | Massive-scale LLM agent simulation with social dynamics | Social media platform simulation, not civilization |
-| [**AI Town**](https://github.com/a16z-infra/ai-town) (a16z, 2023) | Deployable virtual town where LLM characters live, chat, and socialize; inspired by Generative Agents | LLM agents with memory in a virtual social environment | Tech demo / starter kit; no economy, conflict, or generational dynamics |
-| [**Sotopia**](https://sotopia.world/) (CMU, 2023) | Open-ended environment with 90 social scenarios and 40 characters for evaluating LLM social intelligence | Social interaction evaluation; agents with personalities, secrets, relationships | Evaluation benchmark, not continuous simulation |
-
-### Classic Simulation & God Games
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**SimCity**](https://www.ea.com/games/simcity) (Maxis) | 1989 | Emergent urban dynamics (traffic, crime, economics) from zoning and infrastructure. Inspired the entire simulation game genre. Top-down urban planning, no individual agent cognition |
-| **Populous** (Bullfrog) | 1989 | The first god game — indirect control of autonomous worshippers via terrain manipulation and divine acts. Parallels our God Mode |
-| [**Civilization**](https://civilization.2k.com/) (Firaxis) | 1991+ | Full civilization arc with tech trees, diplomacy, warfare, and culture across historical eras. Player-directed strategy, not autonomous agents |
-| **SimEarth** (Maxis) | 1990 | Planetary simulation based on Gaia hypothesis — climate, tectonics, and evolution of life. Macro-scale, no individual agents |
-| [**Black & White**](https://en.wikipedia.org/wiki/Black_%26_White_(video_game)) (Lionhead) | 2001 | God game with a learning AI creature that develops morality from player reinforcement. Parallels our belief evolution |
-| [**Spore**](https://www.spore.com/) (Maxis) | 2008 | Multi-scale evolution from cell to space civilization. Player-directed, each stage is a different genre |
-| **From Dust** (Ubisoft) | 2011 | Advanced terrain/fluid simulation; guide nomadic tribe by reshaping the environment. Environmental physics focus |
-| [**The Universim**](https://crytivo.com/the-universim) (Crytivo) | 2014+ | God game guiding civilization from Stone Age to Space Age on procedural planets. Player-directed progression |
-
-### Life Simulation & Artificial Life
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**Creatures**](https://en.wikipedia.org/wiki/Creatures_(video_game_series)) (Cyberlife) | 1996 | Neural-network-brained creatures that learn, evolve genetically, and exhibit emergent behavior. Pioneered bottom-up emergent intelligence |
-| [**The Sims**](https://www.ea.com/games/the-sims) (Maxis) | 2000+ | Maslow-based needs hierarchy, social bonds, emergent stories from autonomous behavior. Household-scale, not society-scale |
-| **Conway's Game of Life** | 1970 | Zero-player cellular automaton — the foundational example of emergence from simple rules. No agents or social dynamics |
-| [**Tierra**](https://en.wikipedia.org/wiki/Tierra_(computer_simulation)) (Thomas Ray) | 1991 | Self-replicating programs competing in a digital ecology; parasites and symbiotes emerge. No social/cognitive layer |
-| [**Avida**](https://avida.devosoft.org/) (Michigan State) | 2003 | Digital evolution platform where programs evolve and compete on a lattice. Pure evolution research |
-| [**Lenia**](https://chakazul.github.io/lenia.html) (Bert Chan) | 2015 | Continuous Game of Life generalization with 400+ emergent species. Mathematical/artistic, no cognition |
-| [**The Bibites**](https://leocaussan.itch.io/the-bibites) | 2021 | Neural-network virtual creatures evolving via mutation and natural selection. Individual organism focus |
-
-### Colony & Society Simulations
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**Dwarf Fortress**](https://www.bay12games.com/dwarves/) | 2006+ | Per-dwarf personality, emotions, social bonds, faction warfare, resource economy. Their thought/emotion system parallels our System 6 |
-| [**WorldBox**](https://www.superworldbox.com/) | 2018+ | God-sim with emergent civilizations, wars, and tech progression. The "watch and intervene" model parallels our God Mode |
-| [**RimWorld**](https://rimworldgame.com/) | 2018 | AI Storyteller system (Cassandra/Phoebe/Randy) generating emergent narratives from colonist personalities, emotions, and social bonds. Strong design parallel for narrative pacing |
-| [**Kenshi**](https://lofigames.com/) | 2018 | Open-world sandbox where factions war, migrate, and react dynamically without player centrality. No reproduction or generational dynamics |
-| [**Frostpunk**](https://frostpunkgame.com/) | 2018 | City-survival with moral dilemmas; hope/discontent mechanics parallel our emotion systems. Player-directed policy |
-| [**Oxygen Not Included**](https://www.klei.com/games/oxygen-not-included) | 2019 | Colony survival with detailed resource cycles and duplicant needs. Physics/engineering focus, no social bonds or beliefs |
-| [**Songs of Syx**](https://songsofsyx.com/) | 2020+ | Massive-scale colony sim with thousands of citizens, complex economy, social classes. Player-directed management |
-| **Banished** (Shining Rock) | 2014 | Settlement survival with population dynamics. No individual agent personality |
-| [**Manor Lords**](https://www.manorlords.com/) | 2024 | Medieval city-builder with agent-based citizen simulation. Building/RTS hybrid |
-| [**Prison Architect**](https://www.paradoxinteractive.com/games/prison-architect) | 2015 | Agent needs system driving emergent collective behavior (riots, escapes). Institutional management |
-| [**Cities: Skylines II**](https://www.paradoxinteractive.com/games/cities-skylines-ii) | 2023 | 100,000+ individual citizens with unique pathfinding, careers, and social relationships. Urban planning focus |
-
-### Grand Strategy & Emergent History
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**Crusader Kings 3**](https://www.crusaderkings.com/) | 2020 | Dynasty simulation with per-character traits, relationships, schemes, and emergent political narratives across generations. Player controls one dynasty |
-| [**Victoria 3**](https://www.paradoxinteractive.com/games/victoria-3) | 2022 | Population groups (Pops) with political leanings, economic roles, and social movements. Macro-scale nation management |
-| **Humankind** (Amplitude) | 2021 | 4X strategy combining 60 historical cultures across eras. Turn-based, not agent-based |
-| **Mount & Blade II: Bannerlord** | 2022 | Dynamic factions, economy, NPC agency in a living political world. Action-RPG hybrid |
-
-### Procedural History & Worldbuilding
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**Caves of Qud**](https://www.cavesofqud.com/) | 2015+ | Procedural civilization generation with religions, art styles, languages, and mythic biographies. Player explores, doesn't simulate |
-| [**Ultima Ratio Regum**](https://www.ultimaratioregum.co.uk/) | 2012+ | Procedural civilizations with religions, ideologies, art, and political systems. Academic art project |
-| [**Galimulator**](https://snoddasmannen.itch.io/galimulator) | 2017 | Galactic empire rise/fall simulation with wars, dynasties, and revolutions. Abstracted agents at galactic scale |
-| [**Screeps**](https://screeps.com/) | 2016 | MMO where players write JavaScript to control autonomous colony agents 24/7 in a persistent world. Player writes the AI |
-
-### Multi-Agent LLM Frameworks
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**AgentVerse**](https://github.com/OpenBMB/AgentVerse) (Tsinghua) | 2023 | Multi-agent framework for orchestrating LLM agents; supports task-solving and simulation |
-| [**AutoGen**](https://github.com/microsoft/autogen) (Microsoft) | 2023 | Multi-agent conversation framework for complex problem-solving |
-| [**MetaGPT**](https://github.com/geekan/MetaGPT) (DeepWisdom) | 2023 | Multi-agent framework assigning SOPs and roles to LLM agents |
-| [**CrewAI**](https://github.com/crewAIInc/crewAI) | 2023 | Teams of LLM agents with roles handling workflows |
-| [**Voyager**](https://voyager.minedojo.org/) (NVIDIA) | 2023 | First LLM-powered lifelong learning agent in Minecraft; continuous skill acquisition. Single agent |
-| [**MineLand**](https://github.com/cocacola-lab/MineLand) | 2024 | Multi-agent Minecraft simulator supporting 48 agents with physical needs and limited senses |
-
-### Emergent Behavior Research
-
-| Project | Year | Relevance |
-|---------|------|-----------|
-| [**OpenAI Hide-and-Seek**](https://openai.com/index/emergent-tool-use/) | 2019 | Multi-agent RL agents discover 6 emergent strategies including tool use from simple competitive rules |
-| [**Melting Pot**](https://github.com/google-deepmind/meltingpot) (DeepMind) | 2021 | Multi-agent RL environment for studying social dilemmas with up to 16 players |
-| [**Facade**](https://www.interactivestory.net/) (Mateas & Stern) | 2005 | First interactive drama with believable AI characters using natural language. Two-character drama |
-
-### ABM Frameworks
-
-| Framework | Relevance |
-|-----------|-----------|
-| [**Mesa**](https://github.com/projectmesa/mesa) (Python) | Standard Python ABM framework. Our engine builds equivalent functionality with domain-specific extensions |
-| [**MASON**](https://github.com/eclab/mason) (Java) | High-performance ABM toolkit. Relevant for spatial indexing if scaling beyond 8x8 |
-| [**NetLogo**](https://ccl.northwestern.edu/netlogo/) | Visual ABM environment widely used in education and research |
-| [**Repast**](https://repast.github.io/) (Argonne National Lab) | Mature Java/Python ABM platform for large-scale social/organizational simulation |
-| [**GAMA**](https://gama-platform.org/) | GIS-integrated ABM platform for spatially explicit agent simulations |
-| [**FLAME GPU**](https://flamegpu.com/) (U. Sheffield) | GPU-accelerated ABM framework supporting billions of agents |
-| [**Agents.jl**](https://juliadynamics.github.io/Agents.jl/stable/) | Julia-based ABM framework with strong performance |
-| [**krABMaga**](https://krabmaga.github.io/) | Rust-based ABM framework outperforming Mesa, NetLogo, and MASON in benchmarks |
-| [**PettingZoo**](https://pettingzoo.farama.org/) (Farama) | Standard API for multi-agent reinforcement learning environments |
-| [**AnyLogic**](https://www.anylogic.com/) | Commercial multi-paradigm simulation (ABM + system dynamics + discrete events) |
-
-### Foundational Academic Models
-
-| Reference | Year | Relevance |
-|-----------|------|-----------|
-| **Schelling's Segregation Model** | 1971 | Mild individual preferences create extreme macro-level segregation — foundational emergence demonstration |
-| **Axelrod's Cooperation Tournament** | 1984 | Iterated Prisoner's Dilemma showing how cooperation emerges among self-interested agents |
-| **El Farol Bar Problem** (W. Brian Arthur) | 1994 | Bounded rationality and emergent coordination without central control |
-| **Santa Fe Artificial Stock Market** | 1994 | Agent-based stock market with evolutionary trading strategies — emergent economic dynamics |
-| **Artificial Anasazi Model** (Axtell et al.) | 2002 | ABM reconstruction of Anasazi civilization collapse using archaeological data |
-| **Cliodynamics** (Peter Turchin) | 2003+ | Mathematical models finding patterns in historical data to predict political instability — inspired by Asimov's psychohistory |
-| [**JASSS**](https://www.jasss.org/) | 1998+ | *Journal of Artificial Societies and Social Simulation* — the primary academic journal for social simulation research |
-
-### Philosophical Foundation
-
-| Reference | Relevance |
-|-----------|-----------|
-| [**Bostrom's Simulation Argument**](https://www.simulation-argument.com/) (2003) | The theoretical basis for our Matrix meta-layer: what would it mean for simulated entities to discover their reality? |
-| **"Growing Artificial Societies"** (Epstein & Axtell, 1996) | The book that established agent-based social simulation. Our project can be positioned as "Sugarscape extended with belief dynamics, LLM narration, and simulation-awareness mechanics" |
-
-### Interactive Explorations
-
-| Project | Relevance |
-|---------|-----------|
-| [**Parable of the Polygons**](https://ncase.me/polygons/) (Vi Hart & Nicky Case, 2014) | Interactive visualization of Schelling's segregation model — emergence from individual bias |
-| [**The Evolution of Trust**](https://ncase.me/trust/) (Nicky Case, 2017) | Interactive game theory exploration of cooperation/defection dynamics |
-
-### Academic References for Era Parameters
-
-Sources used to calibrate historically-researched era presets:
-
-**General:**
-- Dunbar, R. (1992). "Neocortex size as a constraint on group size in primates." *Journal of Human Evolution.*
-- Henrich, J. (2004). "Demography and Cultural Evolution." *American Antiquity.*
-
-**Hunter-Gatherer:**
-- Kelly, R. (2013). *The Lifeways of Hunter-Gatherers.* Cambridge University Press.
-- Boehm, C. (1999). *Hierarchy in the Forest.* Harvard University Press.
-- Gurven, M. & Kaplan, H. (2007). "Longevity Among Hunter-Gatherers." *Population and Development Review.*
-- Sahlins, M. (1972). *Stone Age Economics.* Aldine.
-- Hewlett, B. & Cavalli-Sforza, L. (1986). "Cultural Transmission Among Aka Pygmies." *American Anthropologist.*
-
-**Medieval Europe:**
-- Dyer, C. (2002). *Making a Living in the Middle Ages.* Yale University Press.
-- Herlihy, D. (1985). *Medieval Households.* Harvard University Press.
-- Epstein, S. (1991). *Wage Labor and Guilds in Medieval Europe.* UNC Press.
-- Milanovic, B. (2011). *The Haves and the Have-Nots.* Basic Books.
-
-**1980s America:**
-- Putnam, R. (2000). *Bowling Alone.* Simon & Schuster.
-- Piketty, T. (2014). *Capital in the Twenty-First Century.* Harvard University Press.
-- Mare, R. (1991). "Five Decades of Educational Assortative Mating." *ASR.*
-
-**Near-Future:**
-- Acemoglu, D. & Restrepo, P. (2020). "Robots and Jobs." *Journal of Political Economy.*
-- Brady, W. et al. (2021). "How social media shapes moral outrage." *Science Advances.*
-- Bail, C. (2021). *Breaking the Social Media Prism.* Princeton University Press.
-
-### Feature Comparison
-
-| Feature | Cognitive Matrix | Generative Agents | Sugarscape | Dwarf Fortress | Project Sid | RimWorld | CK3 | The Sims | AgentSociety |
-|---------|-----------------|-------------------|------------|----------------|-------------|----------|-----|----------|--------------|
-| Agent count | ~50-500 | 25 | 100s | 100s | 1000+ | 3-20 | 1000s | 1-8 households | 10,000+ |
-| LLM integration | Hybrid (protagonists) | Full (all agents) | None | None | Full (all agents) | None | None | None | Full (all agents) |
-| Social bonds | 8-slot Dunbar | Relationships | No | Detailed | Emergent | Detailed | Dynasty | Relationships | Emergent |
-| Belief/ideology | 4-axis + factions | No | Binary tags | Values system | Emergent | Ideoligion (DLC) | Religion + culture | No | Emergent |
-| Economy | Trade + Gini | No | Sugar/spice | Detailed | Emergent | Colony-level | National | Household | Employment + consumption |
-| Generational | Reproduction + cultural memory | No | Yes | Yes | No | No | Yes (core mechanic) | Expansion DLC | No |
-| Emotions | 5 emotions + trauma + contagion | No | No | Yes (detailed) | No | Mood system | Stress | Moodlets | No |
-| Conflict/warfare | Faction wars | No | Basic | Detailed | Minimal | Raids + melee | Wars + schemes | No | No |
-| AI narrative | LLM narrator | LLM dialogue | No | Legends mode | LLM dialogue | AI Storyteller | Event system | No | LLM interactions |
-| Emergent autonomy | Full (observe) | Full (observe) | Full | Partial (manage) | Full (observe) | Partial (manage) | Partial (play as ruler) | Partial (direct) | Full (observe) |
-| **Matrix meta-layer** | **Yes (unique)** | No | No | No | No | No | No | No | No |
-
-**Our differentiator**: The Matrix meta-layer — where agents can discover they're simulated and the system actively fights to maintain control — is genuinely novel across the entire landscape. No other project in this survey — academic, commercial, or indie — implements simulation-awareness as a core mechanic.
 
 ---
 
