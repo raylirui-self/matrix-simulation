@@ -25,7 +25,8 @@
 		focusAgentId,
 		autoSpeed,
 		havenPipOpen,
-		causalTimelineOpen
+		causalTimelineOpen,
+		cinematicMode
 	} from '$lib/stores/ui';
 
 	import CodeRain from '$lib/canvas/CodeRain.svelte';
@@ -39,7 +40,9 @@
 	import EraBanner from '$lib/panels/EraBanner.svelte';
 	import ScenarioCards from '$lib/panels/ScenarioCards.svelte';
 	import CinematicOverlay from '$lib/panels/CinematicOverlay.svelte';
-	import DemiurgeHUD from '$lib/panels/DemiurgeHUD.svelte';
+	import DemiurgeAlertDot from '$lib/panels/DemiurgeAlertDot.svelte';
+	import EraSplash from '$lib/panels/EraSplash.svelte';
+	import AmbientLandscape from '$lib/panels/AmbientLandscape.svelte';
 	import HavenPiP from '$lib/panels/HavenPiP.svelte';
 	import CausalTimeline from '$lib/panels/CausalTimeline.svelte';
 	import LanguageTree from '$lib/panels/LanguageTree.svelte';
@@ -247,6 +250,12 @@
 			return;
 		}
 
+		// C = Cinematic mode toggle (Phase 7D visual overhaul)
+		if (e.key === 'c' || e.key === 'C') {
+			cinematicMode.update((v) => !v);
+			return;
+		}
+
 		// Number keys for overlays
 		const overlayKeys: Record<string, string> = {
 			'0': 'contagion',
@@ -337,12 +346,13 @@
 			</div>
 
 			<div class="landing-hint">
-				Press <kbd>`</kbd> for terminal | <kbd>SPACE</kbd> to tick | <kbd>P</kbd> play/pause | <kbd>H</kbd> Haven | <kbd>G</kbd> Archons | <kbd>T</kbd> Timeline | Scroll to zoom
+				Press <kbd>`</kbd> terminal | <kbd>SPACE</kbd> tick | <kbd>P</kbd> play/pause | <kbd>C</kbd> cinematic | <kbd>H</kbd> Haven | <kbd>T</kbd> Timeline | Scroll to zoom
 			</div>
 		</div>
 	</div>
 {:else}
 	<!-- Main Simulation View -->
+	<AmbientLandscape />
 	<CodeRain />
 	<div class="world-stage" class:dreaming={$dreamState.is_dreaming}>
 		<WorldMap />
@@ -352,18 +362,26 @@
 	<CellView />
 	<SoulView />
 	<EdgePanels />
-	<DemiurgeHUD />
+	<DemiurgeAlertDot />
 	<HavenPiP />
 	<CausalTimeline />
 	<LanguageTree bind:open={languageTreeOpen} />
 	<Terminal />
 	<ControlDrawer bind:open={controlDrawerOpen} />
 	<ChartsPanel bind:open={chartsPanelOpen} />
-	<EraBanner />
+	{#if !$cinematicMode}
+		<EraBanner />
+	{/if}
+	<EraSplash />
 	<CinematicOverlay />
 
+	{#if $cinematicMode}
+		<!-- Minimal tick counter — the only always-visible chrome in cinematic mode. -->
+		<div class="cinematic-tick" aria-label="current tick">t{$tick}</div>
+	{/if}
+
 	<!-- Floating Controls -->
-	<div class="controls">
+	<div class="controls" class:hidden={$cinematicMode}>
 		<button class="ctrl-btn" onclick={() => controlDrawerOpen = !controlDrawerOpen} title="Architect Controls (Tune, God Mode, Whisper)">
 			&#9881;
 		</button>
@@ -389,31 +407,6 @@
 		<span class="tick-display">t={$tick}</span>
 	</div>
 
-	<!-- Zoom level indicator -->
-	<div class="zoom-indicator">
-		<button class:active={$zoomLevel === 0} onclick={() => zoomLevel.set(0)}>RAIN</button>
-		<button class:active={$zoomLevel === 1} onclick={() => zoomLevel.set(1)}>GRID</button>
-		<button class:active={$zoomLevel === 2} class:disabled={!$focusCell} onclick={() => {
-			if (!$focusCell) {
-				// Default to center cell
-				focusCell.set({ row: 3, col: 3 });
-			}
-			zoomLevel.set(2);
-		}}>CELL</button>
-		<button class:active={$zoomLevel === 3} class:disabled={!$focusAgentId} onclick={() => {
-			if (!$focusAgentId) {
-				// Pick the first available agent
-				const firstAgent = Array.from($agents.values())[0];
-				if (firstAgent) {
-					const row = Math.min(7, Math.floor(firstAgent.y * 8));
-					const col = Math.min(7, Math.floor(firstAgent.x * 8));
-					focusCell.set({ row, col });
-					focusAgentId.set(firstAgent.id);
-				}
-			}
-			zoomLevel.set(3);
-		}}>SOUL</button>
-	</div>
 {/if}
 
 <style>
@@ -649,34 +642,23 @@
 		text-align: right;
 	}
 
-	/* Zoom indicator */
-	.zoom-indicator {
+	/* Cinematic mode: minimal tick counter (Phase 7D). */
+	.cinematic-tick {
 		position: fixed;
-		top: 20px;
-		right: 20px;
-		display: flex;
-		gap: 2px;
+		bottom: 6px;
+		left: 8px;
 		z-index: 20;
-	}
-	.zoom-indicator button {
-		background: var(--bg-panel);
-		border: 1px solid rgba(0, 255, 136, 0.1);
-		color: var(--text-dim);
-		font-family: var(--font-mono);
-		font-size: 11px;
+		font-family: var(--font-mono, 'JetBrains Mono', monospace);
+		font-size: 9px;
+		color: rgba(0, 255, 136, 0.3);
 		letter-spacing: 1px;
-		padding: 6px 12px;
-		cursor: pointer;
-		white-space: nowrap;
+		pointer-events: none;
+		user-select: none;
 	}
-	.zoom-indicator button.active {
-		color: var(--green-primary);
-		border-color: var(--green-primary);
-		background: var(--green-dim);
+
+	.controls.hidden {
+		display: none;
 	}
-	.zoom-indicator button:hover { color: var(--green-primary); }
-	.zoom-indicator button.disabled { opacity: 0.4; }
-	.zoom-indicator button.disabled:hover { opacity: 0.7; }
 
 	/* ── Mobile-Responsive Layout (< 768px) ── */
 	@media (max-width: 768px) {
@@ -704,15 +686,5 @@
 		.speed-slider { width: 60px; }
 		.tick-display { min-width: 40px; font-size: 10px; }
 
-		/* Zoom indicator — compact icon-only style */
-		.zoom-indicator {
-			top: 8px;
-			right: 8px;
-		}
-		.zoom-indicator button {
-			font-size: 9px;
-			padding: 4px 6px;
-			letter-spacing: 0;
-		}
 	}
 </style>

@@ -102,19 +102,16 @@
 </div>
 
 <style>
+	/* Embedded inside the top edge panel (Phase 7D layout fix) —
+	   no longer a fixed overlay. */
 	.demiurge-hud {
-		position: fixed;
-		top: 20px;
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 		gap: 10px;
-		padding: 6px 12px 6px 8px;
-		background: rgba(6, 10, 6, 0.78);
+		padding: 4px 10px 4px 6px;
+		background: rgba(6, 10, 6, 0.55);
 		border: 1px solid rgba(0, 255, 136, 0.18);
 		border-radius: 6px;
-		z-index: 25;
 		font-family: var(--font-mono, 'JetBrains Mono', monospace);
 		backdrop-filter: blur(6px);
 		pointer-events: auto;
@@ -179,7 +176,6 @@
 
 	@media (max-width: 768px) {
 		.demiurge-hud {
-			top: 8px;
 			padding: 4px 8px 4px 6px;
 			gap: 6px;
 		}

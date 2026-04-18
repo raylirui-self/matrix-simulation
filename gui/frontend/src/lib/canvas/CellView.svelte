@@ -9,13 +9,14 @@
 	let width = 0;
 	let height = 0;
 	let hoverAgent: Agent | null = null;
+	let autoSelected = $state(false);
 
 	const PHASE_SHAPES: Record<string, number> = {
-		infant: 20,    // circle (many sides)
-		child: 3,      // triangle
-		adolescent: 5, // pentagon
-		adult: 6,      // hexagon
-		elder: 8       // octagon
+		infant: 20,
+		child: 3,
+		adolescent: 5,
+		adult: 6,
+		elder: 8
 	};
 
 	const EMOTION_COLORS: Record<string, string> = {
@@ -36,6 +37,37 @@
 			return row === cell.row && col === cell.col;
 		});
 	}
+
+	function pickMostPopulatedCell(): { row: number; col: number } {
+		const gridSize = 8;
+		const counts = new Map<string, number>();
+		let best: { row: number; col: number } | null = null;
+		let bestCount = 0;
+		for (const a of $agents.values()) {
+			const row = Math.min(gridSize - 1, Math.floor(a.y * gridSize));
+			const col = Math.min(gridSize - 1, Math.floor(a.x * gridSize));
+			const key = `${row},${col}`;
+			const c = (counts.get(key) ?? 0) + 1;
+			counts.set(key, c);
+			if (c > bestCount) {
+				bestCount = c;
+				best = { row, col };
+			}
+		}
+		return best ?? { row: 3, col: 3 };
+	}
+
+	// Auto-select default cell when entering CellView with no focus set.
+	$effect(() => {
+		if ($zoomLevel === 2 && !$focusCell) {
+			focusCell.set(pickMostPopulatedCell());
+			autoSelected = true;
+		}
+	});
+	// Clear auto-select label when user leaves cell view.
+	$effect(() => {
+		if ($zoomLevel !== 2) autoSelected = false;
+	});
 
 	function drawPolygon(cx: number, cy: number, radius: number, sides: number) {
 		ctx.beginPath();
@@ -65,7 +97,6 @@
 			return;
 		}
 
-		// Header
 		ctx.font = '14px JetBrains Mono';
 		ctx.fillStyle = '#00ddff';
 		ctx.textAlign = 'left';
@@ -78,9 +109,7 @@
 		const areaW = width - padding * 2;
 		const areaH = height - padding * 2;
 
-		// Draw agents as large glyphs
 		for (const agent of cellAgents) {
-			// Map agent position within cell to screen
 			const cellFracX = Math.max(0, Math.min(1, agent.x * 8 - cell.col));
 			const cellFracY = Math.max(0, Math.min(1, agent.y * 8 - cell.row));
 			const ax = padding + cellFracX * areaW;
@@ -90,7 +119,6 @@
 			const size = 12 + agent.intelligence * 20;
 			const color = EMOTION_COLORS[agent.emotion] || '#00ff88';
 
-			// Awareness glow
 			if (agent.awareness > 0.1) {
 				const glowR = size + 8 + agent.awareness * 15;
 				const glowColor = agent.is_anomaly ? 'rgba(255, 215, 0,' : 'rgba(255, 255, 255,';
@@ -100,7 +128,6 @@
 				ctx.fill();
 			}
 
-			// Draw shape
 			drawPolygon(ax, ay, size, sides);
 			ctx.fillStyle = color;
 			ctx.globalAlpha = 0.5 + agent.health * 0.5;
@@ -110,7 +137,6 @@
 			ctx.lineWidth = 1.5;
 			ctx.stroke();
 
-			// Sentinel: red outline + scan line
 			if (agent.is_sentinel) {
 				ctx.strokeStyle = '#ff0000';
 				ctx.lineWidth = 2;
@@ -118,7 +144,6 @@
 				ctx.stroke();
 			}
 
-			// Protagonist star
 			if (agent.is_protagonist) {
 				ctx.font = 'bold 16px JetBrains Mono';
 				ctx.fillStyle = '#ffd700';
@@ -130,20 +155,17 @@
 				}
 			}
 
-			// ID label
 			ctx.font = '10px JetBrains Mono';
 			ctx.fillStyle = 'rgba(0, 255, 136, 0.5)';
 			ctx.textAlign = 'center';
 			ctx.fillText(`#${agent.id}`, ax, ay + size + 14);
 
-			// Hover detection
 			if (hoverAgent?.id === agent.id) {
 				ctx.strokeStyle = '#00ff88';
 				ctx.lineWidth = 2;
 				drawPolygon(ax, ay, size + 5, sides);
 				ctx.stroke();
 
-				// Mini stats
 				const lines = [
 					`#${agent.id} ${agent.sex} ${agent.phase} age:${agent.age}`,
 					`HP:${agent.health.toFixed(2)} IQ:${agent.intelligence.toFixed(2)}`,
@@ -163,8 +185,6 @@
 				});
 			}
 		}
-
-		// Bond rendering between agents in this cell could be added here
 
 		animFrame = requestAnimationFrame(draw);
 	}
@@ -232,6 +252,12 @@
 	aria-label="Cell neighborhood view"
 ></canvas>
 
+{#if $zoomLevel === 2 && autoSelected}
+	<div class="auto-prompt" aria-live="polite">
+		Showing most-populated cell. Click a grid cell to change.
+	</div>
+{/if}
+
 <style>
 	.cell-view {
 		position: fixed;
@@ -245,5 +271,20 @@
 	.cell-view.visible {
 		opacity: 1;
 		pointer-events: auto;
+	}
+	.auto-prompt {
+		position: fixed;
+		top: 72px;
+		left: 20px;
+		z-index: 3;
+		font-family: var(--font-mono, 'JetBrains Mono', monospace);
+		font-size: 11px;
+		letter-spacing: 1px;
+		color: rgba(0, 221, 255, 0.75);
+		background: rgba(6, 18, 6, 0.7);
+		border: 1px solid rgba(0, 221, 255, 0.25);
+		padding: 4px 10px;
+		border-radius: 3px;
+		pointer-events: none;
 	}
 </style>

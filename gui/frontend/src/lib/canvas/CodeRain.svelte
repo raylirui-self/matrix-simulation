@@ -12,15 +12,32 @@
 	// Matrix characters
 	const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF';
 
+	// Depth layers (parallax) — background/mid/foreground.
+	// base_* are layer defaults; agent-driven effects multiply on top.
+	type Layer = {
+		name: 'bg' | 'mid' | 'fg';
+		speedMul: number;
+		brightnessMul: number;
+		saturation: number;
+		fontPx: number;
+		lengthMul: number;
+	};
+	const LAYERS: Record<'bg' | 'mid' | 'fg', Layer> = {
+		bg:  { name: 'bg',  speedMul: 0.3, brightnessMul: 0.4, saturation: 55, fontPx: 13, lengthMul: 0.8 },
+		mid: { name: 'mid', speedMul: 0.6, brightnessMul: 0.7, saturation: 80, fontPx: 15, lengthMul: 1.0 },
+		fg:  { name: 'fg',  speedMul: 1.0, brightnessMul: 1.0, saturation: 95, fontPx: 17, lengthMul: 1.4 },
+	};
+	const BASE_SPEED = 0.45; // base was ~1.0 effective; cut ~55%
 	type Column = {
 		x: number;
 		y: number;
 		speed: number;
 		brightness: number;
-		hue: number; // 120=green, 0=red (awareness shift)
+		hue: number;
 		chars: string[];
 		agentId: number;
 		length: number;
+		layer: Layer;
 	};
 
 	let columns: Column[] = [];
@@ -39,12 +56,20 @@
 	let statsOverrideText = ''; // Temporary stats override for marathon/328
 	let statsOverrideTimer: ReturnType<typeof setTimeout> | null = null;
 
+	function pickLayer(): Layer {
+		// 40% bg, 40% mid, 20% fg — stable per-column for parallax persistence.
+		const r = Math.random();
+		if (r < 0.4) return LAYERS.bg;
+		if (r < 0.8) return LAYERS.mid;
+		return LAYERS.fg;
+	}
+
 	function initColumns() {
 		if (!canvas) return;
 		width = canvas.width = window.innerWidth;
 		height = canvas.height = window.innerHeight;
 
-		const colWidth = 20; // wider spacing for cleaner look
+		const colWidth = 20;
 		const numCols = Math.floor(width / colWidth);
 		columns = [];
 
@@ -53,18 +78,21 @@
 		for (let i = 0; i < numCols; i++) {
 			const agent = agentList[i % agentList.length];
 			const awarenessHue = agent ? Math.max(0, 120 - agent.awareness * 120) : 120;
+			const layer = pickLayer();
 
 			columns.push({
 				x: i * colWidth,
 				y: Math.random() * height,
-				speed: agent ? 0.4 + (1 - agent.age / 100) * 1.2 : 0.6 + Math.random() * 1.2,
+				speed: agent ? 0.8 + (1 - agent.age / 100) * 0.6 : 0.8 + Math.random() * 0.6,
 				brightness: agent ? 0.3 + agent.health * 0.7 : 0.5 + Math.random() * 0.5,
 				hue: awarenessHue,
-				chars: Array.from({ length: 12 + Math.floor(Math.random() * 10) }, () =>
-					CHARS[Math.floor(Math.random() * CHARS.length)]
+				chars: Array.from(
+					{ length: Math.max(4, Math.floor((12 + Math.random() * 10) * layer.lengthMul)) },
+					() => CHARS[Math.floor(Math.random() * CHARS.length)]
 				),
 				agentId: agent?.id ?? -1,
-				length: 10 + Math.floor(Math.random() * 15)
+				length: Math.max(4, Math.floor((10 + Math.random() * 15) * layer.lengthMul)),
+				layer,
 			});
 		}
 	}
@@ -81,53 +109,58 @@
 
 		const controlIndex = $matrixState.control_index;
 
-		// Draw columns
-		for (const col of columns) {
-			col.y += col.speed;
-			if (col.y > height + col.length * 16) {
-				col.y = -col.length * 16;
-				// Randomize a char
-				const idx = Math.floor(Math.random() * col.chars.length);
-				col.chars[idx] = CHARS[Math.floor(Math.random() * CHARS.length)];
-			}
+		// Back-to-front draw order so foreground overlaps background (parallax).
+		const drawOrder: Array<Layer['name']> = ['bg', 'mid', 'fg'];
+		for (const layerName of drawOrder) {
+			for (const col of columns) {
+				if (col.layer.name !== layerName) continue;
 
-			for (let j = 0; j < col.chars.length; j++) {
-				const charY = col.y + j * 16;
-				if (charY < -16 || charY > height + 16) continue;
-
-				const fade = j / col.chars.length;
-				const alpha = col.brightness * (1 - fade * 0.7);
-
-				// Easter egg #5: Message in the Rain — quote appears when Matrix loses control
-				let charToRender = col.chars[j];
-				let useHiddenStyle = false;
-				if (controlIndex < 0.2 && j > 0 && Math.random() < 0.02) {
-					charToRender = HIDDEN_MSG[hiddenMsgIndex % HIDDEN_MSG.length];
-					hiddenMsgIndex++;
-					useHiddenStyle = true;
+				const effSpeed = BASE_SPEED * col.layer.speedMul * col.speed;
+				col.y += effSpeed;
+				if (col.y > height + col.length * 16) {
+					col.y = -col.length * 16;
+					const idx = Math.floor(Math.random() * col.chars.length);
+					col.chars[idx] = CHARS[Math.floor(Math.random() * CHARS.length)];
 				}
 
-				if (j === 0) {
-					// Leading character is brightest (white-ish) — movie-accurate bright tip
-					ctx.fillStyle = `rgba(230, 255, 230, ${Math.min(1, alpha * 1.5)})`;
-					ctx.font = 'bold 15px JetBrains Mono';
-				} else if (useHiddenStyle) {
-					// Hidden message chars: slightly brighter, distinct green
-					ctx.fillStyle = `rgba(100, 255, 180, ${Math.min(1, alpha * 1.2)})`;
-					ctx.font = 'bold 15px JetBrains Mono';
-				} else {
-					// Glitch: low control index causes random red flashes
-					let h = col.hue;
-					if (controlIndex < 0.5 && Math.random() < (0.5 - controlIndex) * 0.1) {
-						h = 0; // red flash
+				const fontPx = col.layer.fontPx;
+				const lineH = fontPx + 1;
+				// Foreground trails linger longer for a sense of motion depth.
+				const trailFadeFactor = col.layer.name === 'fg' ? 0.55 : 0.7;
+
+				for (let j = 0; j < col.chars.length; j++) {
+					const charY = col.y + j * lineH;
+					if (charY < -lineH || charY > height + lineH) continue;
+
+					const fade = j / col.chars.length;
+					const alpha = col.brightness * col.layer.brightnessMul * (1 - fade * trailFadeFactor);
+
+					let charToRender = col.chars[j];
+					let useHiddenStyle = false;
+					if (controlIndex < 0.2 && j > 0 && Math.random() < 0.02) {
+						charToRender = HIDDEN_MSG[hiddenMsgIndex % HIDDEN_MSG.length];
+						hiddenMsgIndex++;
+						useHiddenStyle = true;
 					}
-					// Sharper green, less saturated for movie-like look
-					const lightness = 40 + (1 - fade) * 20;
-					ctx.fillStyle = `hsla(${h}, 80%, ${lightness}%, ${alpha * 0.9})`;
-					ctx.font = '15px JetBrains Mono';
-				}
 
-				ctx.fillText(charToRender, col.x, charY);
+					if (j === 0) {
+						ctx.fillStyle = `rgba(230, 255, 230, ${Math.min(1, alpha * 1.5)})`;
+						ctx.font = `bold ${fontPx}px JetBrains Mono`;
+					} else if (useHiddenStyle) {
+						ctx.fillStyle = `rgba(100, 255, 180, ${Math.min(1, alpha * 1.2)})`;
+						ctx.font = `bold ${fontPx}px JetBrains Mono`;
+					} else {
+						let h = col.hue;
+						if (controlIndex < 0.5 && Math.random() < (0.5 - controlIndex) * 0.1) {
+							h = 0;
+						}
+						const lightness = 40 + (1 - fade) * 20;
+						ctx.fillStyle = `hsla(${h}, ${col.layer.saturation}%, ${lightness}%, ${alpha * 0.9})`;
+						ctx.font = `${fontPx}px JetBrains Mono`;
+					}
+
+					ctx.fillText(charToRender, col.x, charY);
+				}
 			}
 		}
 
@@ -253,7 +286,8 @@
 		}
 	});
 
-	// Update columns when agents change
+	// Update columns when agents change — these are per-column MULTIPLIERS
+	// applied on top of layer base values (parallax stays stable).
 	$effect(() => {
 		const agentList = Array.from($agents.values());
 		for (let i = 0; i < columns.length; i++) {
@@ -261,7 +295,7 @@
 			if (agent && columns[i]) {
 				columns[i].brightness = 0.3 + agent.health * 0.7;
 				columns[i].hue = Math.max(0, 120 - agent.awareness * 120);
-				columns[i].speed = 0.5 + (1 - Math.min(agent.age, 80) / 80) * 2;
+				columns[i].speed = 0.8 + (1 - Math.min(agent.age, 80) / 80) * 0.6;
 			}
 		}
 	});

@@ -384,6 +384,63 @@ def test_extinction_population_summary(app_with_god_mode):
 # CSV export guard (H-1) — extinction run must export without crashing
 # ──────────────────────────────────────────────────────────────────────────
 
+# ──────────────────────────────────────────────────────────────────────────
+# Era landscape image endpoint (Phase 7D — ambient/splash imagery)
+# Frontend AmbientLandscape + EraSplash rely on this route. Verifies:
+#   - existing pre-generated era images are served
+#   - missing eras return 404 (frontend degrades to solid dark bg)
+#   - path-traversal inputs are sanitized
+# ──────────────────────────────────────────────────────────────────────────
+
+def test_landscape_image_served_for_existing_era(app_with_god_mode):
+    """Any of the 4 pre-generated era images must be returned as PNG."""
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    for era_slug in ("dawn_of_tribes", "agricultural_age", "age_of_awakening", "industrial_age"):
+        r = app_with_god_mode.get(
+            f"/api/sim/{run_id}/media/landscape/image",
+            params={"era": era_slug},
+        )
+        assert r.status_code == 200, f"{era_slug}: {r.text}"
+        assert r.headers["content-type"] == "image/png"
+        assert len(r.content) > 0
+
+
+def test_landscape_image_404_for_missing_era(app_with_god_mode):
+    """Eras without a generated image return 404; frontend falls back to dark bg."""
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    r = app_with_god_mode.get(
+        f"/api/sim/{run_id}/media/landscape/image",
+        params={"era": "medieval_unknown_era"},
+    )
+    assert r.status_code == 404
+
+
+def test_landscape_image_rejects_path_traversal(app_with_god_mode):
+    """Era slug is sanitized — dots/slashes are stripped, so this resolves to
+    an empty/invalid name and returns 400 or 404, never a file outside the
+    landscape directory."""
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    r = app_with_god_mode.get(
+        f"/api/sim/{run_id}/media/landscape/image",
+        params={"era": "../../../../etc/passwd"},
+    )
+    assert r.status_code in (400, 404)
+    if r.status_code == 200:
+        raise AssertionError("path traversal was NOT blocked")
+
+
+def test_landscape_image_accepts_space_in_era_name(app_with_god_mode):
+    """Frontend may pass display names with spaces; backend lower-cases +
+    underscores them. 'Dawn of Tribes' maps to dawn_of_tribes.png."""
+    run_id = app_with_god_mode.post("/api/sim", json={}).json()["run_id"]
+    r = app_with_god_mode.get(
+        f"/api/sim/{run_id}/media/landscape/image",
+        params={"era": "Dawn of Tribes"},
+    )
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+
+
 def test_csv_export_handles_extinction(tmp_path, app_with_god_mode):
     """CSV export used to IndexError on flat_agents[0] when population was
     zero. H-1 introduced an empty-list guard with a canonical header."""

@@ -4,6 +4,8 @@
 		emotionStats, events, breakthroughs, tickHistory, population
 	} from '$lib/stores/simulation';
 	import { edgePanelVisibility, zoomLevel } from '$lib/stores/ui';
+	import DemiurgeHUD from '$lib/panels/DemiurgeHUD.svelte';
+	import ZoomSelector from '$lib/panels/ZoomSelector.svelte';
 
 	// Derived values
 	let historySparkline = $derived(
@@ -89,6 +91,11 @@
 		<div class="panel-header" style="color: var(--system-color);">THE MATRIX</div>
 
 		<div class="panel-section">
+			<div class="section-title">ZOOM</div>
+			<ZoomSelector />
+		</div>
+
+		<div class="panel-section">
 			<div class="control-gauge">
 				<div class="gauge-label">CONTROL INDEX</div>
 				<div class="gauge-bar">
@@ -134,25 +141,33 @@
 		</div>
 	</div>
 
-	<!-- TOP: Knowledge Panel -->
+	<!-- TOP: Knowledge + Architect Panel -->
 	<div class="edge-panel top" class:visible={$edgePanelVisibility.top}>
-		<div class="panel-header">KNOWLEDGE</div>
-		<div class="panel-section horizontal">
-			<div class="metric-col">
-				<span class="label">AVG IQ</span>
-				<span class="value large">{$stats.avg_intelligence.toFixed(3)}</span>
+		<div class="top-row">
+			<div class="top-col">
+				<div class="panel-header">KNOWLEDGE</div>
+				<div class="panel-section horizontal">
+					<div class="metric-col">
+						<span class="label">AVG IQ</span>
+						<span class="value large">{$stats.avg_intelligence.toFixed(3)}</span>
+					</div>
+					<div class="metric-col">
+						<span class="label">AVG HP</span>
+						<span class="value large">{$stats.avg_health.toFixed(3)}</span>
+					</div>
+					<div class="metric-col">
+						<span class="label">BIRTHS</span>
+						<span class="value large">{$stats.births}</span>
+					</div>
+					<div class="metric-col">
+						<span class="label">DEATHS</span>
+						<span class="value large">{$stats.deaths}</span>
+					</div>
+				</div>
 			</div>
-			<div class="metric-col">
-				<span class="label">AVG HP</span>
-				<span class="value large">{$stats.avg_health.toFixed(3)}</span>
-			</div>
-			<div class="metric-col">
-				<span class="label">BIRTHS</span>
-				<span class="value large">{$stats.births}</span>
-			</div>
-			<div class="metric-col">
-				<span class="label">DEATHS</span>
-				<span class="value large">{$stats.deaths}</span>
+			<div class="top-col architect">
+				<div class="panel-header">ARCHITECT</div>
+				<DemiurgeHUD />
 			</div>
 		</div>
 	</div>
@@ -219,13 +234,30 @@
 		top: 0;
 		left: var(--panel-width);
 		right: var(--panel-width);
-		height: 80px;
+		height: 110px;
 		transform: translateY(-100%);
 		opacity: 0;
 		padding: 10px 20px;
 		border-bottom: 1px solid rgba(0, 255, 136, 0.1);
 	}
 	.edge-panel.top.visible { transform: translateY(0); opacity: 1; }
+
+	.top-row {
+		display: flex;
+		gap: 24px;
+		align-items: flex-start;
+		justify-content: space-between;
+		height: 100%;
+	}
+	.top-col {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.top-col.architect {
+		align-items: flex-end;
+	}
+	.top-col.architect .panel-header { text-align: right; }
 
 	/* Bottom */
 	.edge-panel.bottom {

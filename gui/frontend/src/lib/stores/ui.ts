@@ -41,6 +41,12 @@ export const showParameterTuner = writable(false);
 export const havenPipOpen = writable(false);
 export const causalTimelineOpen = writable(false);
 
+// Phase 7D cinematic mode — when true, hide persistent chrome.
+// Canvas fills the viewport; only a minimal tick counter stays visible.
+// Edge panels still reveal on hover; cinematic events still show.
+// Toggle hotkey: `c` (mnemonic: Cinematic).
+export const cinematicMode = writable(true);
+
 // Mouse position for edge panel proximity detection
 export const mousePosition = writable({ x: 0, y: 0 });
 
