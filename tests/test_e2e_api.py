@@ -26,6 +26,18 @@ import pytest
 from starlette.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Rate-limit buckets are module-level globals in auth._hits; they persist
+    across tests and cause order-dependent flakes. Clear before each test so
+    every test starts with empty buckets regardless of run order.
+    """
+    from gui.backend.api import auth
+    auth._hits.clear()
+    yield
+    auth._hits.clear()
+
+
 @pytest.fixture()
 def app_with_god_mode(tmp_path, monkeypatch):
     """Build a fresh FastAPI app with god-mode enabled and an admin token.
