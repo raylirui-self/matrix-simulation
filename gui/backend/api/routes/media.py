@@ -1,6 +1,8 @@
 """Portrait and era landscape generation endpoints."""
 from __future__ import annotations
 
+import asyncio
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -8,6 +10,8 @@ from fastapi.responses import FileResponse
 
 from gui.backend.api.auth import rate_limit, require_admin_if_media
 from gui.backend.api.state import manager
+
+logger = logging.getLogger("nexus.media")
 
 router = APIRouter(
     prefix="/api/sim/{run_id}/media",
@@ -19,11 +23,35 @@ router = APIRouter(
 # an unauthenticated attacker can't burn the inference budget.
 _MEDIA_RATE = (10, 60.0)  # 10 calls per 60 seconds
 
+# M-5: Hard timeout on synchronous LLM calls. Prior behavior: `def` routes
+# ran the provider inline and could block a worker thread for >30s on a
+# hung Ollama/HF endpoint. Every media endpoint is now `async def` and uses
+# `_await_with_timeout` which offloads the sync LLM call to a worker thread
+# and cancels it if the timeout expires. The 504 return lets the rate
+# limiter bucket fill normally even when the provider is unreachable.
+_LLM_TIMEOUT_SECONDS = 30.0
+
+
+async def _await_with_timeout(blocking_call, *, timeout: float = _LLM_TIMEOUT_SECONDS):
+    """Run a synchronous LLM call in a worker thread with a hard timeout.
+
+    Returns the call's result on success, None on timeout, and re-raises
+    any other exception so callers see the real error.
+    """
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(blocking_call),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("LLM call timed out after %.1fs", timeout)
+        return None
+
 
 @router.post("/portrait/{agent_id}")
-def generate_portrait(run_id: str, agent_id: int, request: Request):
-    rate_limit(request, key="media_portrait", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
+async def generate_portrait(run_id: str, agent_id: int, request: Request):
     """Generate a portrait for the specified agent."""
+    rate_limit(request, key="media_portrait", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
     if not engine:
         engine = manager.load_sim(run_id)
@@ -45,7 +73,11 @@ def generate_portrait(run_id: str, agent_id: int, request: Request):
         narrator = Narrator.from_config(cfg)
         generator = PortraitGenerator()
         tick = engine.state.current_tick
-        path = generator.generate_portrait(agent, narrator, run_id, tick)
+        path = await _await_with_timeout(
+            lambda: generator.generate_portrait(agent, narrator, run_id, tick)
+        )
+        if path is None:
+            return {"status": "error", "message": "Portrait generation timed out"}
         if path and Path(path).exists():
             return {"status": "ok", "path": str(path), "url": f"/api/sim/{run_id}/media/portrait/{agent_id}/image"}
         else:
@@ -73,7 +105,7 @@ def get_portrait_image(run_id: str, agent_id: int):
 
 
 @router.post("/landscape")
-def generate_landscape(run_id: str, request: Request):
+async def generate_landscape(run_id: str, request: Request):
     """Generate an era landscape for the current era."""
     rate_limit(request, key="media_landscape", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
@@ -100,7 +132,11 @@ def generate_landscape(run_id: str, request: Request):
 
         narrator = Narrator.from_config(cfg)
         generator = PortraitGenerator()
-        path = generator.generate_era_landscape(era_name, era_desc, narrator)
+        path = await _await_with_timeout(
+            lambda: generator.generate_era_landscape(era_name, era_desc, narrator)
+        )
+        if path is None:
+            return {"status": "error", "message": "Landscape generation timed out"}
         if path and Path(path).exists():
             return {
                 "status": "ok",
@@ -132,7 +168,7 @@ def get_landscape_image(run_id: str, era: str = "genesis"):
 
 
 @router.post("/narrate")
-def generate_narrative(run_id: str, request: Request):
+async def generate_narrative(run_id: str, request: Request):
     """Generate an LLM narrative about the current state."""
     rate_limit(request, key="media_narrate", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
@@ -149,14 +185,16 @@ def generate_narrative(run_id: str, request: Request):
         from src.narrator import Narrator
         narrator = Narrator.from_config(cfg)
         summary = engine.get_population_summary()
-        narrative = narrator.narrate(summary)
+        narrative = await _await_with_timeout(lambda: narrator.narrate(summary))
+        if narrative is None:
+            return {"status": "error", "message": "Narrate timed out"}
         return {"status": "ok", "narrative": narrative}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 
 @router.post("/monologue/{agent_id}")
-def generate_monologue(run_id: str, agent_id: int, request: Request):
+async def generate_monologue(run_id: str, agent_id: int, request: Request):
     """Generate an inner monologue for a protagonist."""
     rate_limit(request, key="media_monologue", max_calls=_MEDIA_RATE[0], window_seconds=_MEDIA_RATE[1])
     engine = manager.get_engine(run_id)
@@ -178,7 +216,13 @@ def generate_monologue(run_id: str, agent_id: int, request: Request):
         from src.narrator import Narrator
         narrator = Narrator.from_config(cfg)
         tick = engine.state.current_tick
-        result = protagonist_inner_monologue(agent, cfg, narrator, tick, use_llm=cfg.narrator.enabled)
+        result = await _await_with_timeout(
+            lambda: protagonist_inner_monologue(
+                agent, cfg, narrator, tick, use_llm=cfg.narrator.enabled,
+            )
+        )
+        if result is None:
+            return {"status": "error", "message": "Monologue timed out"}
         if result:
             agent.inner_monologue.append({"tick": tick, **result})
         return {"status": "ok", "monologue": result}
