@@ -131,7 +131,10 @@
 			agents.set(agentMap);
 			tick.set(msg.tick);
 			if (msg.matrix) {
-				matrixState.set(msg.matrix);
+				// H-4: msg.matrix is typed as Record<string, any> in StateSyncMessage
+				// (backend payload is loose). Cast at this one seam to preserve
+				// store-side type safety.
+				matrixState.set(msg.matrix as Parameters<typeof matrixState.set>[0]);
 				if (typeof msg.matrix.cycle_number === 'number') {
 					lastSeenCycle = msg.matrix.cycle_number;
 				}
