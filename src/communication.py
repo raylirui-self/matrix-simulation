@@ -471,10 +471,13 @@ def create_language_artifact(faction, agents: list[Agent], tick: int,
     The dead faction's language persists as a discoverable artifact in cells
     where the faction had members.
 
-    Returns the created artifact or None."""
-    comm_cfg = cfg.communication
-    getattr(comm_cfg, 'language_artifact_chance', 0.02)
+    Returns the created artifact or None.
 
+    Note: this function is deterministic given valid inputs — the gating
+    probability `language_artifact_chance` is enforced at the caller
+    (engine.py) so that direct callers (tests, custom tooling) can
+    force artifact creation when needed. See M-1 in docs/code_review.md.
+    """
     # Get faction members (dead or alive)
     members = [a for a in agents if a.faction_id == faction.id]
     if not members:

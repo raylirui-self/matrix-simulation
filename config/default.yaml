@@ -362,6 +362,19 @@ matrix:
   core_fight_awareness_boost: 0.3       # global awareness boost on successful fight
   core_reset_haven_preserved: true      # Haven survives cycle reset
 
+  # ── Awareness growth fine-tuning (M-3: was hardcoded in matrix_layer.py) ──
+  awareness_growth:
+    trust_suppression_floor: 0.3        # system_trust can't suppress growth below this
+    trust_suppression_weight: 0.5       # multiplier on trust for the suppression calc
+    spirituality_weight: 0.5            # spirituality × this × base growth
+    questioning_multiplier: 1.2         # phase multiplier — questioning
+    self_aware_multiplier: 1.5          # phase multiplier — self_aware
+    lucid_multiplier: 2.0               # phase multiplier — lucid
+    recursive_multiplier: 2.5           # phase multiplier — recursive
+    reality_testing_weight: 0.5         # reality_testing skill × this
+    elder_multiplier: 1.5               # elders grow faster (existential reflection)
+    redpill_multiplier: 2.5             # redpilled agents grow faster
+
   # ── Gnostic Mythology Layer (Phase 5) ──
   demiurge:
     base_fear: 0.1                       # baseline fear of losing control
@@ -563,3 +576,7 @@ nested_simulation:
   recursive_awareness_threshold: 0.7   # sub-sim agent awareness to trigger recursive paradox
   recursive_awareness_boost: 0.05      # awareness boost to parent observer when sub-agent becomes recursive
   observer_radius: 0.15                # max distance from World Engine cell center to observe
+
+# ── Causal Event Graph (memory bound for long runs) ──
+causal_graph:
+  max_events: 50000                     # FIFO cap on engine.causal_events (H-1)

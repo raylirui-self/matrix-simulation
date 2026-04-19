@@ -569,6 +569,12 @@ class SimulationEngine:
             caused_by=caused_by, details=details,
         )
         self.causal_events.append(evt)
+        # H-1: FIFO prune to prevent unbounded growth over long runs.
+        cg_cfg = getattr(self.cfg, "causal_graph", None)
+        max_events = getattr(cg_cfg, "max_events", 50000) if cg_cfg else 50000
+        overflow = len(self.causal_events) - max_events
+        if overflow > 0:
+            del self.causal_events[:overflow]
         if agent_id is not None:
             self._agent_last_event[(agent_id, event_type)] = eid
         return eid
@@ -991,11 +997,16 @@ class SimulationEngine:
                     tick, "faction_founded", f"Faction '{fname}' founded",
                     agent_id=founder_id, faction_id=fid,
                 )
-        # Create language artifacts for dissolved factions
+        # Create language artifacts for dissolved factions.
+        # M-1: gate the CALL on cfg.communication.language_artifact_chance
+        # (was silently unused — every dissolution produced an artifact).
         dissolved_ids = _pre_faction_ids - _post_faction_ids
+        artifact_chance = getattr(self.cfg.communication, 'language_artifact_chance', 0.02)
         for fid in dissolved_ids:
             self.record_event(tick, "faction_dissolved", f"Faction #{fid} dissolved",
                               faction_id=fid)
+            if random.random() >= artifact_chance:
+                continue
             # Build a minimal faction-like object for the artifact creator
             class _DeadFaction:
                 def __init__(self, fid):

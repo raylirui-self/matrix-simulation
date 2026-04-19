@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import queue as _queue
 import threading
 from typing import Optional
 
@@ -11,6 +13,8 @@ from src.persistence import SimulationDB
 from src.agents import set_id_counter, get_id_counter
 from src.beliefs import set_faction_id_counter, get_faction_id_counter
 from src.communication import set_info_id_counter, get_info_id_counter
+
+logger = logging.getLogger("nexus.state")
 
 
 def _action_str(action) -> str | None:
@@ -251,12 +255,22 @@ class EngineManager:
 
     def notify_listeners(self, run_id: str, data: dict):
         with self._lock:
-            listeners = self._tick_listeners.get(run_id, [])
-        for queue in listeners:
+            listeners = list(self._tick_listeners.get(run_id, []))
+        dropped = 0
+        for q in listeners:
             try:
-                queue.put_nowait(data)
+                q.put_nowait(data)
+            except _queue.Full:
+                # M-2: a slow WebSocket consumer is backed up. Count the
+                # drop so we can log it below instead of swallowing silently.
+                dropped += 1
             except Exception:
-                pass
+                logger.exception("Unexpected error pushing tick to listener for run %s", run_id)
+        if dropped:
+            logger.warning(
+                "tick frame dropped for %d/%d slow listeners on run %s",
+                dropped, len(listeners), run_id,
+            )
 
 
 # Singleton instance

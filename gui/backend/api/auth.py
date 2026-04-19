@@ -51,12 +51,33 @@ def rate_limit(request: Request, key: str, max_calls: int, window_seconds: float
     """Reject if `key`+client IP exceeds `max_calls` within `window_seconds`.
 
     In-process only — fine for a single-backend dev/prod, not for horizontal scale.
+
+    H-3: Prunes empty buckets after window expiry so the `_hits` dict
+    does not grow without bound as unique client IPs churn through.
     """
     ip = request.client.host if request.client else "unknown"
-    bucket = _hits[f"{key}:{ip}"]
+    bucket_key = f"{key}:{ip}"
+    bucket = _hits[bucket_key]
     now = time.monotonic()
     while bucket and now - bucket[0] > window_seconds:
         bucket.popleft()
     if len(bucket) >= max_calls:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
     bucket.append(now)
+    # Opportunistic eviction: every ~256 calls, sweep empty buckets so the
+    # dict doesn't retain stale entries from long-gone IPs. Cheap amortized.
+    if len(_hits) > 1 and hash(bucket_key) & 0xFF == 0:
+        _evict_empty_buckets(now, window_seconds)
+
+
+def _evict_empty_buckets(now: float, window_seconds: float) -> None:
+    """Drop dict entries whose deque is empty OR whose newest entry is
+    older than the window — i.e., buckets that can no longer contribute
+    to rate-limit decisions.
+    """
+    stale: list[str] = []
+    for k, dq in _hits.items():
+        if not dq or now - dq[-1] > window_seconds:
+            stale.append(k)
+    for k in stale:
+        del _hits[k]

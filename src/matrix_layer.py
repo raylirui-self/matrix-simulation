@@ -275,6 +275,23 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
     non_sentinels = [a for a in alive if not a.is_sentinel]
 
     # ── Phase 1: Natural awareness growth ──
+    # M-3: pull previously-hardcoded growth constants from config.
+    ag_cfg = getattr(mx_cfg, 'awareness_growth', None)
+
+    def _ag(name: str, default: float) -> float:
+        return getattr(ag_cfg, name, default) if ag_cfg else default
+
+    trust_floor = _ag('trust_suppression_floor', 0.3)
+    trust_weight = _ag('trust_suppression_weight', 0.5)
+    spirit_weight = _ag('spirituality_weight', 0.5)
+    phase_mult_questioning = _ag('questioning_multiplier', 1.2)
+    phase_mult_self_aware = _ag('self_aware_multiplier', 1.5)
+    phase_mult_lucid = _ag('lucid_multiplier', 2.0)
+    phase_mult_recursive = _ag('recursive_multiplier', 2.5)
+    rt_weight = _ag('reality_testing_weight', 0.5)
+    elder_mult = _ag('elder_multiplier', 1.5)
+    redpill_mult = _ag('redpill_multiplier', 2.5)
+
     for a in non_sentinels:
         # Base awareness growth from curiosity + intelligence
         # Uses additive components so even low-curiosity agents accumulate over a lifetime
@@ -284,10 +301,10 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
             + a.intelligence * mx_cfg.awareness_growth_rate * 0.5
         )
 
-        # System trust suppresses awareness but can't fully cancel it (floor 30%)
+        # System trust suppresses awareness but can't fully cancel it (floor configurable)
         trust = a.beliefs.get("system_trust", 0.5)
-        if trust > 0.3:
-            base_growth *= max(0.3, 1.0 - trust * 0.5)
+        if trust > trust_floor:
+            base_growth *= max(trust_floor, 1.0 - trust * trust_weight)
 
         # Trauma and suffering can trigger awakening
         if a.trauma > 0.3:
@@ -296,30 +313,30 @@ def process_matrix(agents: list[Agent], matrix_state: MatrixState,
         # High spirituality increases awareness
         spirituality = a.beliefs.get("spirituality", 0)
         if spirituality > 0.2:
-            base_growth += spirituality * mx_cfg.awareness_growth_rate * 0.5
+            base_growth += spirituality * mx_cfg.awareness_growth_rate * spirit_weight
 
         # Consciousness phase modifiers — deeper phases grow faster
         if a.consciousness_phase == "questioning":
-            base_growth *= 1.2
+            base_growth *= phase_mult_questioning
         elif a.consciousness_phase == "self_aware":
-            base_growth *= 1.5
+            base_growth *= phase_mult_self_aware
         elif a.consciousness_phase == "lucid":
-            base_growth *= 2.0
+            base_growth *= phase_mult_lucid
         elif a.consciousness_phase == "recursive":
-            base_growth *= 2.5
+            base_growth *= phase_mult_recursive
 
         # Reality testing skill accelerates awareness
         rt = a.reality_testing
         if rt > 0.2:
-            base_growth *= (1.0 + rt * 0.5)
+            base_growth *= (1.0 + rt * rt_weight)
 
         # Age-based growth: elders question reality more (existential reflection)
         if a.phase == "elder":
-            base_growth *= 1.5
+            base_growth *= elder_mult
 
         # Redpilled agents gain awareness faster
         if a.redpilled:
-            base_growth *= 2.5
+            base_growth *= redpill_mult
             # Red pill cost: emotional instability — baseline shifts toward fear/anger
             fear_shift = getattr(mx_cfg, 'redpill_emotion_shift_fear', 0.05)
             anger_shift = getattr(mx_cfg, 'redpill_emotion_shift_anger', 0.03)
