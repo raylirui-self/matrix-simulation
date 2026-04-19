@@ -24,6 +24,15 @@ Agent-based civilization simulator with emergent societies, factions, and a Matr
 - Never hardcode tunables — add to `config/default.yaml`; config hierarchy: default < era < scenario < CLI < runtime sliders
 - All LLM calls go through `src/narrator.py` (never call Ollama/HF directly from other modules)
 
+## Memory bounds (long-run safety)
+Any collection that is appended to during `engine.tick()` MUST be one of:
+
+1. **Transient-per-tick** — cleared at the start of each tick. Example: `matrix_state.pleroma_glimpses` is cleared in `process_pleroma_glimpses` and on cycle reset. Document the per-tick-clear with a `# fresh each tick` comment at the `.clear()` site.
+2. **Ring-buffered with a cap** — use a `max_…` config key under the system's config section and FIFO-prune on append. Example: `engine.causal_events` uses `cfg.causal_graph.max_events` (default 50000) and prunes via `del self.causal_events[:overflow]` inside `record_event`. Existing caps: `recent_events` (20), `_soul_pool` (100), `causal_events` (50000).
+3. **Test-enforced** — add an assertion to `tests/test_memory_bounds.py` that runs the tick loop long enough to exercise the cap and asserts `len(collection) <= cap`.
+
+Violations of these rules are the #1 cause of OOM on long research runs. If you're about to write `self.foo.append(...)` in a tick-path method, pick one of the three above *before* the append, not after.
+
 ## Architecture
 - `src/engine.py` orchestrates 11 systems: agents, matrix_layer, beliefs, agency, narrator, world, haven, programs, dreams, nested_sim, causal_graph
 - `gui/backend/api/routes/` — FastAPI routes; `gui/frontend/src/routes/+page.svelte` — Nexus entry

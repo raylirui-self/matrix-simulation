@@ -20,12 +20,17 @@
 	import { runId } from '$lib/stores/simulation';
 
 	// ── Belief Particle System ──
+	// L-6: object-pool pattern to eliminate per-frame allocation + splice.
+	// Particles are pre-allocated once; `alive` flag controls whether each
+	// slot is visible/updated. Dead slots are reused by spawn(). No GC
+	// pressure from the 60 FPS render loop; visual behavior is identical.
 	type BeliefParticle = {
 		x: number; y: number;
 		vx: number; vy: number;
 		color: string;
 		life: number;     // 0-1, decays per frame
 		size: number;
+		alive: boolean;   // pool slot marker
 	};
 
 	const INFO_COLORS: Record<string, string> = {
@@ -35,16 +40,35 @@
 		secret: '#aa44ff',
 	};
 
-	let beliefParticles: BeliefParticle[] = [];
 	const MAX_PARTICLES = 300;
+	const beliefParticles: BeliefParticle[] = Array.from({ length: MAX_PARTICLES }, () => ({
+		x: 0, y: 0, vx: 0, vy: 0, color: '#000', life: 0, size: 0, alive: false,
+	}));
+	let firstFreeHint = 0; // where to start searching for a free slot next time
+
+	function _findFreeSlot(): BeliefParticle | null {
+		// Linear scan starting from the last free slot — amortised O(1)
+		// when steady-state is well below MAX_PARTICLES.
+		for (let i = 0; i < MAX_PARTICLES; i++) {
+			const idx = (firstFreeHint + i) % MAX_PARTICLES;
+			if (!beliefParticles[idx].alive) {
+				firstFreeHint = (idx + 1) % MAX_PARTICLES;
+				return beliefParticles[idx];
+			}
+		}
+		return null;
+	}
 
 	function spawnBeliefParticles(agentList: Agent[]) {
 		// Spawn particles from agents based on their state
 		// High-awareness agents emit secret particles; faction members emit propaganda
 		// All agents with faction_id emit belief-colored particles
 		for (const agent of agentList) {
-			if (agent.is_sentinel || beliefParticles.length >= MAX_PARTICLES) break;
+			if (agent.is_sentinel) break;
 			if (Math.random() > 0.15) continue; // throttle spawning
+
+			const slot = _findFreeSlot();
+			if (!slot) break; // pool exhausted
 
 			const ax = gridLeft + agent.x * gridSize * cellSize;
 			const ay = gridTop + agent.y * gridSize * cellSize;
@@ -64,33 +88,36 @@
 			const angle = Math.random() * Math.PI * 2;
 			const speed = 0.3 + Math.random() * 0.8;
 
-			beliefParticles.push({
-				x: ax, y: ay,
-				vx: Math.cos(angle) * speed,
-				vy: Math.sin(angle) * speed,
-				color: INFO_COLORS[infoType],
-				life: 0.8 + Math.random() * 0.2,
-				size: 1.5 + Math.random() * 1.5,
-			});
+			slot.x = ax;
+			slot.y = ay;
+			slot.vx = Math.cos(angle) * speed;
+			slot.vy = Math.sin(angle) * speed;
+			slot.color = INFO_COLORS[infoType];
+			slot.life = 0.8 + Math.random() * 0.2;
+			slot.size = 1.5 + Math.random() * 1.5;
+			slot.alive = true;
 		}
 	}
 
 	function updateBeliefParticles() {
-		for (let i = beliefParticles.length - 1; i >= 0; i--) {
+		for (let i = 0; i < MAX_PARTICLES; i++) {
 			const p = beliefParticles[i];
+			if (!p.alive) continue;
 			p.x += p.vx;
 			p.y += p.vy;
 			p.life -= 0.008;
 			p.vx *= 0.99; // gentle drag
 			p.vy *= 0.99;
 			if (p.life <= 0) {
-				beliefParticles.splice(i, 1);
+				p.alive = false;
 			}
 		}
 	}
 
 	function drawBeliefParticles(ctx: CanvasRenderingContext2D) {
-		for (const p of beliefParticles) {
+		for (let i = 0; i < MAX_PARTICLES; i++) {
+			const p = beliefParticles[i];
+			if (!p.alive) continue;
 			ctx.globalAlpha = p.life * 0.7;
 			ctx.fillStyle = p.color;
 			ctx.beginPath();
