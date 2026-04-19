@@ -152,19 +152,27 @@ async def generate_landscape(run_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_SHIPPED_LANDSCAPE_DIR = Path(__file__).resolve().parents[2] / "assets" / "era_landscapes"
+_RUNTIME_LANDSCAPE_DIR = Path("output/era_landscapes")
+
+
 @router.get("/landscape/image")
 def get_landscape_image(run_id: str, era: str = "genesis"):
-    """Get the landscape image for an era."""
-    # Sanitize era name to prevent path traversal
+    """Get the landscape image for an era.
+
+    Resolution order: shipped canonical asset first, then runtime-generated
+    fallback for landscapes produced via POST /landscape during a session.
+    """
     safe_name = "".join(c for c in era.lower().replace(" ", "_") if c.isalnum() or c == "_")
     if not safe_name:
         raise HTTPException(status_code=400, detail="Invalid era name")
-    landscape_dir = Path("output/era_landscapes")
-    path = landscape_dir / f"{safe_name}.png"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"No landscape found for era: {era}")
 
-    return FileResponse(path, media_type="image/png")
+    for base in (_SHIPPED_LANDSCAPE_DIR, _RUNTIME_LANDSCAPE_DIR):
+        candidate = base / f"{safe_name}.png"
+        if candidate.exists():
+            return FileResponse(candidate, media_type="image/png")
+
+    raise HTTPException(status_code=404, detail=f"No landscape found for era: {era}")
 
 
 @router.post("/narrate")

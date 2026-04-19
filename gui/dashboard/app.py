@@ -127,10 +127,19 @@ def main():
     import base64
     import os as _os
     from pathlib import Path
-    era_img_dir = Path("output/era_landscapes")
-    era_img_dir.mkdir(parents=True, exist_ok=True)
+    shipped_landscape_dir = Path(__file__).resolve().parents[1] / "backend" / "assets" / "era_landscapes"
+    runtime_landscape_dir = Path("output/era_landscapes")
+    runtime_landscape_dir.mkdir(parents=True, exist_ok=True)
     era_safe_name = era_name.lower().replace(" ", "_")
-    era_img_path = era_img_dir / f"{era_safe_name}.png"
+
+    def _resolve_era_image() -> Path | None:
+        for base in (shipped_landscape_dir, runtime_landscape_dir):
+            candidate = base / f"{era_safe_name}.png"
+            if candidate.exists():
+                return candidate
+        return None
+
+    era_img_path = _resolve_era_image()
 
     # Detect era change — generate landscape if missing
     prev_era = st.session_state.get("_current_era", None)
@@ -141,8 +150,8 @@ def main():
     # Show banner first (always visible immediately)
     era_banner_container = st.container()
 
-    # Generate landscape if era changed and image missing
-    if era_changed and not era_img_path.exists():
+    # Generate landscape if era changed and no image exists in either tier
+    if era_changed and era_img_path is None:
         hf_token = sidebar.get("portrait_hf_token") or _os.environ.get("HF_TOKEN")
         gen_status = st.empty()
         gen_status.info(f"Generating {era_name} landscape... This may take a moment.")
@@ -158,6 +167,7 @@ def main():
             result = gen.generate_era_landscape(era_name, era_desc, narrator)
             if result:
                 gen_status.success(f"{era_name} landscape generated!")
+                era_img_path = _resolve_era_image()
             else:
                 gen_status.warning("Landscape generation failed — no image provider available. Set HF token in sidebar > Portrait Generation.")
         except Exception as e:
@@ -165,7 +175,7 @@ def main():
 
     # Render the banner (with or without background image)
     with era_banner_container:
-        if era_img_path.exists():
+        if era_img_path is not None:
             img_data = base64.b64encode(era_img_path.read_bytes()).decode()
             st.markdown(f"""
             <div class="era-banner-with-bg" style="background-image: url('data:image/png;base64,{img_data}');">
