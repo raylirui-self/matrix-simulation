@@ -245,6 +245,9 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
     world_engines = getattr(engine, 'world_engines', []) or []
     engine_details: list[dict] = []
     grid_size = engine.world.size if hasattr(engine, 'world') else 8
+    # L-5: O(1) lookup for builder agents — was O(N×M) linear scan per push.
+    # Built once per payload so total cost drops from O(N×M) to O(N + M).
+    agents_by_id = {a.id: a for a in engine.agents}
     for we in world_engines:
         ss = we.sub_sim
         if ss is None:
@@ -253,9 +256,7 @@ def build_tick_message(engine, result, delta_data: dict) -> dict:
         max_aw = max((a.awareness for a in alive_sub), default=0.0)
         has_paradox = any(a.recursive_detected for a in alive_sub)
         # Look up builder agent position (may be dead)
-        builder = next(
-            (a for a in engine.agents if a.id == we.builder_id), None
-        )
+        builder = agents_by_id.get(we.builder_id)
         bx = round(builder.x, 4) if builder else (we.cell_col + 0.5) / grid_size
         by = round(builder.y, 4) if builder else (we.cell_row + 0.5) / grid_size
         # Lightweight sub-agent grid (positions + awareness only)

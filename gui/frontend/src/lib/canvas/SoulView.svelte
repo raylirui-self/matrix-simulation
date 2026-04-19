@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { agents, runId } from '$lib/stores/simulation';
+	import { runId } from '$lib/stores/simulation';
 	import { zoomLevel, focusAgentId, focusCell } from '$lib/stores/ui';
 	import { api } from '$lib/api/rest';
 

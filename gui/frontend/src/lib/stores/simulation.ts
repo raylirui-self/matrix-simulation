@@ -2,6 +2,11 @@
 import { writable, derived } from 'svelte/store';
 import type { AgentDelta, TickMessage, WSMessage } from '$lib/api/websocket';
 import { soundscape } from '$lib/audio/soundscape';
+import {
+	CYCLE_RESET_SAFETY_MS,
+	CYCLE_RESET_WHITEOUT_MS,
+	monoNow
+} from '$lib/constants/cinematic';
 
 // ── Agent type ──
 export type Agent = {
@@ -100,12 +105,14 @@ export const cycleResetAnimation = writable<{
 }>({ active: false, started_at: 0, cycle: 0 });
 
 export function triggerCycleResetAnimation(cycle: number) {
-	cycleResetAnimation.set({ active: true, started_at: Date.now(), cycle });
+	cycleResetAnimation.set({ active: true, started_at: monoNow(), cycle });
 	setTimeout(() => {
 		cycleResetAnimation.update(($c) =>
-			$c.started_at + 4500 <= Date.now() ? { active: false, started_at: 0, cycle: $c.cycle } : $c
+			$c.started_at + CYCLE_RESET_WHITEOUT_MS <= monoNow()
+				? { active: false, started_at: 0, cycle: $c.cycle }
+				: $c
 		);
-	}, 4700);
+	}, CYCLE_RESET_SAFETY_MS);
 }
 
 // Stats

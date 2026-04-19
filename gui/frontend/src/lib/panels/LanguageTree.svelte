@@ -31,6 +31,9 @@
 	let decryptionLevel = $state(0);
 	let lastFetchTick = $state(-1);
 	let fetchInFlight = false;
+	// L-3: surface fetch failures so the panel doesn't look mysteriously
+	// empty when the endpoint is unavailable on an older backend.
+	let fetchError = $state<string | null>(null);
 
 	async function fetchLanguage() {
 		const rid = $runId;
@@ -42,8 +45,9 @@
 			encryptionLevel = data.encryption_level;
 			decryptionLevel = data.decryption_level;
 			lastFetchTick = $tickStore;
-		} catch {
-			// Silently ignore — endpoint may not exist on older backends
+			fetchError = null;
+		} catch (e) {
+			fetchError = e instanceof Error ? e.message : 'Language tree unavailable';
 		} finally {
 			fetchInFlight = false;
 		}
@@ -92,6 +96,10 @@
 			<span class="title">LANGUAGE EVOLUTION</span>
 			<button class="close-btn" onclick={() => (open = false)}>×</button>
 		</div>
+
+		{#if fetchError}
+			<div class="fetch-error">Language tree unavailable — {fetchError}</div>
+		{/if}
 
 		<svg viewBox="0 0 {SVG_W} {SVG_H}" class="tree-svg">
 			<!-- Root node -->
@@ -190,6 +198,15 @@
 	.tree-svg {
 		width: 100%;
 		height: auto;
+	}
+	.fetch-error {
+		font-size: 10px;
+		color: #ffaa55;
+		padding: 4px 6px;
+		margin-bottom: 4px;
+		border: 1px solid rgba(255, 170, 85, 0.4);
+		border-radius: 3px;
+		background: rgba(255, 170, 85, 0.08);
 	}
 	.arms-race {
 		padding: 4px 8px 2px;

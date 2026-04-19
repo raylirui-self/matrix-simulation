@@ -27,6 +27,10 @@ import {
 	nestedSims,
 	havenSummary
 } from './simulation';
+import {
+	CYCLE_RESET_SAFETY_MS,
+	CYCLE_RESET_WHITEOUT_MS
+} from '$lib/constants/cinematic';
 
 describe('simulation store — initial values', () => {
 	it('runId starts null', () => {
@@ -141,9 +145,8 @@ describe('simulation store — mutation', () => {
 });
 
 describe('triggerCycleResetAnimation', () => {
-	// Pins L-2 (hardcoded 4700ms) + L-4 (Date.now vs performance.now)
-	// behavior. When the fix for either lands, update this test to
-	// read from the new shared constant / time source.
+	// L-1: timings come from shared cinematic constants.
+	// L-4: clock is now monotonic (performance.now), so fake timers drive it.
 
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -159,20 +162,21 @@ describe('triggerCycleResetAnimation', () => {
 		const s = get(cycleResetAnimation);
 		expect(s.active).toBe(true);
 		expect(s.cycle).toBe(7);
-		expect(s.started_at).toBeGreaterThan(0);
+		// Using monotonic clock — started_at >= 0 but may be 0 at t=0 in jsdom
+		expect(typeof s.started_at).toBe('number');
 	});
 
-	it('turns active=false after the 4700ms timeout fires', () => {
+	it('turns active=false after the safety timer fires', () => {
 		triggerCycleResetAnimation(1);
 		expect(get(cycleResetAnimation).active).toBe(true);
 
-		vi.advanceTimersByTime(4700);
+		vi.advanceTimersByTime(CYCLE_RESET_SAFETY_MS);
 		expect(get(cycleResetAnimation).active).toBe(false);
 	});
 
-	it('does not prematurely turn off before the timer fires', () => {
+	it('does not prematurely turn off before the whiteout window elapses', () => {
 		triggerCycleResetAnimation(2);
-		vi.advanceTimersByTime(4699);
+		vi.advanceTimersByTime(CYCLE_RESET_WHITEOUT_MS - 1);
 		expect(get(cycleResetAnimation).active).toBe(true);
 	});
 });

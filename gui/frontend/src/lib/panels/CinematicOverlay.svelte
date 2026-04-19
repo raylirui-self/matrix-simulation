@@ -17,13 +17,17 @@
 	let cycleResetStage = $state<'idle' | 'pause' | 'whiteout' | 'hold' | 'fadeback'>('idle');
 	let timer: ReturnType<typeof setTimeout> | null = null;
 
-	const DISPLAY_MS = 4000;
-	const FADE_MS = 600;
+	import {
+		CINEMATIC_DISPLAY_MS as DISPLAY_MS,
+		CINEMATIC_FADE_MS as FADE_MS,
+		CYCLE_RESET_STAGES
+	} from '$lib/constants/cinematic';
+
 	// Cycle-reset timings (ms): pause → expanding whiteout → hold → fade-back → done
-	const RESET_PAUSE = 400;
-	const RESET_WHITEOUT = 900;
-	const RESET_HOLD = 1300;
-	const RESET_FADEBACK = 1100;
+	const RESET_PAUSE = CYCLE_RESET_STAGES.PAUSE_MS;
+	const RESET_WHITEOUT = CYCLE_RESET_STAGES.WHITEOUT_MS;
+	const RESET_HOLD = CYCLE_RESET_STAGES.HOLD_MS;
+	const RESET_FADEBACK = CYCLE_RESET_STAGES.FADEBACK_MS;
 
 	const unsub = cinematicEventQueue.subscribe(($q) => {
 		if ($q.length > 0 && !currentEvent) {
